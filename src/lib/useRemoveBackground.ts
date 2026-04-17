@@ -1,0 +1,121 @@
+import { useCallback, useRef } from 'react';
+import { removeBackground } from 'modern-rembg';
+import type { ModelId } from './models';
+import { getModelById } from './models';
+
+export interface UseRemoveBackgroundOptions {
+  onProgress?: (progress: number) => void;
+  onError?: (error: Error) => void;
+  onSuccess?: (result: string) => void;
+  onCancelled?: () => void;
+}
+
+export interface UseRemoveBackgroundReturn {
+  processImage: (imageDataUrl: string, modelId: ModelId) => Promise<void>;
+  abort: () => void;
+}
+
+export function useRemoveBackground(
+  options: UseRemoveBackgroundOptions = {}
+): UseRemoveBackgroundReturn {
+  const isCancelledRef = useRef<boolean>(false);
+  const isProcessingRef = useRef<boolean>(false);
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const currentProgressRef = useRef<number>(0);
+
+  const stopProgressAnimation = useCallback(() => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  }, []);
+
+  const startProgressAnimation = useCallback(() => {
+    stopProgressAnimation();
+    currentProgressRef.current = 0;
+    
+    progressIntervalRef.current = setInterval(() => {
+      if (isCancelledRef.current) {
+        stopProgressAnimation();
+        return;
+      }
+      
+      const remaining = 90 - currentProgressRef.current;
+      if (remaining > 0) {
+        const increment = remaining * 0.05 + Math.random() * 2;
+        currentProgressRef.current = Math.min(90, currentProgressRef.current + increment);
+        options.onProgress?.(Math.floor(currentProgressRef.current));
+      }
+    }, 200);
+  }, [options, stopProgressAnimation]);
+
+  const abort = useCallback(() => {
+    if (isProcessingRef.current) {
+      isCancelledRef.current = true;
+      isProcessingRef.current = false;
+      stopProgressAnimation();
+      options.onCancelled?.();
+    }
+  }, [options.onCancelled, stopProgressAnimation]);
+
+  const processImage = useCallback(
+    async (imageDataUrl: string, modelId: ModelId) => {
+      if (isProcessingRef.current) {
+        isCancelledRef.current = true;
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      isCancelledRef.current = false;
+      isProcessingRef.current = true;
+
+      try {
+        options.onProgress?.(0);
+        startProgressAnimation();
+
+        const model = getModelById(modelId);
+
+        const blob = await removeBackground(imageDataUrl, {
+          model: `/models/${model.filename}`,
+          resolution: model.resolution,
+          debug: true,
+        });
+
+        stopProgressAnimation();
+
+        if (isCancelledRef.current) {
+          isProcessingRef.current = false;
+          return;
+        }
+
+        options.onProgress?.(95);
+
+        const resultDataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+
+        if (isCancelledRef.current) {
+          isProcessingRef.current = false;
+          return;
+        }
+
+        options.onProgress?.(100);
+        options.onSuccess?.(resultDataUrl);
+      } catch (error) {
+        stopProgressAnimation();
+        if (!isCancelledRef.current) {
+          options.onError?.(error instanceof Error ? error : new Error(String(error)));
+        }
+      } finally {
+        isProcessingRef.current = false;
+      }
+    },
+    [options, startProgressAnimation, stopProgressAnimation]
+  );
+
+  return {
+    processImage,
+    abort,
+  };
+}
