@@ -30,8 +30,8 @@ export function ModelSelector() {
 
 	return (
 		<div
-			className={`rounded-xl border p-4 shadow-sm ${isDarkMode ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white"}`}>
-			<label className={`mb-3 block text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>
+			className={`rounded-xl border p-4 pt-6 shadow-sm ${isDarkMode ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white"}`}>
+			<label className={`mb-4 block text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>
 				{t("modelSelectorTitle")}
 			</label>
 

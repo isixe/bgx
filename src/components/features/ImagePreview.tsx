@@ -72,6 +72,17 @@ export function ImagePreview() {
 			<div
 				ref={containerRef}
 				className={`relative w-full h-full rounded-lg overflow-hidden cursor-crosshair select-none ${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'}`}
+				style={{
+					backgroundImage: `
+						linear-gradient(45deg, ${isDarkMode ? '#334155' : '#e5e7eb'} 25%, transparent 25%),
+						linear-gradient(-45deg, ${isDarkMode ? '#334155' : '#e5e7eb'} 25%, transparent 25%),
+						linear-gradient(45deg, transparent 75%, ${isDarkMode ? '#334155' : '#e5e7eb'} 75%),
+						linear-gradient(-45deg, transparent 75%, ${isDarkMode ? '#334155' : '#e5e7eb'} 75%)
+					`,
+					backgroundSize: '20px 20px',
+					backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+					backgroundColor: isDarkMode ? '#1e293b' : '#f3f4f6',
+				}}
 				onMouseDown={handleMouseDown}
 				onMouseUp={handleMouseUp}
 				onMouseLeave={handleMouseUp}

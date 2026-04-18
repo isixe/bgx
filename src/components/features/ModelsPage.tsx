@@ -49,8 +49,7 @@ export function ModelsPage() {
 
 	return (
 		<div className="flex flex-col h-full">
-			<div
-				className={`flex items-center gap-3 border-b pb-4 mb-4 ${isDarkMode ? "border-slate-700" : "border-slate-200"}`}>
+			<div className={`flex items-center gap-3 pb-4 my-4 }`}>
 				<button
 					onClick={() => setCurrentPage("main")}
 					className={`flex h-8 w-8 items-center justify-center rounded-lg ${isDarkMode ? "text-slate-400 hover:bg-slate-700" : "text-slate-500 hover:bg-slate-100"}`}>

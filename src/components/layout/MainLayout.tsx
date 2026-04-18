@@ -227,23 +227,23 @@ function SidebarContent({
 				</div>
 			)}
 
-			<div className="space-y-2">
+			<div className="space-y-4">
 				{originalImage && !resultImage && !isProcessing && (
 					<button
 						onClick={handleStartProcessing}
 						disabled={!originalImage}
-						className="w-full rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+						className="w-full rounded-lg bg-indigo-600 px-6 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{t("startProcessing")}
 					</button>
 				)}
 
 				{resultImage && (
-					<>
+					<div className="space-y-4">
 						{!isModelProcessed && !isProcessing && (
 							<button
 								onClick={handleStartProcessing}
-								className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-indigo-700"
+								className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700"
 							>
 								{t("reprocess")}
 							</button>
@@ -252,19 +252,17 @@ function SidebarContent({
 						<button
 							onClick={handleReset}
 							disabled={isProcessing}
-							className={`w-full rounded-lg border px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-50 ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+							className={`w-full rounded-lg border px-4 py-3 text-sm font-medium transition-all disabled:opacity-50 ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
 						>
 							{t("processNewImage")}
 						</button>
-					</>
+					</div>
 				)}
 
+				<ModelSelector />
 
+				{originalImage && <ExportPanel disabled={isProcessing} />}
 			</div>
-
-			<ModelSelector />
-
-			{originalImage && <ExportPanel disabled={isProcessing} />}
 		</>
 	);
 }
