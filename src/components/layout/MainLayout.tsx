@@ -100,8 +100,8 @@ export function MainLayout() {
 
 				{/* Desktop Sidebar */}
 				{currentPage !== 'models' && (
-					<aside className={`hidden lg:block w-[400px] flex-shrink-0 border-l ${isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'} overflow-y-auto`}>
-						<SidebarContent 
+					<aside className={`hidden lg:block w-[400px] flex-shrink-0 border-l ${isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'} overflow-y-auto p-4`}>
+					<SidebarContent
 						error={error}
 						originalImage={originalImage}
 						resultImage={resultImage}
@@ -112,7 +112,7 @@ export function MainLayout() {
 						t={t}
 						isDarkMode={isDarkMode}
 					/>
-					</aside>
+				</aside>
 				)}
 
 				{/* Mobile Menu Overlay */}
@@ -259,14 +259,7 @@ function SidebarContent({
 					</>
 				)}
 
-				{isProcessing && (
-					<button
-						onClick={() => useAppStore.getState().abortProcessing?.()}
-						className={`w-full rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
-					>
-						{t("cancel")}
-					</button>
-				)}
+
 			</div>
 
 			<ModelSelector />
