@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState, useEffect } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "../../lib/i18n";
-import { useLanguage } from "../../hooks/useLanguage";
 import { getModelById, getLocalizedModel } from "../../utils/modelUtils";
 
 const SUPPORTED_FORMATS = [
@@ -21,7 +20,6 @@ const SUPPORTED_EXTENSIONS = ".jpg,.jpeg,.png,.webp,.bmp,.tiff,.tif,.svg,.avif,.
 export function ImageUploader() {
 	const { setOriginalImage, setError, currentModel, setCurrentModel, isDarkMode } = useAppStore();
 	const { t } = useTranslation();
-	const { isHydrated } = useLanguage(); // Force re-render on language change
 	const [isDragging, setIsDragging] = useState(false);
 	const [isModelOpen, setIsModelOpen] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -184,20 +182,16 @@ export function ImageUploader() {
 			</div>
 
 			<h3 className={`mb-2 text-base font-medium ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
-				{isHydrated ? t("uploaderTitle") : "Upload Image"}
+				{t("uploaderTitle")}
 			</h3>
-			<p className={`mb-3 text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-				{isHydrated ? t("uploaderSubtitle") : "Drag and drop or click to select"}
-			</p>
-			<p className={`mb-4 text-xs ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
-				{isHydrated ? t("uploaderPaste") : "Or paste from clipboard (Ctrl+V)"}
-			</p>
+			<p className={`mb-3 text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{t("uploaderSubtitle")}</p>
+			<p className={`mb-4 text-xs ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>{t("uploaderPaste")}</p>
 
 			{isDragging && (
 				<div
 					className={`absolute inset-0 flex items-center justify-center rounded-xl ${isDarkMode ? "bg-indigo-900/50" : "bg-indigo-50/80"}`}>
 					<span className={`text-sm font-medium ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`}>
-						{isHydrated ? t("uploaderDrop") : "Drop here"}
+						{t("uploaderDrop")}
 					</span>
 				</div>
 			)}

@@ -14,7 +14,6 @@ export type AppState = {
   isProcessing: boolean;
   progress: number;
   error: string | null;
-  abortFn: (() => void) | null;
   isReadyToProcess: boolean;
   processedModel: string | null;
   currentPage: 'main' | 'models';
@@ -28,25 +27,21 @@ export type AppState = {
   setIsProcessing: (isProcessing: boolean) => void;
   setProgress: (progress: number) => void;
   setError: (error: string | null) => void;
-  setAbortFn: (abort: (() => void) | null) => void;
   setIsReadyToProcess: (isReady: boolean) => void;
   setProcessedModel: (model: string | null) => void;
   setIsDarkMode: (isDark: boolean) => void;
   startProcessing: () => void;
   reset: () => void;
-  cancelProcessing: () => void;
 };
 
 export type UseRemoveBackgroundOptions = {
   onProgress?: (progress: number) => void;
   onError?: (error: Error) => void;
   onSuccess?: (result: string) => void;
-  onCancelled?: () => void;
 };
 
 export type UseRemoveBackgroundReturn = {
   processImage: (imageDataUrl: string, modelId: string) => Promise<void>;
-  abort: () => void;
 };
 
 type TranslationKey = string;

@@ -18,13 +18,11 @@ function initClientLanguage(): Language {
 
 export function useLanguage() {
   const [language, setLanguageState] = useState<Language>('en');
-  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     const clientLang = initClientLanguage();
     i18n.setLanguage(clientLang);
     setLanguageState(clientLang);
-    setIsHydrated(true);
 
     const handleLanguageChange = (e: CustomEvent<Language>) => {
       setLanguageState(e.detail);
@@ -36,5 +34,5 @@ export function useLanguage() {
     };
   }, []);
 
-  return { language, isHydrated };
+  return { language };
 }

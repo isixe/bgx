@@ -20,7 +20,6 @@ const initialState = {
   isProcessing: false,
   progress: 0,
   error: null,
-  abortFn: null as (() => void) | null,
   isReadyToProcess: false,
   processedModel: null as const,
   currentPage: 'main' as const,
@@ -37,7 +36,6 @@ export const useAppStore = create<AppState>((set) => ({
   setIsProcessing: (isProcessing) => set({ isProcessing }),
   setProgress: (progress) => set({ progress }),
   setError: (error) => set({ error }),
-  setAbortFn: (abort) => set({ abortFn: abort }),
   setIsReadyToProcess: (isReady) => set({ isReadyToProcess: isReady }),
   setProcessedModel: (model) => set({ processedModel: model }),
   setCurrentPage: (page) => set({ currentPage: page }),
@@ -49,10 +47,4 @@ export const useAppStore = create<AppState>((set) => ({
   },
   startProcessing: () => set((state) => ({ isReadyToProcess: true, processingTrigger: state.processingTrigger + 1 })),
   reset: () => set({ ...initialState }),
-  cancelProcessing: () => {
-    const { abortFn } = useAppStore.getState();
-    if (abortFn) {
-      abortFn();
-    }
-  },
 }));

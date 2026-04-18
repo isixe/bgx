@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { useAppStore } from "../stores/appStore";
-import { useRemoveBackgroundWorker } from "../hooks/useRemoveBackgroundWorker";
+import { useRemoveBackground } from "../hooks/useRemoveBackground";
 import { MainLayout } from "../components/layout/MainLayout";
 
 export function AppProvider() {
@@ -46,33 +46,11 @@ export function AppProvider() {
 		[setResultImage, setIsProcessing, setProgress, setProcessedModel, currentModel],
 	);
 
-	const handleCancelled = useCallback(() => {
-		// Only update if currently processing to avoid unnecessary re-renders
-		const state = useAppStore.getState();
-		if (state.isProcessing) {
-			setIsProcessing(false);
-			setProgress(0);
-		}
-	}, [setIsProcessing, setProgress]);
-
-	const { processImage, abort } = useRemoveBackgroundWorker({
+	const { processImage } = useRemoveBackground({
 		onProgress: handleProgress,
 		onError: handleError,
 		onSuccess: handleSuccess,
-		onCancelled: handleCancelled,
 	});
-
-	// Use a ref to keep the latest abort function
-	const abortRef = useRef(abort);
-	abortRef.current = abort;
-
-	useEffect(() => {
-		// Set a wrapper function that always calls the latest abort
-		setAbortFn(() => () => abortRef.current());
-		return () => {
-			setAbortFn(null);
-		};
-	}, [setAbortFn]);
 
 	useEffect(() => {
 		if (originalImage && !isProcessing && isReadyToProcess) {
@@ -94,12 +72,6 @@ export function AppProvider() {
 		setError,
 		setProgress,
 	]);
-
-	useEffect(() => {
-		return () => {
-			abort();
-		};
-	}, [abort]);
 
 	// Sync dark mode to html element for Tailwind dark mode
 	useEffect(() => {

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "../../lib/i18n";
-import { useLanguage } from "../../hooks/useLanguage";
 import { ImageUploader } from "../features/ImageUploader";
 import { ModelSelector } from "../features/ModelSelector";
 import { ImagePreview } from "../features/ImagePreview";
@@ -12,7 +11,6 @@ import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 export function MainLayout() {
 	const { originalImage, resultImage, isProcessing, currentModel, processedModel, startProcessing, reset, currentPage, setCurrentPage, isDarkMode, setIsDarkMode } = useAppStore();
 	const { t } = useTranslation();
-	const { isHydrated } = useLanguage();
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 	const isModelProcessed = processedModel === currentModel;
@@ -57,7 +55,7 @@ export function MainLayout() {
 					<button
 						onClick={() => setCurrentPage('models')}
 						className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-						title={isHydrated ? t('settings') : 'Settings'}
+						title={t('settings')}
 					>
 						<svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
 							<circle cx="12" cy="12" r="3" />
@@ -104,17 +102,16 @@ export function MainLayout() {
 				{currentPage !== 'models' && (
 					<aside className={`hidden lg:block w-[400px] flex-shrink-0 border-l ${isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'} overflow-y-auto`}>
 						<SidebarContent 
-							error={error}
-							originalImage={originalImage}
-							resultImage={resultImage}
-							isProcessing={isProcessing}
-							isModelProcessed={isModelProcessed}
-							startProcessing={startProcessing}
-							reset={reset}
-							isHydrated={isHydrated}
-							t={t}
-							isDarkMode={isDarkMode}
-						/>
+						error={error}
+						originalImage={originalImage}
+						resultImage={resultImage}
+						isProcessing={isProcessing}
+						isModelProcessed={isModelProcessed}
+						startProcessing={startProcessing}
+						reset={reset}
+						t={t}
+						isDarkMode={isDarkMode}
+					/>
 					</aside>
 				)}
 
@@ -132,7 +129,7 @@ export function MainLayout() {
 								{/* Mobile Menu Header */}
 								<div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-700">
 									<span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-										{isHydrated ? t('menu') : 'Menu'}
+										{t('menu')}
 									</span>
 									<button
 										onClick={closeMobileMenu}
@@ -158,10 +155,10 @@ export function MainLayout() {
 									className={`sm:hidden w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${isDarkMode ? 'text-slate-200 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}
 								>
 									<svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-										<circle cx="12" cy="12" r="3" />
-										<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+									<circle cx="12" cy="12" r="3" />
+									<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
 								</svg>
-									{isHydrated ? t('settings') : 'Settings'}
+									{t('settings')}
 								</button>
 
 								<SidebarContent 
@@ -172,7 +169,6 @@ export function MainLayout() {
 									isModelProcessed={isModelProcessed}
 									startProcessing={startProcessing}
 									reset={reset}
-									isHydrated={isHydrated}
 									t={t}
 									isDarkMode={isDarkMode}
 									onAction={closeMobileMenu}
@@ -195,7 +191,6 @@ interface SidebarContentProps {
 	isModelProcessed: boolean;
 	startProcessing: () => void;
 	reset: () => void;
-	isHydrated: boolean;
 	t: (key: string) => string;
 	isDarkMode: boolean;
 	onAction?: () => void;
@@ -209,7 +204,6 @@ function SidebarContent({
 	isModelProcessed, 
 	startProcessing, 
 	reset, 
-	isHydrated, 
 	t, 
 	isDarkMode,
 	onAction 
@@ -240,7 +234,7 @@ function SidebarContent({
 						disabled={!originalImage}
 						className="w-full rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
 					>
-						{isHydrated ? t("startProcessing") : "Start Processing"}
+						{t("startProcessing")}
 					</button>
 				)}
 
@@ -251,7 +245,7 @@ function SidebarContent({
 								onClick={handleStartProcessing}
 								className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-indigo-700"
 							>
-								{isHydrated ? t("reprocess") : "Reprocess"}
+								{t("reprocess")}
 							</button>
 						)}
 
@@ -260,7 +254,7 @@ function SidebarContent({
 							disabled={isProcessing}
 							className={`w-full rounded-lg border px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-50 ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
 						>
-							{isHydrated ? t("processNewImage") : "Process New Image"}
+							{t("processNewImage")}
 						</button>
 					</>
 				)}
@@ -270,7 +264,7 @@ function SidebarContent({
 						onClick={() => useAppStore.getState().abortProcessing?.()}
 						className={`w-full rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
 					>
-						{isHydrated ? t("cancel") : "Cancel"}
+						{t("cancel")}
 					</button>
 				)}
 			</div>

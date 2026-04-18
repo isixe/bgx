@@ -6,7 +6,6 @@ import type { UseRemoveBackgroundOptions, UseRemoveBackgroundReturn } from '../t
 export function useRemoveBackground(
   options: UseRemoveBackgroundOptions = {}
 ): UseRemoveBackgroundReturn {
-  const isCancelledRef = useRef<boolean>(false);
   const isProcessingRef = useRef<boolean>(false);
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentProgressRef = useRef<number>(0);
@@ -23,11 +22,6 @@ export function useRemoveBackground(
     currentProgressRef.current = 0;
 
     progressIntervalRef.current = setInterval(() => {
-      if (isCancelledRef.current) {
-        stopProgressAnimation();
-        return;
-      }
-
       const remaining = 90 - currentProgressRef.current;
       if (remaining > 0) {
         const increment = remaining * 0.05 + Math.random() * 2;
@@ -37,23 +31,12 @@ export function useRemoveBackground(
     }, 200);
   }, [options, stopProgressAnimation]);
 
-  const abort = useCallback(() => {
-    if (isProcessingRef.current) {
-      isCancelledRef.current = true;
-      isProcessingRef.current = false;
-      stopProgressAnimation();
-      options.onCancelled?.();
-    }
-  }, [options.onCancelled, stopProgressAnimation]);
-
   const processImage = useCallback(
     async (imageDataUrl: string, modelId: string) => {
       if (isProcessingRef.current) {
-        isCancelledRef.current = true;
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      isCancelledRef.current = false;
       isProcessingRef.current = true;
 
       try {
@@ -70,11 +53,6 @@ export function useRemoveBackground(
 
         stopProgressAnimation();
 
-        if (isCancelledRef.current) {
-          isProcessingRef.current = false;
-          return;
-        }
-
         options.onProgress?.(95);
 
         const resultDataUrl = await new Promise<string>((resolve) => {
@@ -83,18 +61,11 @@ export function useRemoveBackground(
           reader.readAsDataURL(blob);
         });
 
-        if (isCancelledRef.current) {
-          isProcessingRef.current = false;
-          return;
-        }
-
         options.onProgress?.(100);
         options.onSuccess?.(resultDataUrl);
       } catch (error) {
         stopProgressAnimation();
-        if (!isCancelledRef.current) {
-          options.onError?.(error instanceof Error ? error : new Error(String(error)));
-        }
+        options.onError?.(error instanceof Error ? error : new Error(String(error)));
       } finally {
         isProcessingRef.current = false;
       }
@@ -104,7 +75,6 @@ export function useRemoveBackground(
 
   return {
     processImage,
-    abort,
   };
 }
 

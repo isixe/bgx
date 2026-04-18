@@ -1,12 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "../../lib/i18n";
-import { useLanguage } from "../../hooks/useLanguage";
 
 export function ImagePreview() {
 	const { originalImage, resultImage, isProcessing, isDarkMode } = useAppStore();
 	const { t } = useTranslation();
-	const { isHydrated } = useLanguage();
 	const [sliderPosition, setSliderPosition] = useState(50);
 	const [isDragging, setIsDragging] = useState(false);
 	const [scale, setScale] = useState(1);
@@ -141,7 +139,7 @@ export function ImagePreview() {
 					<div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-4">
 						<div className="w-10 h-10 border-3 border-white/30 border-t-white rounded-full animate-spin" />
 						<div className="text-white text-lg font-medium">
-							{isHydrated ? t('processingHint') : 'Processing...'}
+							{t('processingHint')}
 						</div>
 					</div>
 				)}
