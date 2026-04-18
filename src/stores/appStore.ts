@@ -1,34 +1,8 @@
 import { create } from 'zustand';
-
-export type ModelId = 'u2netp' | 'u2net' | 'isnet-anime';
-
-export interface AppState {
-  currentModel: ModelId;
-  originalImage: string | null;
-  resultImage: string | null;
-  isProcessing: boolean;
-  progress: number;
-  error: string | null;
-  abortFn: (() => void) | null;
-  isReadyToProcess: boolean;
-  processedModel: ModelId | null;
-
-  setCurrentModel: (model: ModelId) => void;
-  setOriginalImage: (image: string | null) => void;
-  setResultImage: (image: string | null) => void;
-  setIsProcessing: (isProcessing: boolean) => void;
-  setProgress: (progress: number) => void;
-  setError: (error: string | null) => void;
-  setAbortFn: (abort: (() => void) | null) => void;
-  setIsReadyToProcess: (isReady: boolean) => void;
-  setProcessedModel: (model: ModelId | null) => void;
-  startProcessing: () => void;
-  reset: () => void;
-  cancelProcessing: () => void;
-}
+import type { AppState } from '../types/app';
 
 const initialState = {
-  currentModel: 'u2netp' as ModelId,
+  currentModel: 'u2netp' as const,
   originalImage: null,
   resultImage: null,
   isProcessing: false,
@@ -36,7 +10,8 @@ const initialState = {
   error: null,
   abortFn: null as (() => void) | null,
   isReadyToProcess: false,
-  processedModel: null as ModelId | null,
+  processedModel: null as const,
+  currentPage: 'main' as const,
 };
 
 export const useAppStore = create<AppState>((set) => ({
@@ -51,6 +26,7 @@ export const useAppStore = create<AppState>((set) => ({
   setAbortFn: (abort) => set({ abortFn: abort }),
   setIsReadyToProcess: (isReady) => set({ isReadyToProcess: isReady }),
   setProcessedModel: (model) => set({ processedModel: model }),
+  setCurrentPage: (page) => set({ currentPage: page }),
   startProcessing: () => set({ isReadyToProcess: true }),
   reset: () => set({ ...initialState }),
   cancelProcessing: () => {

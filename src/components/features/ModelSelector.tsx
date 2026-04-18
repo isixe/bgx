@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "../../lib/i18n";
-import { useLanguage } from "../../lib/i18n/useLanguage";
-import { getModelById, getLocalizedModel } from "../../lib/models";
+import { useLanguage } from "../../hooks/useLanguage";
+import { getModelById, getLocalizedModel } from "../../utils/modelUtils";
+import { MODELS } from "../../config/models";
 
 export function ModelSelector() {
 	const { currentModel, isProcessing, setCurrentModel, originalImage } = useAppStore();
@@ -69,10 +70,10 @@ return (
 				{isOpen && (
 					<div className="absolute z-10 mt-2 w-full rounded-lg border border-slate-200 bg-white shadow-lg">
 						<div className="max-h-80 overflow-auto py-1">
-							{(['u2netp', 'u2net', 'isnet-anime'] as const).map((modelId) => {
-								const model = getModelById(modelId);
-								const localized = getLocalizedModel(modelId, t);
-								return (
+							{MODELS.map((model) => {
+														const modelId = model.id;
+														const localized = getLocalizedModel(modelId, t);
+														return (
 									<button
 													key={modelId}
 													onClick={() => handleSelect(modelId)}

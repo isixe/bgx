@@ -1,13 +1,16 @@
-import { translations, type Language, type TranslationKey } from './translations';
+import { translations as zh } from './zh';
+import { translations as en, type TranslationKey } from './en';
 
-// Get initial language from localStorage or browser
+export type Language = 'zh' | 'en';
+
+const translations = { zh, en };
+
 function getInitialLanguage(): Language {
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem('bgx-language') as Language | null;
     if (stored && ['zh', 'en'].includes(stored)) {
       return stored;
     }
-    // Detect browser language
     const browserLang = navigator.language.toLowerCase();
     if (browserLang.startsWith('zh')) {
       return 'zh';
@@ -26,8 +29,17 @@ export const i18n = {
     }
   },
 
-  t(key: TranslationKey): string {
-    return translations[this.currentLang][key] || key;
+  t(key: TranslationKey | string): string {
+    const keys = key.split('.');
+    let value: unknown = translations[this.currentLang];
+    for (const k of keys) {
+      if (value && typeof value === 'object' && k in value) {
+        value = (value as Record<string, unknown>)[k];
+      } else {
+        return key;
+      }
+    }
+    return typeof value === 'string' ? value : key;
   },
 
   getLanguage(): Language {
@@ -35,14 +47,12 @@ export const i18n = {
   },
 };
 
-// Hook for React components
 export function useTranslation() {
   return {
-    t: (key: TranslationKey) => i18n.t(key),
+    t: (key: TranslationKey | string) => i18n.t(key),
     language: i18n.getLanguage(),
     setLanguage: (lang: Language) => {
       i18n.setLanguage(lang);
-      // Force re-render by dispatching custom event
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('languagechange', { detail: lang }));
       }
@@ -50,5 +60,5 @@ export function useTranslation() {
   };
 }
 
-export type { Language, TranslationKey };
+export type { TranslationKey };
 export { translations };

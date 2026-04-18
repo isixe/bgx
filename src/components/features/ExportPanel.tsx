@@ -1,15 +1,15 @@
 import { useCallback, useState, useRef, useEffect } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "../../lib/i18n";
-import { useLanguage } from "../../lib/i18n/useLanguage";
+import { useLanguage } from "../../hooks/useLanguage";
 
 type ExportFormat = "png" | "jpg" | "webp";
 
-interface FormatOption {
+type FormatOption = {
 	value: ExportFormat;
 	labelKey: "formatPng" | "formatJpg" | "formatWebp";
 	descKey: "formatPngDesc" | "formatJpgDesc" | "formatWebpDesc";
-}
+};
 
 const FORMAT_OPTIONS: FormatOption[] = [
 	{ value: "png", labelKey: "formatPng", descKey: "formatPngDesc" },
@@ -17,9 +17,9 @@ const FORMAT_OPTIONS: FormatOption[] = [
 	{ value: "webp", labelKey: "formatWebp", descKey: "formatWebpDesc" },
 ];
 
-interface ExportPanelProps {
+type ExportPanelProps = {
 	disabled?: boolean;
-}
+};
 
 export function ExportPanel({ disabled = false }: ExportPanelProps) {
 	const { resultImage, originalImage } = useAppStore();

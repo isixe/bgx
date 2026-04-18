@@ -1,9 +1,8 @@
 import { useCallback, useRef, useState, useEffect } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "../../lib/i18n";
-import { useLanguage } from "../../lib/i18n/useLanguage";
-import { getModelById, getLocalizedModel } from "../../lib/models";
-import type { ModelId } from "../../lib/models";
+import { useLanguage } from "../../hooks/useLanguage";
+import { getModelById, getLocalizedModel } from "../../utils/modelUtils";
 
 const SUPPORTED_FORMATS = [
 	"image/jpeg",
@@ -178,55 +177,6 @@ export function ImageUploader() {
 			<h3 className="mb-2 text-base font-medium text-slate-900">{t("uploaderTitle")}</h3>
 			<p className="mb-3 text-sm text-slate-500">{t("uploaderSubtitle")}</p>
 			<p className="mb-4 text-xs text-slate-400">{t("uploaderPaste")}</p>
-
-			{/* Model Selector */}
-			<div className="relative mx-auto max-w-xs" ref={modelDropdownRef}>
-				<button
-					onClick={(e) => {
-						e.stopPropagation();
-						setIsModelOpen(!isModelOpen);
-					}}
-					className="flex mx-auto items-center text-left text-sm">
-					<span className="text-slate-600">
-						{t("modelLabel")} <span className="font-medium text-slate-600">{localizedCurrentModel.name}</span>
-					</span>
-					<svg
-						className={`h-4 w-4 text-slate-400 transition-transform ${isModelOpen ? "rotate-180" : ""}`}
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24">
-						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-					</svg>
-				</button>
-
-				{isModelOpen && (
-					<div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg">
-						<div className="py-1">
-							{(["u2netp", "u2net", "isnet-anime"] as const).map((modelId) => {
-								const model = getModelById(modelId);
-								const localized = getLocalizedModel(modelId, t);
-								return (
-									<button
-										key={modelId}
-										onClick={(e) => {
-											e.stopPropagation();
-											handleModelSelect(modelId);
-										}}
-										className={`
-											w-full px-3 py-2 text-left text-sm transition-colors
-											${currentModel === modelId ? "bg-indigo-50 text-indigo-600" : "text-slate-700 hover:bg-slate-50"}
-										`}>
-										<div className="flex items-center justify-between">
-											<span className="font-medium">{localized.name}</span>
-											<span className="text-xs text-slate-400">{model.size}</span>
-										</div>
-									</button>
-								);
-							})}
-						</div>
-					</div>
-				)}
-			</div>
 
 			{isDragging && (
 				<div className="absolute inset-0 flex items-center justify-center rounded-xl bg-indigo-50/80">

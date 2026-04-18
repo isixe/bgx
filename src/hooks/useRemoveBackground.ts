@@ -1,19 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { removeBackground } from 'modern-rembg';
-import type { ModelId } from './models';
-import { getModelById } from './models';
-
-export interface UseRemoveBackgroundOptions {
-  onProgress?: (progress: number) => void;
-  onError?: (error: Error) => void;
-  onSuccess?: (result: string) => void;
-  onCancelled?: () => void;
-}
-
-export interface UseRemoveBackgroundReturn {
-  processImage: (imageDataUrl: string, modelId: ModelId) => Promise<void>;
-  abort: () => void;
-}
+import { getModelById } from '../utils/modelUtils';
+import type { UseRemoveBackgroundOptions, UseRemoveBackgroundReturn } from '../types/app';
 
 export function useRemoveBackground(
   options: UseRemoveBackgroundOptions = {}
@@ -33,13 +21,13 @@ export function useRemoveBackground(
   const startProgressAnimation = useCallback(() => {
     stopProgressAnimation();
     currentProgressRef.current = 0;
-    
+
     progressIntervalRef.current = setInterval(() => {
       if (isCancelledRef.current) {
         stopProgressAnimation();
         return;
       }
-      
+
       const remaining = 90 - currentProgressRef.current;
       if (remaining > 0) {
         const increment = remaining * 0.05 + Math.random() * 2;
@@ -59,7 +47,7 @@ export function useRemoveBackground(
   }, [options.onCancelled, stopProgressAnimation]);
 
   const processImage = useCallback(
-    async (imageDataUrl: string, modelId: ModelId) => {
+    async (imageDataUrl: string, modelId: string) => {
       if (isProcessingRef.current) {
         isCancelledRef.current = true;
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -119,3 +107,5 @@ export function useRemoveBackground(
     abort,
   };
 }
+
+export type { UseRemoveBackgroundOptions, UseRemoveBackgroundReturn } from '../types/app';

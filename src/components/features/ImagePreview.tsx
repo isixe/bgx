@@ -1,153 +1,146 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "../../lib/i18n";
-import { useLanguage } from "../../lib/i18n/useLanguage";
+import { useLanguage } from "../../hooks/useLanguage";
 
 export function ImagePreview() {
-	const { originalImage, resultImage, isProcessing, startProcessing } = useAppStore();
+	const { originalImage, resultImage, isProcessing } = useAppStore();
 	const { t } = useTranslation();
-	useLanguage(); // Force re-render on language change
+	useLanguage();
 	const [sliderPosition, setSliderPosition] = useState(50);
 	const [isDragging, setIsDragging] = useState(false);
+	const [scale, setScale] = useState(1);
+	const [position, setPosition] = useState({ x: 0, y: 0 });
+	const [isPanning, setIsPanning] = useState(false);
+	const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 	const containerRef = useRef<HTMLDivElement>(null);
+	const canvasWrapperRef = useRef<HTMLDivElement>(null);
 
 	if (!originalImage) return null;
 
-	const handleMove = (clientX: number) => {
+	const handleSliderMove = useCallback((clientX: number) => {
 		if (!containerRef.current) return;
 		const rect = containerRef.current.getBoundingClientRect();
 		const x = clientX - rect.left;
 		const percentage = (x / rect.width) * 100;
 		setSliderPosition(Math.max(0, Math.min(100, percentage)));
-	};
-
-	const handleMouseDown = () => setIsDragging(true);
-	const handleMouseUp = () => setIsDragging(false);
-
-	const handleMouseMove = (e: React.MouseEvent) => {
-		if (!isDragging) return;
-		handleMove(e.clientX);
-	};
-
-	const handleTouchMove = (e: React.TouchEvent) => {
-		handleMove(e.touches[0].clientX);
-	};
-
-	useEffect(() => {
-		const handleGlobalMouseUp = () => setIsDragging(false);
-		window.addEventListener("mouseup", handleGlobalMouseUp);
-		return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
 	}, []);
 
-	return (
-		<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-			<h3 className="mb-4 text-sm font-medium text-slate-700">{t("previewTitle")}</h3>
+	const handleMouseDown = (e: React.MouseEvent) => {
+		if (e.button === 0 && !isPanning) {
+			setIsDragging(true);
+			handleSliderMove(e.clientX);
+		}
+	};
 
+	const handleMouseUp = () => {
+		setIsDragging(false);
+		setIsPanning(false);
+	};
+
+	const handleMouseMove = useCallback((e: React.MouseEvent) => {
+		if (isDragging) {
+			handleSliderMove(e.clientX);
+		}
+		if (isPanning) {
+			const dx = e.clientX - panStart.x;
+			const dy = e.clientY - panStart.y;
+			setPosition(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+			setPanStart({ x: e.clientX, y: e.clientY });
+		}
+	}, [isDragging, isPanning, panStart, handleSliderMove]);
+
+	const handleTouchMove = useCallback((e: React.TouchEvent) => {
+		if (isDragging) {
+			handleSliderMove(e.touches[0].clientX);
+		}
+	}, [isDragging, handleSliderMove]);
+
+	const handleWheel = (e: React.WheelEvent) => {
+		e.preventDefault();
+		const delta = e.deltaY > 0 ? 0.9 : 1.1;
+		setScale(prev => Math.max(0.1, Math.min(5, prev * delta)));
+	};
+
+	const handlePanStart = (e: React.MouseEvent) => {
+		if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
+			setIsPanning(true);
+			setPanStart({ x: e.clientX, y: e.clientY });
+		}
+	};
+
+	return (
+		<div className="w-full h-full flex items-center justify-center">
 			<div
 				ref={containerRef}
-				className="relative select-none overflow-hidden rounded-lg bg-slate-50"
+				className="relative w-full h-full bg-gray-100 rounded-lg overflow-hidden cursor-crosshair select-none"
 				onMouseDown={handleMouseDown}
 				onMouseUp={handleMouseUp}
+				onMouseLeave={handleMouseUp}
 				onMouseMove={handleMouseMove}
 				onTouchMove={handleTouchMove}
-				onTouchStart={handleMouseDown}
-				onTouchEnd={handleMouseUp}>
-				{resultImage ? (
-				<>
-					{/* 底层：处理结果 */}
-					<img
-						src={resultImage}
-						alt={t("previewResult")}
-						className="block w-full"
-						style={{ maxHeight: "600px", objectFit: "contain" }}
-						draggable={false}
-					/>
+				onTouchEnd={handleMouseUp}
+				onWheel={handleWheel}
+			>
+				{/* Original Image (Background) */}
+				<img
+					src={originalImage}
+					alt="Original"
+					className="absolute inset-0 w-full h-full object-contain"
+					draggable={false}
+				/>
 
-					{/* 上层：原图（通过clip控制显示区域） */}
+				{/* Result Image (Foreground with clip) */}
+				{resultImage && (
 					<div
-						className="absolute inset-0 overflow-hidden"
-						style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}>
+						className="absolute inset-0"
+						style={{
+							clipPath: `inset(0 0 0 ${sliderPosition}%)`,
+							backgroundImage: `
+								linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
+								linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
+								linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
+								linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)
+							`,
+							backgroundSize: '20px 20px',
+							backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+							backgroundColor: '#f3f4f6',
+						}}
+					>
 						<img
-							src={originalImage}
-							alt={t("previewOriginal")}
-							className="block h-full w-full object-contain"
-							style={{ maxHeight: "600px" }}
+							src={resultImage}
+							alt="Result"
+							className="w-full h-full object-contain"
 							draggable={false}
 						/>
 					</div>
+				)}
 
-					{/* 滑块分割线 */}
+				{/* Slider Line */}
+				{resultImage && (
 					<div
-						className="absolute inset-y-0 w-1 cursor-ew-resize bg-white shadow-md"
-						style={{ left: `${sliderPosition}%`, transform: "translateX(-50%)" }}>
-						{/* 滑块按钮 */}
-						<div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-							<div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md">
-								<svg className="h-4 w-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
-								</svg>
+						className="absolute top-0 bottom-0 w-1 bg-white shadow-lg cursor-ew-resize"
+						style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
+					>
+						<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center">
+							<div className="flex gap-1">
+								<div className="w-0.5 h-3 bg-gray-400" />
+								<div className="w-0.5 h-3 bg-gray-400" />
 							</div>
 						</div>
 					</div>
+				)}
 
-					{/* 标签 */}
-					<div className="absolute bottom-3 left-3 rounded bg-white/90 px-2 py-1 text-xs font-medium text-slate-700 shadow-sm">
-						{t("previewOriginal")}
-					</div>
-					<div className="absolute bottom-3 right-3 rounded bg-white/90 px-2 py-1 text-xs font-medium text-slate-700 shadow-sm">
-						{t("previewResult")}
-					</div>
-
-					{/* 处理中遮罩 */}
-					{isProcessing && (
-						<div className="absolute inset-0 flex items-center justify-center bg-white/80">
-							<div className="text-center">
-								<div className="mx-auto mb-4 flex items-center justify-center gap-1">
-									<div className="h-6 w-6 animate-bounce rounded-sm bg-indigo-600" style={{ animationDelay: '0ms' }} />
-									<div className="h-6 w-6 animate-bounce rounded-sm bg-indigo-600" style={{ animationDelay: '150ms' }} />
-									<div className="h-6 w-6 animate-bounce rounded-sm bg-indigo-600" style={{ animationDelay: '300ms' }} />
-								</div>
-								<p className="text-sm font-medium text-slate-700">{t("processingHint")}</p>
-								<p className="mt-1 text-xs text-slate-500">{t("processingModelDownload")}</p>
-							</div>
+				{/* Processing Overlay */}
+				{isProcessing && (
+					<div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-4">
+						<div className="w-10 h-10 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+						<div className="text-white text-lg font-medium">
+							{t('processingHint')}
 						</div>
-					)}
-				</>
-			) : (
-					<div className="relative">
-						<img
-							src={originalImage}
-							alt={t("previewOriginal")}
-							className="block w-full"
-							style={{ maxHeight: "600px", objectFit: "contain" }}
-							draggable={false}
-						/>
-						{isProcessing && (
-							<div className="absolute inset-0 flex items-center justify-center bg-white/80">
-								<div className="text-center">
-									<div className="mx-auto mb-4 flex items-center justify-center gap-1">
-										<div className="h-6 w-6 animate-bounce rounded-sm bg-indigo-600" style={{ animationDelay: '0ms' }} />
-										<div className="h-6 w-6 animate-bounce rounded-sm bg-indigo-600" style={{ animationDelay: '150ms' }} />
-										<div className="h-6 w-6 animate-bounce rounded-sm bg-indigo-600" style={{ animationDelay: '300ms' }} />
-									</div>
-									<p className="text-sm font-medium text-slate-700">{t("processingHint")}</p>
-									<p className="mt-1 text-xs text-slate-500">{t("processingModelDownload")}</p>
-								</div>
-							</div>
-						)}
 					</div>
 				)}
 			</div>
-
-			{resultImage ? (
-				<p className="mt-3 text-center text-xs text-slate-400">{t("previewDragHint")}</p>
-			) : !isProcessing ? (
-				<button
-					onClick={startProcessing}
-					className="mt-4 w-full rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow">
-					{t("startProcessing")}
-				</button>
-			) : null}
 		</div>
 	);
 }

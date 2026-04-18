@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { i18n, type Language } from './index';
+import { i18n, type Language } from '../lib/i18n';
 
 function initClientLanguage(): Language {
   if (typeof window === 'undefined') {
