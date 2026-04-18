@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "../../lib/i18n";
 import { useLanguage } from "../../hooks/useLanguage";
@@ -9,32 +10,63 @@ import { ModelsPage } from "../features/ModelsPage";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 
 export function MainLayout() {
-	const { originalImage, resultImage, isProcessing, currentModel, processedModel, startProcessing, reset, currentPage, setCurrentPage } = useAppStore();
+	const { originalImage, resultImage, isProcessing, currentModel, processedModel, startProcessing, reset, currentPage, setCurrentPage, isDarkMode, setIsDarkMode } = useAppStore();
 	const { t } = useTranslation();
-	useLanguage();
+	const { isHydrated } = useLanguage();
+	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 	const isModelProcessed = processedModel === currentModel;
 	const error = useAppStore((state) => state.error);
 
+	const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
 	return (
-		<div className="flex h-screen flex-col bg-slate-50">
-			<header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4">
+		<div className={`flex h-screen flex-col ${isDarkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
+			<header className={`flex h-14 flex-shrink-0 items-center justify-between border-b ${isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'} px-4`}>
 				<div className="flex items-center gap-3">
+					{/* Mobile Menu Button */}
+					<button
+						onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+						className="lg:hidden flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+						aria-label="Toggle menu"
+					>
+						<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+							<path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+						</svg>
+					</button>
 					<img src="/favicon.ico" alt="BGX" className="h-8 w-8 rounded-lg" />
-					<span className="text-base font-semibold text-slate-900">BGX</span>
+					<span className={`text-base font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>BGX</span>
 				</div>
 				<div className="flex items-center gap-2">
 					<button
+						onClick={() => setIsDarkMode(!isDarkMode)}
+						className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+						aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+					>
+						{isDarkMode ? (
+							<svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+								<circle cx="12" cy="12" r="5" />
+								<path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+							</svg>
+						) : (
+							<svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+								<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+							</svg>
+						)}
+					</button>
+					<button
 						onClick={() => setCurrentPage('models')}
-						className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-						title={t('settings')}
+						className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+						title={isHydrated ? t('settings') : 'Settings'}
 					>
 						<svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
 							<circle cx="12" cy="12" r="3" />
 							<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
 						</svg>
 					</button>
-					<LanguageSwitcher />
+					<div className="hidden sm:block">
+						<LanguageSwitcher />
+					</div>
 					<a
 						href="https://github.com"
 						target="_blank"
@@ -49,8 +81,8 @@ export function MainLayout() {
 				</div>
 			</header>
 
-			<div className="flex flex-1 overflow-hidden">
-				<main className="flex-1 flex flex-col overflow-hidden bg-slate-100">
+			<div className="flex flex-1 overflow-hidden relative">
+				<main className={`flex-1 flex flex-col overflow-hidden ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
 					{currentPage === 'models' ? (
 						<div className="flex flex-1 overflow-hidden">
 							<div className="w-full max-w-3xl mx-auto">
@@ -58,75 +90,194 @@ export function MainLayout() {
 							</div>
 						</div>
 					) : !originalImage ? (
-						<div className="flex flex-1 items-center justify-center">
+						<div className="flex flex-1 items-center justify-center p-4">
 								<ImageUploader />
 						</div>
 					) : (
-							<div className="flex flex-1 overflow-hidden">
-									<ImagePreview />
-						</div>
+								<div className="flex flex-1 overflow-hidden">
+										<ImagePreview />
+							</div>
 					)}
 				</main>
 
+				{/* Desktop Sidebar */}
 				{currentPage !== 'models' && (
-				<aside className="w-[400px] flex-shrink-0 border-l border-slate-200 bg-white overflow-y-auto">
-					<div className="p-4 space-y-6">
-						{error && (
-							<div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-lg border border-red-200 bg-red-600 px-4 py-3 text-sm text-white shadow-lg">
-								<button onClick={() => useAppStore.getState().setError(null)} className="ml-3 text-white/70 hover:text-white">✕</button>
-								{error}
-							</div>
-						)}
+					<aside className={`hidden lg:block w-[400px] flex-shrink-0 border-l ${isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'} overflow-y-auto`}>
+						<SidebarContent 
+							error={error}
+							originalImage={originalImage}
+							resultImage={resultImage}
+							isProcessing={isProcessing}
+							isModelProcessed={isModelProcessed}
+							startProcessing={startProcessing}
+							reset={reset}
+							isHydrated={isHydrated}
+							t={t}
+							isDarkMode={isDarkMode}
+						/>
+					</aside>
+				)}
 
-						<div className="space-y-2">
-							{originalImage && !resultImage && !isProcessing && (
-								<button
-									onClick={startProcessing}
-									disabled={!originalImage}
-									className="w-full rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-								>
-									{t("startProcessing")}
-								</button>
-							)}
-
-							{resultImage && (
-								<>
-									{!isModelProcessed && !isProcessing && (
-										<button
-											onClick={startProcessing}
-											className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-indigo-700"
-										>
-											{t("reprocess")}
-										</button>
-									)}
-
+				{/* Mobile Menu Overlay */}
+				{isMobileMenuOpen && currentPage !== 'models' && (
+					<>
+						{/* Backdrop */}
+						<div 
+							className="lg:hidden fixed inset-0 bg-black/50 z-40"
+							onClick={closeMobileMenu}
+						/>
+						{/* Mobile Sidebar */}
+						<aside className={`lg:hidden fixed inset-y-0 left-0 w-[320px] z-50 border-r ${isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'} overflow-y-auto transform transition-transform duration-300 ease-in-out`}>
+							<div className="p-4 space-y-6">
+								{/* Mobile Menu Header */}
+								<div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-700">
+									<span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+										{isHydrated ? t('menu') : 'Menu'}
+									</span>
 									<button
-										onClick={reset}
-										disabled={isProcessing}
-										className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 disabled:opacity-50"
+										onClick={closeMobileMenu}
+										className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
 									>
-										{t("processNewImage")}
+										<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+											<path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+										</svg>
 									</button>
-								</>
-							)}
+								</div>
 
-							{isProcessing && (
+								{/* Mobile Language Switcher */}
+								<div className="sm:hidden">
+									<LanguageSwitcher />
+								</div>
+
+								{/* Mobile Settings Button */}
 								<button
-									onClick={() => useAppStore.getState().abortProcessing?.()}
-									className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50"
+									onClick={() => {
+										setCurrentPage('models');
+										closeMobileMenu();
+									}}
+									className={`sm:hidden w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${isDarkMode ? 'text-slate-200 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}
 								>
-									{t("cancel")}
+									<svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+										<circle cx="12" cy="12" r="3" />
+										<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+								</svg>
+									{isHydrated ? t('settings') : 'Settings'}
 								</button>
-							)}
-						</div>
 
-						<ModelSelector />
-
-						{originalImage && <ExportPanel disabled={isProcessing} />}
-					</div>
-				</aside>
+								<SidebarContent 
+									error={error}
+									originalImage={originalImage}
+									resultImage={resultImage}
+									isProcessing={isProcessing}
+									isModelProcessed={isModelProcessed}
+									startProcessing={startProcessing}
+									reset={reset}
+									isHydrated={isHydrated}
+									t={t}
+									isDarkMode={isDarkMode}
+									onAction={closeMobileMenu}
+								/>
+							</div>
+						</aside>
+					</>
 				)}
 			</div>
 		</div>
+	);
+}
+
+// Sidebar content component to avoid duplication
+interface SidebarContentProps {
+	error: string | null;
+	originalImage: string | null;
+	resultImage: string | null;
+	isProcessing: boolean;
+	isModelProcessed: boolean;
+	startProcessing: () => void;
+	reset: () => void;
+	isHydrated: boolean;
+	t: (key: string) => string;
+	isDarkMode: boolean;
+	onAction?: () => void;
+}
+
+function SidebarContent({ 
+	error, 
+	originalImage, 
+	resultImage, 
+	isProcessing, 
+	isModelProcessed, 
+	startProcessing, 
+	reset, 
+	isHydrated, 
+	t, 
+	isDarkMode,
+	onAction 
+}: SidebarContentProps) {
+	const handleStartProcessing = () => {
+		startProcessing();
+		onAction?.();
+	};
+
+	const handleReset = () => {
+		reset();
+		onAction?.();
+	};
+
+	return (
+		<>
+			{error && (
+				<div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-lg border border-red-200 bg-red-600 px-4 py-3 text-sm text-white shadow-lg">
+					<button onClick={() => useAppStore.getState().setError(null)} className="ml-3 text-white/70 hover:text-white">✕</button>
+					{error}
+				</div>
+			)}
+
+			<div className="space-y-2">
+				{originalImage && !resultImage && !isProcessing && (
+					<button
+						onClick={handleStartProcessing}
+						disabled={!originalImage}
+						className="w-full rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						{isHydrated ? t("startProcessing") : "Start Processing"}
+					</button>
+				)}
+
+				{resultImage && (
+					<>
+						{!isModelProcessed && !isProcessing && (
+							<button
+								onClick={handleStartProcessing}
+								className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-indigo-700"
+							>
+								{isHydrated ? t("reprocess") : "Reprocess"}
+							</button>
+						)}
+
+						<button
+							onClick={handleReset}
+							disabled={isProcessing}
+							className={`w-full rounded-lg border px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-50 ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+						>
+							{isHydrated ? t("processNewImage") : "Process New Image"}
+						</button>
+					</>
+				)}
+
+				{isProcessing && (
+					<button
+						onClick={() => useAppStore.getState().abortProcessing?.()}
+						className={`w-full rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+					>
+						{isHydrated ? t("cancel") : "Cancel"}
+					</button>
+				)}
+			</div>
+
+			<ModelSelector />
+
+			{originalImage && <ExportPanel disabled={isProcessing} />}
+		</>
 	);
 }

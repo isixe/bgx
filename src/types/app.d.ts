@@ -18,6 +18,8 @@ export type AppState = {
   isReadyToProcess: boolean;
   processedModel: string | null;
   currentPage: 'main' | 'models';
+  isDarkMode: boolean;
+  processingTrigger: number;
 
   setCurrentModel: (model: string) => void;
   setCurrentPage: (page: 'main' | 'models') => void;
@@ -29,6 +31,7 @@ export type AppState = {
   setAbortFn: (abort: (() => void) | null) => void;
   setIsReadyToProcess: (isReady: boolean) => void;
   setProcessedModel: (model: string | null) => void;
+  setIsDarkMode: (isDark: boolean) => void;
   startProcessing: () => void;
   reset: () => void;
   cancelProcessing: () => void;

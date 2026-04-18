@@ -5,7 +5,7 @@ import { MODELS } from "../../config/models";
 
 export function ModelsPage() {
 	const { t } = useTranslation();
-	const { setCurrentModel, setCurrentPage, currentModel, isProcessing } = useAppStore();
+	const { setCurrentModel, setCurrentPage, currentModel, isProcessing, isDarkMode } = useAppStore();
 	const [checking, setChecking] = useState<string | null>(null);
 	const [modelStatus, setModelStatus] = useState<Record<string, "unchecked" | "checking" | "available" | "error">>({
 		u2netp: "unchecked",
@@ -49,15 +49,18 @@ export function ModelsPage() {
 
 	return (
 		<div className="flex flex-col h-full">
-			<div className="flex items-center gap-3 border-b border-slate-200 pb-4 mb-4">
+			<div
+				className={`flex items-center gap-3 border-b pb-4 mb-4 ${isDarkMode ? "border-slate-700" : "border-slate-200"}`}>
 				<button
 					onClick={() => setCurrentPage("main")}
-					className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
+					className={`flex h-8 w-8 items-center justify-center rounded-lg ${isDarkMode ? "text-slate-400 hover:bg-slate-700" : "text-slate-500 hover:bg-slate-100"}`}>
 					<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
 					</svg>
 				</button>
-				<h2 className="text-lg font-semibold text-slate-900">{t("modelsPageTitle")}</h2>
+				<h2 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
+					{t("modelsPageTitle")}
+				</h2>
 			</div>
 
 			<div className="space-y-3 overflow-y-auto flex-1">
@@ -72,17 +75,29 @@ export function ModelsPage() {
 							disabled={isProcessing}
 							className={`
                 relative w-full rounded-xl border p-5 text-left transition-all
-                ${isSelected ? "border-indigo-600 bg-indigo-50" : "border-slate-200 hover:border-slate-300 hover:shadow-sm"}
+                ${
+									isSelected
+										? isDarkMode
+											? "border-indigo-500 bg-indigo-900/30"
+											: "border-indigo-600 bg-indigo-50"
+										: isDarkMode
+											? "border-slate-600 hover:border-slate-500 hover:shadow-sm"
+											: "border-slate-200 hover:border-slate-300 hover:shadow-sm"
+								}
                 ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}
               `}>
 							<div className="flex items-center justify-between pr-14">
 								<div>
 									<div className="flex items-center gap-2">
-										<span className={`text-base font-medium ${isSelected ? "text-indigo-600" : "text-slate-900"}`}>
+										<span
+											className={`text-base font-medium ${isSelected ? (isDarkMode ? "text-white" : "text-indigo-600") : isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
 											{model.name}
 										</span>
 										{isSelected && (
-											<svg className="h-4 w-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+											<svg
+												className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-indigo-600"}`}
+												fill="currentColor"
+												viewBox="0 0 20 20">
 												<path
 													fillRule="evenodd"
 													d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -91,8 +106,11 @@ export function ModelsPage() {
 											</svg>
 										)}
 									</div>
-									<p className="mt-1 text-sm text-slate-500">{t(model.descKey)}</p>
-									<div className="mt-1 flex items-center gap-3 text-xs text-slate-400">
+									<p className={`mt-1 text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+										{t(model.descKey)}
+									</p>
+									<div
+										className={`mt-1 flex items-center gap-3 text-xs ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
 										<span>{model.size}</span>
 										<span>
 											{t("modelOutputSize")}: {model.resolution}

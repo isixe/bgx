@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation, type Language } from '../../lib/i18n';
+import { useLanguage } from '../../hooks/useLanguage';
+import { useAppStore } from '../../stores/appStore';
 
 export function LanguageSwitcher() {
   const { language, setLanguage, t } = useTranslation();
+  const { isHydrated } = useLanguage();
+  const { isDarkMode } = useAppStore();
   const [isOpen, setIsOpen] = useState(false);
   const [currentLang, setCurrentLang] = useState<Language>(language);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -36,8 +40,8 @@ export function LanguageSwitcher() {
   };
 
   const languages: { value: Language; label: string }[] = [
-    { value: 'zh', label: t('languageZh') },
-    { value: 'en', label: t('languageEn') },
+    { value: 'zh', label: isHydrated ? t('languageZh') : '中文' },
+    { value: 'en', label: isHydrated ? t('languageEn') : 'English' },
   ];
 
   return (
@@ -45,7 +49,7 @@ export function LanguageSwitcher() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex h-7 w-7 items-center justify-center text-slate-500 transition-colors hover:text-slate-700"
-        title={t('language')}
+        title={isHydrated ? t('language') : 'Language'}
       >
         <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -58,20 +62,24 @@ export function LanguageSwitcher() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-20 mt-1 w-32 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+        <div className={`absolute right-0 z-20 mt-1 w-32 rounded-lg border py-1 shadow-lg ${isDarkMode ? 'border-slate-600 bg-slate-800' : 'border-slate-200 bg-white'}`}>
           {languages.map((lang) => (
             <button
               key={lang.value}
               onClick={() => handleSelect(lang.value)}
               className={`w-full px-4 py-2 text-left text-sm transition-colors ${
                 currentLang === lang.value
-                  ? 'bg-indigo-50 text-indigo-600 font-medium'
-                  : 'text-slate-700 hover:bg-slate-50'
+                  ? isDarkMode 
+                    ? 'bg-indigo-900/30 text-white font-medium'
+                    : 'bg-indigo-50 text-indigo-600 font-medium'
+                  : isDarkMode
+                    ? 'text-slate-300 hover:bg-slate-700'
+                    : 'text-slate-700 hover:bg-slate-50'
               }`}
             >
               <div className="flex items-center gap-2">
                 {currentLang === lang.value && (
-                  <svg className="h-4 w-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className={`h-4 w-4 ${isDarkMode ? 'text-white' : 'text-indigo-600'}`} fill="currentColor" viewBox="0 0 20 20">
                     <path
                       fillRule="evenodd"
                       d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"

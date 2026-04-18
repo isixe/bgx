@@ -19,9 +19,9 @@ const SUPPORTED_FORMATS = [
 const SUPPORTED_EXTENSIONS = ".jpg,.jpeg,.png,.webp,.bmp,.tiff,.tif,.svg,.avif,.heic,.heif";
 
 export function ImageUploader() {
-	const { setOriginalImage, setError, currentModel, setCurrentModel } = useAppStore();
+	const { setOriginalImage, setError, currentModel, setCurrentModel, isDarkMode } = useAppStore();
 	const { t } = useTranslation();
-	useLanguage(); // Force re-render on language change
+	const { isHydrated } = useLanguage(); // Force re-render on language change
 	const [isDragging, setIsDragging] = useState(false);
 	const [isModelOpen, setIsModelOpen] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -151,8 +151,12 @@ export function ImageUploader() {
         relative mx-auto max-w-3xl cursor-pointer rounded-xl border-2 border-dashed p-10 text-center transition-all duration-200
         ${
 					isDragging
-						? "border-indigo-500 bg-indigo-50"
-						: "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white"
+						? isDarkMode
+							? "border-indigo-400 bg-indigo-900/30"
+							: "border-indigo-500 bg-indigo-50"
+						: isDarkMode
+							? "border-slate-600 bg-slate-800 hover:border-slate-500 hover:bg-slate-700"
+							: "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white"
 				}
       `}>
 			<input
@@ -163,8 +167,13 @@ export function ImageUploader() {
 				className="hidden"
 			/>
 
-			<div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100">
-				<svg className="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<div
+				className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full ${isDarkMode ? "bg-indigo-900/50" : "bg-indigo-100"}`}>
+				<svg
+					className={`h-8 w-8 ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`}
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24">
 					<path
 						strokeLinecap="round"
 						strokeLinejoin="round"
@@ -174,13 +183,22 @@ export function ImageUploader() {
 				</svg>
 			</div>
 
-			<h3 className="mb-2 text-base font-medium text-slate-900">{t("uploaderTitle")}</h3>
-			<p className="mb-3 text-sm text-slate-500">{t("uploaderSubtitle")}</p>
-			<p className="mb-4 text-xs text-slate-400">{t("uploaderPaste")}</p>
+			<h3 className={`mb-2 text-base font-medium ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
+				{isHydrated ? t("uploaderTitle") : "Upload Image"}
+			</h3>
+			<p className={`mb-3 text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+				{isHydrated ? t("uploaderSubtitle") : "Drag and drop or click to select"}
+			</p>
+			<p className={`mb-4 text-xs ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+				{isHydrated ? t("uploaderPaste") : "Or paste from clipboard (Ctrl+V)"}
+			</p>
 
 			{isDragging && (
-				<div className="absolute inset-0 flex items-center justify-center rounded-xl bg-indigo-50/80">
-					<span className="text-sm font-medium text-indigo-600">{t("uploaderDrop")}</span>
+				<div
+					className={`absolute inset-0 flex items-center justify-center rounded-xl ${isDarkMode ? "bg-indigo-900/50" : "bg-indigo-50/80"}`}>
+					<span className={`text-sm font-medium ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`}>
+						{isHydrated ? t("uploaderDrop") : "Drop here"}
+					</span>
 				</div>
 			)}
 		</div>

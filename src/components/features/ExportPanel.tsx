@@ -22,7 +22,7 @@ type ExportPanelProps = {
 };
 
 export function ExportPanel({ disabled = false }: ExportPanelProps) {
-	const { resultImage, originalImage } = useAppStore();
+	const { resultImage, originalImage, isDarkMode } = useAppStore();
 	const { t } = useTranslation();
 	useLanguage();
 	const [copied, setCopied] = useState(false);
@@ -89,8 +89,8 @@ export function ExportPanel({ disabled = false }: ExportPanelProps) {
 	if (!originalImage) return null;
 
 	return (
-		<div className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm ${disabled ? 'opacity-60' : ''}`}>
-			<h3 className="mb-3 text-sm font-medium text-slate-700">{t("exportTitle")}</h3>
+		<div className={`rounded-xl border p-4 shadow-sm ${disabled ? 'opacity-60' : ''} ${isDarkMode ? 'border-slate-600 bg-slate-800' : 'border-slate-200 bg-white'}`}>
+			<h3 className={`mb-3 text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{t("exportTitle")}</h3>
 
 			<div className="relative">
 				{disabled && <div className="absolute inset-0 z-10 cursor-not-allowed" />}
@@ -99,13 +99,13 @@ export function ExportPanel({ disabled = false }: ExportPanelProps) {
 					<button
 						onClick={() => !disabled && setIsOpen(!isOpen)}
 						disabled={disabled}
-						className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-left transition-all hover:border-slate-300 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50">
+						className={`flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left transition-all hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${isDarkMode ? 'border-slate-600 bg-slate-700 hover:border-slate-500' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
 						<div>
-							<div className="text-sm font-medium text-slate-900">{t(selectedOption.labelKey)}</div>
-							<div className="text-xs text-slate-500">{t(selectedOption.descKey)}</div>
+							<div className={`text-sm font-medium ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>{t(selectedOption.labelKey)}</div>
+							<div className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{t(selectedOption.descKey)}</div>
 						</div>
 						<svg
-							className={`h-5 w-5 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+							className={`h-5 w-5 transition-transform ${isOpen ? "rotate-180" : ""} ${isDarkMode ? 'text-slate-400' : 'text-slate-400'}`}
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24">
@@ -114,7 +114,7 @@ export function ExportPanel({ disabled = false }: ExportPanelProps) {
 					</button>
 
 					{isOpen && !disabled && (
-						<div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg">
+						<div className={`absolute z-10 mt-1 w-full rounded-lg border shadow-lg ${isDarkMode ? 'border-slate-600 bg-slate-800' : 'border-slate-200 bg-white'}`}>
 							<div className="py-1">
 								{FORMAT_OPTIONS.map((format) => (
 									<button
@@ -124,19 +124,21 @@ export function ExportPanel({ disabled = false }: ExportPanelProps) {
 											setIsOpen(false);
 										}}
 										className={`w-full px-4 py-3 text-left transition-colors ${
-											selectedFormat === format.value ? "bg-indigo-50" : "hover:bg-slate-50"
+											selectedFormat === format.value 
+												? isDarkMode ? "bg-indigo-900/30" : "bg-indigo-50"
+												: isDarkMode ? "hover:bg-slate-700" : "hover:bg-slate-50"
 										}`}>
 										<div className="flex items-start justify-between">
 											<div>
 												<div
-													className={`text-sm font-medium ${selectedFormat === format.value ? "text-indigo-600" : "text-slate-900"}`}>
-													{t(format.labelKey)}
-												</div>
-												<div className="text-xs text-slate-500">{t(format.descKey)}</div>
+											className={`text-sm font-medium ${selectedFormat === format.value ? (isDarkMode ? "text-white" : "text-indigo-600") : isDarkMode ? 'text-slate-100' : "text-slate-900"}`}>
+											{t(format.labelKey)}
+										</div>
+												<div className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{t(format.descKey)}</div>
 											</div>
 											<div className="flex h-4 w-4 flex-shrink-0 items-center justify-center">
 												{selectedFormat === format.value && (
-													<svg className="h-4 w-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+											<svg className={`h-4 w-4 ${isDarkMode ? 'text-white' : 'text-indigo-600'}`} fill="currentColor" viewBox="0 0 20 20">
 														<path
 															fillRule="evenodd"
 															d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -177,7 +179,9 @@ export function ExportPanel({ disabled = false }: ExportPanelProps) {
 							${
 								copied
 									? "bg-green-600 text-white"
-									: "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:shadow-sm"
+									: isDarkMode 
+										? "border border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600 hover:shadow-sm"
+										: "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:shadow-sm"
 							}
 							disabled:cursor-not-allowed disabled:opacity-50
 						`}>
@@ -204,7 +208,7 @@ export function ExportPanel({ disabled = false }: ExportPanelProps) {
 					</button>
 				</div>
 
-				<p className="mt-3 text-xs text-slate-400">{t("clipboardHint")}</p>
+				<p className={`mt-3 text-xs ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{t("clipboardHint")}</p>
 			</div>
 		</div>
 	);

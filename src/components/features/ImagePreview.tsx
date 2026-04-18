@@ -4,9 +4,9 @@ import { useTranslation } from "../../lib/i18n";
 import { useLanguage } from "../../hooks/useLanguage";
 
 export function ImagePreview() {
-	const { originalImage, resultImage, isProcessing } = useAppStore();
+	const { originalImage, resultImage, isProcessing, isDarkMode } = useAppStore();
 	const { t } = useTranslation();
-	useLanguage();
+	const { isHydrated } = useLanguage();
 	const [sliderPosition, setSliderPosition] = useState(50);
 	const [isDragging, setIsDragging] = useState(false);
 	const [scale, setScale] = useState(1);
@@ -73,7 +73,7 @@ export function ImagePreview() {
 		<div className="w-full h-full flex items-center justify-center">
 			<div
 				ref={containerRef}
-				className="relative w-full h-full bg-gray-100 rounded-lg overflow-hidden cursor-crosshair select-none"
+				className={`relative w-full h-full rounded-lg overflow-hidden cursor-crosshair select-none ${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'}`}
 				onMouseDown={handleMouseDown}
 				onMouseUp={handleMouseUp}
 				onMouseLeave={handleMouseUp}
@@ -96,7 +96,12 @@ export function ImagePreview() {
 						className="absolute inset-0"
 						style={{
 							clipPath: `inset(0 0 0 ${sliderPosition}%)`,
-							backgroundImage: `
+							backgroundImage: isDarkMode ? `
+								linear-gradient(45deg, #334155 25%, transparent 25%),
+								linear-gradient(-45deg, #334155 25%, transparent 25%),
+								linear-gradient(45deg, transparent 75%, #334155 75%),
+								linear-gradient(-45deg, transparent 75%, #334155 75%)
+							` : `
 								linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
 								linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
 								linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
@@ -104,7 +109,7 @@ export function ImagePreview() {
 							`,
 							backgroundSize: '20px 20px',
 							backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-							backgroundColor: '#f3f4f6',
+							backgroundColor: isDarkMode ? '#1e293b' : '#f3f4f6',
 						}}
 					>
 						<img
@@ -136,7 +141,7 @@ export function ImagePreview() {
 					<div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-4">
 						<div className="w-10 h-10 border-3 border-white/30 border-t-white rounded-full animate-spin" />
 						<div className="text-white text-lg font-medium">
-							{t('processingHint')}
+							{isHydrated ? t('processingHint') : 'Processing...'}
 						</div>
 					</div>
 				)}

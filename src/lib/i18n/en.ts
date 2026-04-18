@@ -126,6 +126,9 @@ export const translations = {
   language: 'Language',
   languageZh: '中文',
   languageEn: 'English',
+
+  darkMode: 'Dark Mode',
+  lightMode: 'Light Mode',
 } as const;
 
 export type TranslationKey = keyof typeof translations;

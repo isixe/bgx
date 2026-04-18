@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useAppStore } from "../stores/appStore";
-import { useRemoveBackground } from "../hooks/useRemoveBackground";
+import { useRemoveBackgroundWorker } from "../hooks/useRemoveBackgroundWorker";
 import { MainLayout } from "../components/layout/MainLayout";
 
 export function AppProvider() {
@@ -10,6 +10,8 @@ export function AppProvider() {
 		resultImage,
 		isProcessing,
 		isReadyToProcess,
+		isDarkMode,
+		processingTrigger,
 		setResultImage,
 		setIsProcessing,
 		setProgress,
@@ -45,11 +47,15 @@ export function AppProvider() {
 	);
 
 	const handleCancelled = useCallback(() => {
-		setIsProcessing(false);
-		setProgress(0);
+		// Only update if currently processing to avoid unnecessary re-renders
+		const state = useAppStore.getState();
+		if (state.isProcessing) {
+			setIsProcessing(false);
+			setProgress(0);
+		}
 	}, [setIsProcessing, setProgress]);
 
-	const { processImage, abort } = useRemoveBackground({
+	const { processImage, abort } = useRemoveBackgroundWorker({
 		onProgress: handleProgress,
 		onError: handleError,
 		onSuccess: handleSuccess,
@@ -76,13 +82,33 @@ export function AppProvider() {
 			setProgress(0);
 			processImage(originalImage, currentModel);
 		}
-	}, [originalImage, currentModel, isProcessing, isReadyToProcess, processImage, setIsProcessing, setIsReadyToProcess, setError, setProgress]);
+	}, [
+		originalImage,
+		currentModel,
+		isProcessing,
+		isReadyToProcess,
+		processingTrigger,
+		processImage,
+		setIsProcessing,
+		setIsReadyToProcess,
+		setError,
+		setProgress,
+	]);
 
 	useEffect(() => {
 		return () => {
 			abort();
 		};
 	}, [abort]);
+
+	// Sync dark mode to html element for Tailwind dark mode
+	useEffect(() => {
+		if (isDarkMode) {
+			document.documentElement.classList.add("dark");
+		} else {
+			document.documentElement.classList.remove("dark");
+		}
+	}, [isDarkMode]);
 
 	return <MainLayout />;
 }
