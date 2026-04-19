@@ -17,7 +17,12 @@ const SUPPORTED_FORMATS = [
 
 const SUPPORTED_EXTENSIONS = ".jpg,.jpeg,.png,.webp,.bmp,.tiff,.tif,.svg,.avif,.heic,.heif";
 
-export function ImageUploader() {
+interface ImageUploaderProps {
+	disabled?: boolean;
+	disabledMessage?: string;
+}
+
+export function ImageUploader({ disabled = false, disabledMessage }: ImageUploaderProps) {
 	const { setOriginalImage, setError, currentModel, setCurrentModel, isDarkMode } = useAppStore();
 	const { t } = useTranslation();
 	const [isDragging, setIsDragging] = useState(false);
@@ -28,7 +33,7 @@ export function ImageUploader() {
 	const currentModelInfo = getModelById(currentModel);
 	const localizedCurrentModel = getLocalizedModel(currentModel, t);
 
-	const handleModelSelect = (modelId: ModelId) => {
+	const handleModelSelect = (modelId: string) => {
 		setCurrentModel(modelId);
 		setIsModelOpen(false);
 	};
@@ -54,6 +59,8 @@ export function ImageUploader() {
 
 	const handleFile = useCallback(
 		(file: File) => {
+			if (disabled) return;
+
 			if (!isValidImageType(file)) {
 				setError(t("errorUnsupportedFormat"));
 				return;
@@ -77,12 +84,13 @@ export function ImageUploader() {
 			};
 			reader.readAsDataURL(file);
 		},
-		[setOriginalImage, setError, t],
+		[setOriginalImage, setError, t, disabled],
 	);
 
 	const handleDrop = useCallback(
 		(e: React.DragEvent) => {
 			e.preventDefault();
+			if (disabled) return;
 			setIsDragging(false);
 
 			const file = e.dataTransfer.files[0];
@@ -90,13 +98,14 @@ export function ImageUploader() {
 				handleFile(file);
 			}
 		},
-		[handleFile],
+		[handleFile, disabled],
 	);
 
 	const handleDragOver = useCallback((e: React.DragEvent) => {
 		e.preventDefault();
+		if (disabled) return;
 		setIsDragging(true);
-	}, []);
+	}, [disabled]);
 
 	const handleDragLeave = useCallback((e: React.DragEvent) => {
 		e.preventDefault();
@@ -104,8 +113,9 @@ export function ImageUploader() {
 	}, []);
 
 	const handleClick = useCallback(() => {
+		if (disabled) return;
 		fileInputRef.current?.click();
-	}, []);
+	}, [disabled]);
 
 	const handleFileInput = useCallback(
 		(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,6 +129,7 @@ export function ImageUploader() {
 
 	useEffect(() => {
 		const handlePaste = (e: ClipboardEvent) => {
+			if (disabled) return;
 			const items = e.clipboardData?.items;
 			if (!items) return;
 
@@ -137,7 +148,7 @@ export function ImageUploader() {
 		return () => {
 			document.removeEventListener("paste", handlePaste);
 		};
-	}, [handleFile]);
+	}, [handleFile, disabled]);
 
 	return (
 		<div
@@ -146,15 +157,19 @@ export function ImageUploader() {
 			onDragLeave={handleDragLeave}
 			onClick={handleClick}
 			className={`
-        relative mx-4 sm:mx-6 lg:mx-auto max-w-3xl px-6 sm:px-10 lg:px-40 py-14 cursor-pointer rounded-xl border-2 border-dashed text-center transition-all duration-200
+        relative mx-4 sm:mx-6 lg:mx-auto max-w-3xl px-6 sm:px-10 lg:px-40 py-14 rounded-xl border-2 border-dashed text-center transition-all duration-200
         ${
-					isDragging
+					disabled
 						? isDarkMode
-							? "border-indigo-400 bg-indigo-900/30"
-							: "border-indigo-500 bg-indigo-50"
-						: isDarkMode
-							? "border-slate-600 bg-slate-800 hover:border-slate-500 hover:bg-slate-700"
-							: "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white"
+							? "border-slate-700 bg-slate-800/50 cursor-not-allowed"
+							: "border-slate-300 bg-slate-100/50 cursor-not-allowed"
+						: isDragging
+							? isDarkMode
+								? "border-indigo-400 bg-indigo-900/30 cursor-pointer"
+								: "border-indigo-500 bg-indigo-50 cursor-pointer"
+							: isDarkMode
+								? "border-slate-600 bg-slate-800 hover:border-slate-500 hover:bg-slate-700 cursor-pointer"
+								: "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white cursor-pointer"
 				}
       `}>
 			<input
@@ -163,12 +178,23 @@ export function ImageUploader() {
 				accept={SUPPORTED_EXTENSIONS}
 				onChange={handleFileInput}
 				className="hidden"
+				disabled={disabled}
 			/>
 
 			<div
-				className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full ${isDarkMode ? "bg-indigo-900/50" : "bg-indigo-100"}`}>
+				className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full ${
+					disabled
+						? isDarkMode
+							? "bg-slate-700"
+							: "bg-slate-200"
+						: isDarkMode
+							? "bg-indigo-900/50"
+							: "bg-indigo-100"
+				}`}>
 				<svg
-					className={`h-8 w-8 ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`}
+					className={`h-8 w-8 ${
+						disabled ? (isDarkMode ? "text-slate-500" : "text-slate-400") : isDarkMode ? "text-indigo-400" : "text-indigo-600"
+					}`}
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24">
@@ -182,12 +208,16 @@ export function ImageUploader() {
 			</div>
 
 			<h3 className={`mb-2 text-base font-medium ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
-				{t("uploaderTitle")}
+				{disabled && disabledMessage ? disabledMessage : t("uploaderTitle")}
 			</h3>
-			<p className={`mb-3 text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{t("uploaderSubtitle")}</p>
-			<p className={`mb-4 text-xs ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>{t("uploaderPaste")}</p>
+			{!disabled && (
+				<>
+					<p className={`mb-3 text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{t("uploaderSubtitle")}</p>
+					<p className={`mb-4 text-xs ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>{t("uploaderPaste")}</p>
+				</>
+			)}
 
-			{isDragging && (
+			{isDragging && !disabled && (
 				<div
 					className={`absolute inset-0 flex items-center justify-center rounded-xl ${isDarkMode ? "bg-indigo-900/50" : "bg-indigo-50/80"}`}>
 					<span className={`text-sm font-medium ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`}>
