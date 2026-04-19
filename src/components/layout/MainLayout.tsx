@@ -27,9 +27,9 @@ export function MainLayout() {
 	const error = useAppStore((state) => state.error);
 
 	return (
-		<div className={`h-[100dvh] flex flex-col overflow-hidden ${isDarkMode ? "bg-slate-900" : "bg-slate-50"}`}>
+		<div className={`h-[100dvh] overflow-y-auto ${isDarkMode ? "bg-slate-900" : "bg-slate-50"}`}>
 			<header
-				className={`flex h-14 items-center justify-between border-b ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} px-4 flex-shrink-0`}>
+				className={`flex h-14 items-center justify-between border-b ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} px-4`}>
 				<div className="flex items-center gap-3">
 					<img src="/favicon.ico" alt="BGX" className="h-8 w-8 rounded-lg" />
 					<span className={`text-base font-semibold ${isDarkMode ? "text-white" : "text-slate-900"}`}>BGX</span>
@@ -73,7 +73,47 @@ export function MainLayout() {
 				</div>
 			</header>
 
-			<div className="flex flex-1 relative overflow-hidden">
+			{/* Mobile Layout */}
+			<div className="[@media(min-width:900px)]:hidden">
+				<main className={`${isDarkMode ? "bg-slate-800" : "bg-slate-100"}`}>
+					{currentPage === "models" ? (
+						<div className="overflow-hidden">
+							<div className="w-full max-w-3xl mx-auto">
+								<ModelsPage />
+							</div>
+						</div>
+					) : !originalImage ? (
+						<div className="flex items-center justify-center p-4" style={{ minHeight: "calc(100dvh - 56px)" }}>
+							<ImageUploader />
+						</div>
+					) : (
+						<div className="flex flex-col">
+							{/* Image Preview */}
+							<div className="h-[300px]">
+								<ImagePreview />
+							</div>
+							{/* Mobile Controls */}
+							<div
+								className={`border-t ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} p-4`}>
+								<SidebarContent
+									error={error}
+									originalImage={originalImage}
+									resultImage={resultImage}
+									isProcessing={isProcessing}
+									isModelProcessed={isModelProcessed}
+									startProcessing={startProcessing}
+									reset={reset}
+									t={t}
+									isDarkMode={isDarkMode}
+								/>
+							</div>
+						</div>
+					)}
+				</main>
+			</div>
+
+			{/* Desktop Layout */}
+			<div className="hidden [@media(min-width:900px)]:flex h-[calc(100dvh-56px)] overflow-hidden">
 				<main className={`flex-1 flex flex-col overflow-y-auto ${isDarkMode ? "bg-slate-800" : "bg-slate-100"}`}>
 					{currentPage === "models" ? (
 						<div className="overflow-hidden">
@@ -91,21 +131,6 @@ export function MainLayout() {
 							<div className="flex-1 min-h-0">
 								<ImagePreview />
 							</div>
-							{/* Mobile Controls - shown below image preview on small screens */}
-							<div
-								className={`[@media(min-width:900px)]:hidden border-t ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} p-4`}>
-								<SidebarContent
-									error={error}
-									originalImage={originalImage}
-									resultImage={resultImage}
-									isProcessing={isProcessing}
-									isModelProcessed={isModelProcessed}
-									startProcessing={startProcessing}
-									reset={reset}
-									t={t}
-									isDarkMode={isDarkMode}
-								/>
-							</div>
 						</div>
 					)}
 				</main>
@@ -113,7 +138,7 @@ export function MainLayout() {
 				{/* Desktop Sidebar */}
 				{currentPage !== "models" && (
 					<aside
-						className={`hidden [@media(min-width:900px)]:block w-[400px] flex-shrink-0 border-l ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} overflow-y-auto p-4`}>
+						className={`w-[400px] flex-shrink-0 border-l ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} overflow-y-auto p-4`}>
 						<SidebarContent
 							error={error}
 							originalImage={originalImage}
