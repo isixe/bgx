@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "../../lib/i18n";
 import { ImageUploader } from "../features/ImageUploader";
@@ -9,38 +8,37 @@ import { ModelsPage } from "../features/ModelsPage";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 
 export function MainLayout() {
-	const { originalImage, resultImage, isProcessing, currentModel, processedModel, startProcessing, reset, currentPage, setCurrentPage, isDarkMode, setIsDarkMode } = useAppStore();
+	const {
+		originalImage,
+		resultImage,
+		isProcessing,
+		currentModel,
+		processedModel,
+		startProcessing,
+		reset,
+		currentPage,
+		setCurrentPage,
+		isDarkMode,
+		setIsDarkMode,
+	} = useAppStore();
 	const { t } = useTranslation();
-	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 	const isModelProcessed = processedModel === currentModel;
 	const error = useAppStore((state) => state.error);
 
-	const closeMobileMenu = () => setIsMobileMenuOpen(false);
-
 	return (
-		<div className={`flex h-screen flex-col ${isDarkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
-			<header className={`flex h-14 flex-shrink-0 items-center justify-between border-b ${isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'} px-4`}>
+		<div className={`flex h-screen flex-col ${isDarkMode ? "bg-slate-900" : "bg-slate-50"}`}>
+			<header
+				className={`flex h-14 flex-shrink-0 items-center justify-between border-b ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} px-4`}>
 				<div className="flex items-center gap-3">
-					{/* Mobile Menu Button */}
-					<button
-						onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-						className="lg:hidden flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-						aria-label="Toggle menu"
-					>
-						<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-							<path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-						</svg>
-					</button>
 					<img src="/favicon.ico" alt="BGX" className="h-8 w-8 rounded-lg" />
-					<span className={`text-base font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>BGX</span>
+					<span className={`text-base font-semibold ${isDarkMode ? "text-white" : "text-slate-900"}`}>BGX</span>
 				</div>
 				<div className="flex items-center gap-2">
 					<button
 						onClick={() => setIsDarkMode(!isDarkMode)}
 						className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-						aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-					>
+						aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}>
 						{isDarkMode ? (
 							<svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
 								<circle cx="12" cy="12" r="5" />
@@ -53,35 +51,31 @@ export function MainLayout() {
 						)}
 					</button>
 					<button
-						onClick={() => setCurrentPage('models')}
-						className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-						title={t('settings')}
-					>
+						onClick={() => setCurrentPage("models")}
+						className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+						title={t("settings")}>
 						<svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
 							<circle cx="12" cy="12" r="3" />
 							<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
 						</svg>
 					</button>
-					<div className="hidden sm:block">
-						<LanguageSwitcher />
-					</div>
+					<LanguageSwitcher />
 					<a
-					href="https://github.com/isixe/bgx"
-					target="_blank"
-					rel="noopener noreferrer"
-					className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-					title="GitHub"
-				>
+						href="https://github.com/isixe/bgx"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+						title="GitHub">
 						<svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-							<path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+							<path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
 						</svg>
 					</a>
 				</div>
 			</header>
 
 			<div className="flex flex-1 overflow-hidden relative">
-				<main className={`flex-1 flex flex-col overflow-hidden ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
-					{currentPage === 'models' ? (
+				<main className={`flex-1 flex flex-col overflow-hidden ${isDarkMode ? "bg-slate-800" : "bg-slate-100"}`}>
+					{currentPage === "models" ? (
 						<div className="flex flex-1 overflow-hidden">
 							<div className="w-full max-w-3xl mx-auto">
 								<ModelsPage />
@@ -89,79 +83,17 @@ export function MainLayout() {
 						</div>
 					) : !originalImage ? (
 						<div className="flex flex-1 items-center justify-center p-4">
-								<ImageUploader />
+							<ImageUploader />
 						</div>
 					) : (
-								<div className="flex flex-1 overflow-hidden">
-										<ImagePreview />
+						<div className="flex flex-1 overflow-hidden flex-col lg:flex-row">
+							<div className="flex-1 overflow-hidden">
+								<ImagePreview />
 							</div>
-					)}
-				</main>
-
-				{/* Desktop Sidebar */}
-				{currentPage !== 'models' && (
-					<aside className={`hidden lg:block w-[400px] flex-shrink-0 border-l ${isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'} overflow-y-auto p-4`}>
-					<SidebarContent
-						error={error}
-						originalImage={originalImage}
-						resultImage={resultImage}
-						isProcessing={isProcessing}
-						isModelProcessed={isModelProcessed}
-						startProcessing={startProcessing}
-						reset={reset}
-						t={t}
-						isDarkMode={isDarkMode}
-					/>
-				</aside>
-				)}
-
-				{/* Mobile Menu Overlay */}
-				{isMobileMenuOpen && currentPage !== 'models' && (
-					<>
-						{/* Backdrop */}
-						<div 
-							className="lg:hidden fixed inset-0 bg-black/50 z-40"
-							onClick={closeMobileMenu}
-						/>
-						{/* Mobile Sidebar */}
-						<aside className={`lg:hidden fixed inset-y-0 left-0 w-[320px] z-50 border-r ${isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'} overflow-y-auto transform transition-transform duration-300 ease-in-out`}>
-							<div className="p-4 space-y-6">
-								{/* Mobile Menu Header */}
-								<div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-700">
-									<span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-										{t('menu')}
-									</span>
-									<button
-										onClick={closeMobileMenu}
-										className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-									>
-										<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-											<path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-										</svg>
-									</button>
-								</div>
-
-								{/* Mobile Language Switcher */}
-								<div className="sm:hidden">
-									<LanguageSwitcher />
-								</div>
-
-								{/* Mobile Settings Button */}
-								<button
-									onClick={() => {
-										setCurrentPage('models');
-										closeMobileMenu();
-									}}
-									className={`sm:hidden w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${isDarkMode ? 'text-slate-200 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}
-								>
-									<svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-									<circle cx="12" cy="12" r="3" />
-									<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-								</svg>
-									{t('settings')}
-								</button>
-
-								<SidebarContent 
+							{/* Mobile Controls - shown below image preview on small screens */}
+							<div
+								className={`lg:hidden flex-shrink-0 border-t ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} p-4 overflow-y-auto max-h-[40vh]`}>
+								<SidebarContent
 									error={error}
 									originalImage={originalImage}
 									resultImage={resultImage}
@@ -171,11 +103,28 @@ export function MainLayout() {
 									reset={reset}
 									t={t}
 									isDarkMode={isDarkMode}
-									onAction={closeMobileMenu}
 								/>
 							</div>
-						</aside>
-					</>
+						</div>
+					)}
+				</main>
+
+				{/* Desktop Sidebar */}
+				{currentPage !== "models" && (
+					<aside
+						className={`hidden lg:block w-[400px] flex-shrink-0 border-l ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} overflow-y-auto p-4`}>
+						<SidebarContent
+							error={error}
+							originalImage={originalImage}
+							resultImage={resultImage}
+							isProcessing={isProcessing}
+							isModelProcessed={isModelProcessed}
+							startProcessing={startProcessing}
+							reset={reset}
+							t={t}
+							isDarkMode={isDarkMode}
+						/>
+					</aside>
 				)}
 			</div>
 		</div>
@@ -196,17 +145,17 @@ interface SidebarContentProps {
 	onAction?: () => void;
 }
 
-function SidebarContent({ 
-	error, 
-	originalImage, 
-	resultImage, 
-	isProcessing, 
-	isModelProcessed, 
-	startProcessing, 
-	reset, 
-	t, 
+function SidebarContent({
+	error,
+	originalImage,
+	resultImage,
+	isProcessing,
+	isModelProcessed,
+	startProcessing,
+	reset,
+	t,
 	isDarkMode,
-	onAction 
+	onAction,
 }: SidebarContentProps) {
 	const handleStartProcessing = () => {
 		startProcessing();
@@ -222,7 +171,9 @@ function SidebarContent({
 		<>
 			{error && (
 				<div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-lg border border-red-200 bg-red-600 px-4 py-3 text-sm text-white shadow-lg">
-					<button onClick={() => useAppStore.getState().setError(null)} className="ml-3 text-white/70 hover:text-white">✕</button>
+					<button onClick={() => useAppStore.getState().setError(null)} className="ml-3 text-white/70 hover:text-white">
+						✕
+					</button>
 					{error}
 				</div>
 			)}
@@ -232,8 +183,7 @@ function SidebarContent({
 					<button
 						onClick={handleStartProcessing}
 						disabled={!originalImage}
-						className="w-full rounded-lg bg-indigo-600 px-6 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-					>
+						className="w-full rounded-lg bg-indigo-600 px-6 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
 						{t("startProcessing")}
 					</button>
 				)}
@@ -243,8 +193,7 @@ function SidebarContent({
 						{!isModelProcessed && !isProcessing && (
 							<button
 								onClick={handleStartProcessing}
-								className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700"
-							>
+								className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700">
 								{t("reprocess")}
 							</button>
 						)}
@@ -252,8 +201,7 @@ function SidebarContent({
 						<button
 							onClick={handleReset}
 							disabled={isProcessing}
-							className={`w-full rounded-lg border px-4 py-3 text-sm font-medium transition-all disabled:opacity-50 ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
-						>
+							className={`w-full rounded-lg border px-4 py-3 text-sm font-medium transition-all disabled:opacity-50 ${isDarkMode ? "border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}>
 							{t("processNewImage")}
 						</button>
 					</div>
