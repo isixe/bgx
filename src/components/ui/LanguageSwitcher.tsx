@@ -6,19 +6,7 @@ export function LanguageSwitcher() {
 	const { language, setLanguage, t } = useTranslation();
 	const { isDarkMode } = useAppStore();
 	const [isOpen, setIsOpen] = useState(false);
-	const [currentLang, setCurrentLang] = useState<Language>(language);
 	const dropdownRef = useRef<HTMLDivElement>(null);
-
-	// Listen for language changes
-	useEffect(() => {
-		const handleLanguageChange = (e: CustomEvent<Language>) => {
-			setCurrentLang(e.detail);
-		};
-		window.addEventListener("languagechange", handleLanguageChange as EventListener);
-		return () => {
-			window.removeEventListener("languagechange", handleLanguageChange as EventListener);
-		};
-	}, []);
 
 	// Close dropdown when clicking outside
 	useEffect(() => {
@@ -33,7 +21,6 @@ export function LanguageSwitcher() {
 
 	const handleSelect = (lang: Language) => {
 		setLanguage(lang);
-		setCurrentLang(lang);
 		setIsOpen(false);
 	};
 
@@ -66,7 +53,7 @@ export function LanguageSwitcher() {
 							key={lang.value}
 							onClick={() => handleSelect(lang.value)}
 							className={`w-full px-4 py-2 text-left text-sm transition-colors ${
-								currentLang === lang.value
+								language === lang.value
 									? isDarkMode
 										? "bg-indigo-900/30 text-white font-medium"
 										: "bg-indigo-50 text-indigo-600 font-medium"
@@ -75,7 +62,7 @@ export function LanguageSwitcher() {
 										: "text-slate-700 hover:bg-slate-50"
 							}`}>
 							<div className="flex items-center gap-2">
-								{currentLang === lang.value && (
+								{language === lang.value && (
 									<svg
 										className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-indigo-600"}`}
 										fill="currentColor"
