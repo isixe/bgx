@@ -147,6 +147,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (state.cachedModelUrl) {
       revokeCachedUrl(state.cachedModelUrl);
     }
-    set({ ...initialState });
+    // 保留当前选中的模型和模型状态，只重置图片相关状态
+    set({
+      originalImage: null,
+      resultImage: null,
+      isProcessing: false,
+      progress: 0,
+      error: null,
+      isReadyToProcess: false,
+      processedModel: null,
+      cachedModelUrl: null,
+      isModelLoading: false,
+      modelDownloadProgress: 0,
+      isModelDownloading: false,
+    });
+    // 重新加载当前模型
+    get().setCurrentModel(state.currentModel);
   },
 }));
