@@ -73,8 +73,8 @@ export function MainLayout() {
 				</div>
 			</header>
 
-			<div className="relative">
-				<main className={`flex flex-col ${isDarkMode ? "bg-slate-800" : "bg-slate-100"}`}>
+			<div className="flex relative">
+				<main className={`flex-1 flex flex-col ${isDarkMode ? "bg-slate-800" : "bg-slate-100"}`}>
 					{currentPage === "models" ? (
 						<div className="overflow-hidden">
 							<div className="w-full max-w-3xl mx-auto">

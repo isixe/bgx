@@ -41,33 +41,40 @@ export function ExportPanel({ disabled = false }: ExportPanelProps) {
 	}, []);
 
 	const handleDownload = useCallback(() => {
-		if (!resultImage) return;
+		if (!resultImage || !originalImage) return;
 
 		const canvas = document.createElement("canvas");
 		const ctx = canvas.getContext("2d");
 		if (!ctx) return;
 
-		const img = new Image();
-		img.onload = () => {
-			canvas.width = img.width;
-			canvas.height = img.height;
+		// 先加载原始图片获取原始尺寸
+		const originalImg = new Image();
+		originalImg.onload = () => {
+			// 使用原始图片的尺寸
+			canvas.width = originalImg.width;
+			canvas.height = originalImg.height;
 
 			if (selectedFormat === "jpg") {
 				ctx.fillStyle = "#FFFFFF";
 				ctx.fillRect(0, 0, canvas.width, canvas.height);
 			}
 
-			ctx.drawImage(img, 0, 0);
+			// 再加载结果图片并绘制
+			const resultImg = new Image();
+			resultImg.onload = () => {
+				ctx.drawImage(resultImg, 0, 0, canvas.width, canvas.height);
 
-			const quality = selectedFormat === "webp" ? 0.9 : undefined;
-			const dataUrl = canvas.toDataURL(`image/${selectedFormat}`, quality);
-			const link = document.createElement("a");
-			link.download = `bgx-removed-${Date.now()}.${selectedFormat}`;
-			link.href = dataUrl;
-			link.click();
+				const quality = selectedFormat === "webp" ? 0.9 : undefined;
+				const dataUrl = canvas.toDataURL(`image/${selectedFormat}`, quality);
+				const link = document.createElement("a");
+				link.download = `bgx-removed-${Date.now()}.${selectedFormat}`;
+				link.href = dataUrl;
+				link.click();
+			};
+			resultImg.src = resultImage;
 		};
-		img.src = resultImage;
-	}, [resultImage, selectedFormat]);
+		originalImg.src = originalImage;
+	}, [resultImage, originalImage, selectedFormat]);
 
 	const handleCopy = useCallback(async () => {
 		if (!resultImage) return;
