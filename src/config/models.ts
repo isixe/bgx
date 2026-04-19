@@ -37,7 +37,7 @@ export const MODELS: ModelConfig[] = [
   {
     id: 'isnet-general-use',
     name: 'ISNet General',
-    resolution: 320,
+    resolution: 1024,
     size: '~170MB',
     filename: 'isnet-general-use.onnx',
     descKey: 'model.isnet-general-use.desc',
