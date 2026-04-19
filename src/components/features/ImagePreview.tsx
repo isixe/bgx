@@ -75,7 +75,38 @@ export function ImagePreview() {
 		if (isDraggingSlider) {
 			handleSliderMove(e.touches[0].clientX);
 		}
-	}, [isDraggingSlider, handleSliderMove]);
+		if (isPanning) {
+			const touch = e.touches[0];
+			const dx = touch.clientX - panStart.x;
+			const dy = touch.clientY - panStart.y;
+			setPosition(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+			setPanStart({ x: touch.clientX, y: touch.clientY });
+		}
+	}, [isDraggingSlider, isPanning, panStart, handleSliderMove]);
+
+	const handleTouchStart = useCallback((e: React.TouchEvent) => {
+		if (isProcessing) return;
+		// 检查触摸点是否在滑块区域内
+		const touch = e.touches[0];
+		const target = e.target as HTMLElement;
+		if (target.closest('.slider-area')) return;
+		setIsPanning(true);
+		setPanStart({ x: touch.clientX, y: touch.clientY });
+	}, [isProcessing]);
+
+	const handleSliderTouchStart = useCallback((e: React.TouchEvent) => {
+		e.stopPropagation();
+		if (isProcessing) return;
+		setIsDraggingSlider(true);
+		handleSliderMove(e.touches[0].clientX);
+	}, [isProcessing, handleSliderMove]);
+
+	const handleSliderAreaTouchStart = useCallback((e: React.TouchEvent) => {
+		e.stopPropagation();
+		if (isProcessing) return;
+		setIsDraggingSlider(true);
+		handleSliderMove(e.touches[0].clientX);
+	}, [isProcessing, handleSliderMove]);
 
 	const handleWheel = (e: React.WheelEvent) => {
 		// 处理中时禁止缩放
@@ -105,6 +136,7 @@ export function ImagePreview() {
 				onMouseUp={handleMouseUp}
 				onMouseLeave={handleMouseUp}
 				onMouseMove={handleMouseMove}
+				onTouchStart={handleTouchStart}
 				onTouchMove={handleTouchMove}
 				onTouchEnd={handleMouseUp}
 				onWheel={handleWheel}
@@ -169,15 +201,17 @@ export function ImagePreview() {
 				{/* Slider Area - 扩大点击触发区域 */}
 				{resultImage && (
 					<div
-						className="absolute inset-y-0 w-20 cursor-ew-resize z-10"
+						className="slider-area absolute inset-y-0 w-20 cursor-ew-resize z-10"
 						style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
 						onMouseDown={handleSliderAreaMouseDown}
+						onTouchStart={handleSliderAreaTouchStart}
 					>
 						{/* Slider Line */}
 						<div
 							ref={sliderRef}
 							className="absolute top-0 bottom-0 left-1/2 w-1 bg-white shadow-lg -translate-x-1/2"
 							onMouseDown={handleSliderMouseDown}
+							onTouchStart={handleSliderTouchStart}
 						>
 							<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center pointer-events-none">
 								<div className="flex gap-1">

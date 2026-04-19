@@ -86,13 +86,14 @@ export function MainLayout() {
 							<ImageUploader />
 						</div>
 					) : (
-						<div className="flex flex-1 overflow-hidden flex-col lg:flex-row">
-							<div className="flex-1 overflow-hidden">
+						<div className="flex flex-1 overflow-y-auto flex-col">
+							{/* Image Preview */}
+							<div className="h-[400px] flex-shrink-0">
 								<ImagePreview />
 							</div>
 							{/* Mobile Controls - shown below image preview on small screens */}
 							<div
-								className={`lg:hidden flex-shrink-0 border-t ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} p-4 overflow-y-auto max-h-[40vh]`}>
+								className={`[@media(min-width:900px)]:hidden flex-shrink-0 border-t ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} p-4`}>
 								<SidebarContent
 									error={error}
 									originalImage={originalImage}
@@ -112,7 +113,7 @@ export function MainLayout() {
 				{/* Desktop Sidebar */}
 				{currentPage !== "models" && (
 					<aside
-						className={`hidden lg:block w-[400px] flex-shrink-0 border-l ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} overflow-y-auto p-4`}>
+						className={`hidden [@media(min-width:900px)]:block w-[400px] flex-shrink-0 border-l ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} overflow-y-auto p-4`}>
 						<SidebarContent
 							error={error}
 							originalImage={originalImage}
