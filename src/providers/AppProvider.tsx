@@ -2,8 +2,10 @@ import { useCallback, useEffect } from "react";
 import { useAppStore } from "../stores/appStore";
 import { useRemoveBackground } from "../hooks/useRemoveBackground";
 import { MainLayout } from "../components/layout/MainLayout";
+import { useTranslation, i18n } from "../lib/i18n";
 
 export function AppProvider() {
+	const { language } = useTranslation();
 	const {
 		currentModel,
 		originalImage,
@@ -81,6 +83,11 @@ export function AppProvider() {
 			document.documentElement.classList.remove("dark");
 		}
 	}, [isDarkMode]);
+
+	// Update page title based on language
+	useEffect(() => {
+		document.title = i18n.t('pageTitle');
+	}, [language]);
 
 	return <MainLayout />;
 }

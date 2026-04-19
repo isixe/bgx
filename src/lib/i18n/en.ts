@@ -1,6 +1,7 @@
 export const translations = {
   appName: 'BGX',
   appSubtitle: 'Background Remover',
+  pageTitle: 'BGX - Background Remover',
   privacyBadge: 'Local Processing, Privacy Protected',
 
   heroBadge: 'Completely Free, No Registration',
