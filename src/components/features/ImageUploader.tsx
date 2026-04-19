@@ -146,7 +146,7 @@ export function ImageUploader() {
 			onDragLeave={handleDragLeave}
 			onClick={handleClick}
 			className={`
-        relative mx-auto  max-w-3xl px-40 py-14 cursor-pointer rounded-xl border-2 border-dashed text-center transition-all duration-200
+        relative mx-4 sm:mx-6 lg:mx-auto max-w-3xl px-6 sm:px-10 lg:px-40 py-14 cursor-pointer rounded-xl border-2 border-dashed text-center transition-all duration-200
         ${
 					isDragging
 						? isDarkMode
