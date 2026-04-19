@@ -122,7 +122,7 @@ export function ImagePreview() {
 		<div className="w-full h-full flex items-center justify-center">
 			<div
 				ref={containerRef}
-				className={`relative w-full h-full rounded-lg overflow-hidden select-none ${isPanning ? 'cursor-grabbing' : 'cursor-grab'} ${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'}`}
+				className={`relative w-full h-full rounded-none sm:rounded-lg overflow-hidden select-none touch-none ${isPanning ? 'cursor-grabbing' : 'cursor-grab'} ${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'}`}
 				style={{
 					backgroundImage: `
 						linear-gradient(45deg, ${isDarkMode ? '#334155' : '#e5e7eb'} 25%, transparent 25%),

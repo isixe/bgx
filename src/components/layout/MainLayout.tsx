@@ -27,7 +27,7 @@ export function MainLayout() {
 	const error = useAppStore((state) => state.error);
 
 	return (
-		<div className={`flex h-screen flex-col ${isDarkMode ? "bg-slate-900" : "bg-slate-50"}`}>
+		<div className={`min-h-screen flex flex-col ${isDarkMode ? "bg-slate-900" : "bg-slate-50"}`}>
 			<header
 				className={`flex h-14 flex-shrink-0 items-center justify-between border-b ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} px-4`}>
 				<div className="flex items-center gap-3">
@@ -73,8 +73,8 @@ export function MainLayout() {
 				</div>
 			</header>
 
-			<div className="flex flex-1 overflow-hidden relative">
-				<main className={`flex-1 flex flex-col overflow-hidden ${isDarkMode ? "bg-slate-800" : "bg-slate-100"}`}>
+			<div className="flex flex-1 relative">
+				<main className={`flex-1 flex flex-col ${isDarkMode ? "bg-slate-800" : "bg-slate-100"}`}>
 					{currentPage === "models" ? (
 						<div className="flex flex-1 overflow-hidden">
 							<div className="w-full max-w-3xl mx-auto">
