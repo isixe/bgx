@@ -88,7 +88,7 @@ export function MainLayout() {
 					) : (
 						<div className="flex flex-1 overflow-y-auto flex-col">
 							{/* Image Preview */}
-							<div className="h-[400px] flex-shrink-0">
+							<div className="h-[300px] flex-shrink-0">
 								<ImagePreview />
 							</div>
 							{/* Mobile Controls - shown below image preview on small screens */}

@@ -72,6 +72,8 @@ export function ImagePreview() {
 	}, [isDraggingSlider, isPanning, panStart, handleSliderMove]);
 
 	const handleTouchMove = useCallback((e: React.TouchEvent) => {
+		// 阻止默认滚动行为
+		e.preventDefault();
 		if (isDraggingSlider) {
 			handleSliderMove(e.touches[0].clientX);
 		}
