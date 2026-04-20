@@ -1,4 +1,4 @@
-import { getModelPath } from './modelUtils';
+import { getModelPath, getModelById } from './modelUtils';
 
 const DB_NAME = 'bgx-models-db';
 const DB_VERSION = 1;
@@ -35,14 +35,29 @@ function openDB(): Promise<IDBDatabase> {
 	});
 }
 
+async function getModelUrl(modelId: string): Promise<string> {
+	const model = getModelById(modelId);
+	const localPath = `/models/${model.filename}`;
+
+	try {
+		const response = await fetch(localPath, { method: 'HEAD' });
+		if (response.ok) {
+			return localPath;
+		}
+	} catch {
+	}
+
+	return model.downloadUrl;
+}
+
 export async function downloadModel(
 	modelId: string,
 	onProgress?: (progress: DownloadProgress) => void
 ): Promise<void> {
-	const modelPath = getModelPath(modelId);
+	const modelUrl = await getModelUrl(modelId);
 
 	try {
-		const response = await fetch(modelPath, {
+		const response = await fetch(modelUrl, {
 			headers: {
 				Accept: '*/*',
 			},

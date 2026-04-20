@@ -1,4 +1,3 @@
-import type { TranslationKey } from '../lib/i18n';
 import type { ModelConfig } from '../types/app';
 
 export const MODELS: ModelConfig[] = [
@@ -9,6 +8,7 @@ export const MODELS: ModelConfig[] = [
     size: '~4MB',
     filename: 'u2netp.onnx',
     descKey: 'model.u2netp.desc',
+    downloadUrl: '/models/u2netp.onnx',
   },
   {
     id: 'u2net',
@@ -17,6 +17,7 @@ export const MODELS: ModelConfig[] = [
     size: '~168MB',
     filename: 'u2net.onnx',
     descKey: 'model.u2net.desc',
+    downloadUrl: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx',
   },
   {
     id: 'u2net_human_seg',
@@ -25,6 +26,7 @@ export const MODELS: ModelConfig[] = [
     size: '~168MB',
     filename: 'u2net_human_seg.onnx',
     descKey: 'model.u2net_human_seg.desc',
+    downloadUrl: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net_human_seg.onnx',
   },
   {
     id: 'silueta',
@@ -33,6 +35,7 @@ export const MODELS: ModelConfig[] = [
     size: '~42MB',
     filename: 'silueta.onnx',
     descKey: 'model.silueta.desc',
+    downloadUrl: '/models/silueta.onnx',
   },
   {
     id: 'isnet-general-use',
@@ -41,6 +44,7 @@ export const MODELS: ModelConfig[] = [
     size: '~170MB',
     filename: 'isnet-general-use.onnx',
     descKey: 'model.isnet-general-use.desc',
+    downloadUrl: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx',
   },
   {
     id: 'isnet-anime',
@@ -49,6 +53,7 @@ export const MODELS: ModelConfig[] = [
     size: '~168MB',
     filename: 'isnet-anime.onnx',
     descKey: 'model.isnet-anime.desc',
+    downloadUrl: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-anime.onnx',
   },
   {
     id: 'large',
@@ -57,6 +62,7 @@ export const MODELS: ModelConfig[] = [
     size: '~176MB',
     filename: 'large.onnx',
     descKey: 'model.large.desc',
+    downloadUrl: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/large.onnx',
   },
   {
     id: 'medium',
@@ -65,6 +71,7 @@ export const MODELS: ModelConfig[] = [
     size: '~88MB',
     filename: 'medium.onnx',
     descKey: 'model.medium.desc',
+    downloadUrl: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/medium.onnx',
   },
   {
     id: 'small',
@@ -73,6 +80,7 @@ export const MODELS: ModelConfig[] = [
     size: '~44MB',
     filename: 'small.onnx',
     descKey: 'model.small.desc',
+    downloadUrl: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/small.onnx',
   },
   {
     id: 'PPModnet_MobileNetV2',
@@ -81,5 +89,6 @@ export const MODELS: ModelConfig[] = [
     size: '~26MB',
     filename: 'PPModnet_MobileNetV2.onnx',
     descKey: 'model.PPModnet_MobileNetV2.desc',
+    downloadUrl: '/models/PPModnet_MobileNetV2.onnx',
   },
 ];
