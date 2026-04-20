@@ -6,7 +6,10 @@ export type Language = 'zh' | 'en';
 
 const translations = { zh, en };
 
-function getInitialLanguage(): Language {
+// 服務器端和客戶端首次渲染使用一致的默認語言
+const DEFAULT_LANGUAGE: Language = 'en';
+
+function getStoredLanguage(): Language | null {
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem('bgx-language') as Language | null;
     if (stored && ['zh', 'en'].includes(stored)) {
@@ -17,11 +20,11 @@ function getInitialLanguage(): Language {
       return 'zh';
     }
   }
-  return 'en';
+  return null;
 }
 
 export const i18n = {
-  currentLang: getInitialLanguage(),
+  currentLang: DEFAULT_LANGUAGE,
   listeners: new Set<() => void>(),
 
   subscribe(listener: () => void) {
@@ -63,6 +66,18 @@ export const i18n = {
 
 export function useTranslation() {
   const [, forceUpdate] = useState({});
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    // 客戶端 hydration 完成後，應用存儲的語言設置
+    if (!isHydrated) {
+      const storedLang = getStoredLanguage();
+      if (storedLang && storedLang !== i18n.currentLang) {
+        i18n.setLanguage(storedLang);
+      }
+      setIsHydrated(true);
+    }
+  }, [isHydrated]);
 
   useEffect(() => {
     return i18n.subscribe(() => {
@@ -80,6 +95,7 @@ export function useTranslation() {
     t,
     language: i18n.getLanguage(),
     setLanguage,
+    isHydrated,
   };
 }
 
