@@ -28,8 +28,6 @@ const initialState = {
   processingTrigger: 0,
   cachedModelUrl: null as string | null,
   isModelLoading: false,
-  modelDownloadProgress: 0,
-  isModelDownloading: false,
   // 全局模型状态
   modelStatuses: {} as Record<string, ModelStatus>,
   isModelStatusesLoaded: false,
@@ -76,6 +74,33 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
   },
 
+  // 共享的模型下载方法
+  downloadModelWithProgress: async (modelId: string) => {
+    const state = get();
+    
+    // 如果已经在下载中，不重复下载
+    if (state.modelStatuses[modelId] === 'downloading') {
+      return;
+    }
+
+    get().updateModelStatus(modelId, 'downloading');
+    get().setModelDownloadProgress(modelId, { loaded: 0, total: 0, percentage: 0 });
+
+    try {
+      await downloadModel(modelId, (progress) => {
+        get().setModelDownloadProgress(modelId, progress);
+      });
+
+      get().updateModelStatus(modelId, 'downloaded');
+      get().setModelDownloadProgress(modelId, null);
+    } catch (error) {
+      console.error(`Failed to download model ${modelId}:`, error);
+      get().updateModelStatus(modelId, 'error');
+      get().setModelDownloadProgress(modelId, null);
+      throw error;
+    }
+  },
+
   setCurrentModel: async (model) => {
     const state = get();
 
@@ -88,8 +113,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       currentModel: model,
       isModelLoading: true,
       cachedModelUrl: null,
-      modelDownloadProgress: 0,
-      isModelDownloading: false,
     });
 
     try {
@@ -107,29 +130,21 @@ export const useAppStore = create<AppState>((set, get) => ({
         get().updateModelStatus(model, 'downloaded');
       } else {
         // 未缓存，需要下载
-        set({ isModelDownloading: true, isModelLoading: false });
-        get().updateModelStatus(model, 'downloading');
-
-        await downloadModel(model, (progress) => {
-          set({ modelDownloadProgress: progress.percentage });
-        });
+        set({ isModelLoading: false });
+        
+        // 使用共享的下载方法
+        await get().downloadModelWithProgress(model);
 
         // 下载完成，加载到内存
         const cachedUrl = await getCachedModelBlobUrl(model);
         set({
           cachedModelUrl: cachedUrl,
-          isModelDownloading: false,
-          modelDownloadProgress: 0,
         });
-        // 更新全局状态为已下载
-        get().updateModelStatus(model, 'downloaded');
       }
     } catch (error) {
       console.error('Failed to load/download model:', error);
       set({
         isModelLoading: false,
-        isModelDownloading: false,
-        modelDownloadProgress: 0,
         error: 'model_download_failed',
       });
       // 更新全局状态为错误
@@ -168,8 +183,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       processedModel: null,
       cachedModelUrl: null,
       isModelLoading: false,
-      modelDownloadProgress: 0,
-      isModelDownloading: false,
     });
     // 重新加载当前模型
     get().setCurrentModel(state.currentModel);

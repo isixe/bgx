@@ -20,13 +20,18 @@ export function MainLayout() {
 		setCurrentPage,
 		isDarkMode,
 		setIsDarkMode,
-		isModelDownloading,
-		modelDownloadProgress,
+		modelStatuses,
+		modelDownloadProgresses,
 	} = useAppStore();
 	const { t } = useTranslation();
 
 	const isModelProcessed = processedModel === currentModel;
 	const error = useAppStore((state) => state.error);
+	
+	// 从全局状态计算当前模型的下载状态
+	const isModelDownloading = modelStatuses[currentModel] === 'downloading';
+	const currentModelProgress = modelDownloadProgresses[currentModel];
+	const modelDownloadProgress = currentModelProgress?.percentage ?? 0;
 
 	return (
 		<div className={`h-[100dvh] overflow-y-auto ${isDarkMode ? "bg-slate-900" : "bg-slate-50"}`}>

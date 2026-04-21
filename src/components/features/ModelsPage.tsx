@@ -1,10 +1,7 @@
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "../../lib/i18n";
 import { MODELS } from "../../config/models";
-import {
-	downloadModel,
-	deleteModel,
-} from "../../utils/modelCache";
+import { deleteModel } from "../../utils/modelCache";
 
 export function ModelsPage() {
 	const { t } = useTranslation();
@@ -15,27 +12,16 @@ export function ModelsPage() {
 		isProcessing,
 		isDarkMode,
 		modelStatuses,
-		updateModelStatus,
 		modelDownloadProgresses,
-		setModelDownloadProgress,
+		downloadModelWithProgress,
+		updateModelStatus,
 	} = useAppStore();
 
 	const handleDownload = async (modelId: string) => {
-		if (modelStatuses[modelId] === "downloading") return;
-
-		updateModelStatus(modelId, "downloading");
-		setModelDownloadProgress(modelId, { loaded: 0, total: 0, percentage: 0 });
-
 		try {
-			await downloadModel(modelId, (progress) => {
-				setModelDownloadProgress(modelId, progress);
-			});
-
-			updateModelStatus(modelId, "downloaded");
-			setModelDownloadProgress(modelId, null);
+			await downloadModelWithProgress(modelId);
 		} catch {
-			updateModelStatus(modelId, "error");
-			setModelDownloadProgress(modelId, null);
+			// 错误已在 store 中处理
 		}
 	};
 

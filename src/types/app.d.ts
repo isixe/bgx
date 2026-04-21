@@ -31,9 +31,7 @@ export type AppState = {
   processingTrigger: number;
   cachedModelUrl: string | null;
   isModelLoading: boolean;
-  modelDownloadProgress: number;
-  isModelDownloading: boolean;
-  // 全局模型状态记录
+  // 全局模型状态
   modelStatuses: Record<string, ModelStatus>;
   isModelStatusesLoaded: boolean;
   // 全局下载进度状态（跨页面保持）
@@ -56,6 +54,8 @@ export type AppState = {
   updateModelStatus: (modelId: string, status: ModelStatus) => void;
   // 全局下载进度管理
   setModelDownloadProgress: (modelId: string, progress: DownloadProgressInfo | null) => void;
+  // 共享的模型下载方法
+  downloadModelWithProgress: (modelId: string) => Promise<void>;
 };
 
 export type UseRemoveBackgroundOptions = {
