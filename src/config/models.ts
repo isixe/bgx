@@ -1,11 +1,11 @@
 import type { ModelConfig } from '../types/app';
 
 const HF_HOST = 'https://huggingface.co';
-const HF_MIRROR_HOST = 'https://hf-mirror.com';
+const HF_MIRROR_HOST = '';
 
 const hfUrl = (repo: string, path: string) => ({
   downloadUrl: `${HF_HOST}/${repo}/resolve/main/${path}?download=true`,
-  feedbackUrl: `${HF_MIRROR_HOST}/${repo}/resolve/main/${path}?download=true`
+  feedbackUrl: ``
 });
 
 const REMBG_REPO = 'tomjackson2023/rembg';
@@ -18,7 +18,8 @@ export const MODELS: ModelConfig[] = [
     size: '~4MB',
     filename: 'u2netp.onnx',
     descKey: 'model.u2netp.desc',
-    ...hfUrl(REMBG_REPO, 'u2netp.onnx')
+    ...hfUrl(REMBG_REPO, 'u2netp.onnx'),
+    feedbackUrl: "https://unpkg.com/@rmbg/model-u2netp@0.0.1/u2netp.onnx",
   },
   {
     id: 'u2net',
