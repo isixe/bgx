@@ -27,9 +27,9 @@ export function MainLayout() {
 
 	const isModelProcessed = processedModel === currentModel;
 	const error = useAppStore((state) => state.error);
-	
+
 	// 从全局状态计算当前模型的下载状态
-	const isModelDownloading = modelStatuses[currentModel] === 'downloading';
+	const isModelDownloading = modelStatuses[currentModel] === "downloading";
 	const currentModelProgress = modelDownloadProgresses[currentModel];
 	const modelDownloadProgress = currentModelProgress?.percentage ?? 0;
 
@@ -37,10 +37,12 @@ export function MainLayout() {
 		<div className={`h-[100dvh] overflow-y-auto ${isDarkMode ? "bg-slate-900" : "bg-slate-50"}`}>
 			<header
 				className={`flex h-14 items-center justify-between border-b ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} px-4`}>
-				<div className="flex items-center gap-3">
+				<button
+					onClick={() => setCurrentPage("main")}
+					className="flex items-center gap-3 transition-opacity hover:opacity-80">
 					<img src="/favicon.ico" alt="BGX" className="h-8 w-8 rounded-lg" />
 					<span className={`text-base font-semibold ${isDarkMode ? "text-white" : "text-slate-900"}`}>BGX</span>
-				</div>
+				</button>
 				<div className="flex items-center gap-2">
 					<button
 						onClick={() => setIsDarkMode(!isDarkMode)}
@@ -58,13 +60,17 @@ export function MainLayout() {
 						)}
 					</button>
 					<button
-						onClick={() => setCurrentPage("models")}
-						className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+						onClick={() => setCurrentPage(currentPage === "models" ? "main" : "models")}
+						className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+							currentPage === "models"
+								? "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400"
+								: "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+						}`}
 						title={t("settings")}>
 						<svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
 							<circle cx="12" cy="12" r="3" />
 							<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-					</svg>
+						</svg>
 					</button>
 					<LanguageSwitcher />
 					<a
@@ -75,16 +81,20 @@ export function MainLayout() {
 						title="GitHub">
 						<svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
 							<path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-					</svg>
+						</svg>
 					</a>
 				</div>
 			</header>
 
 			{/* Model Downloading Notification */}
 			{isModelDownloading && (
-				<div className={`fixed top-16 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md rounded-xl border p-4 shadow-lg ${isDarkMode ? "border-indigo-500/30 bg-indigo-900/90" : "border-indigo-200 bg-indigo-50"}`}>
+				<div
+					className={`fixed top-16 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md rounded-xl border p-4 shadow-lg ${isDarkMode ? "border-indigo-500/30 bg-indigo-900/90" : "border-indigo-200 bg-indigo-50"}`}>
 					<div className="flex items-center gap-3">
-						<svg className={`h-5 w-5 animate-spin ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`} fill="none" viewBox="0 0 24 24">
+						<svg
+							className={`h-5 w-5 animate-spin ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`}
+							fill="none"
+							viewBox="0 0 24 24">
 							<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
 							<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
 						</svg>
@@ -239,10 +249,15 @@ function SidebarContent({
 		<>
 			{error && (
 				<div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-lg border border-red-200 bg-red-600 px-4 py-3 text-sm text-white shadow-lg">
-					<button onClick={() => useAppStore.getState().setError(null)} className="ml-3 text-white/70 hover:text-white">
-						✕
+					<button
+						onClick={() => useAppStore.getState().setError(null)}
+						className="absolute right-2 top-2 p-1 text-white/70 hover:text-white transition-colors"
+						aria-label="Close">
+						<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+						</svg>
 					</button>
-					{error === 'model_download_failed' ? t('modelDownloadFailed') : error}
+					<div className="pr-6">{error === "model_download_failed" ? t("modelDownloadFailed") : error}</div>
 				</div>
 			)}
 
