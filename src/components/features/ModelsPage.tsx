@@ -70,7 +70,7 @@ export function ModelsPage() {
 				</h2>
 			</div>
 
-			<div className="space-y-3 overflow-y-auto flex-1 sm:mx-0 mx-5">
+			<div className="space-y-3 overflow-y-auto flex-1 sm:mx-0 mx-5 pb-5">
 				{MODELS.map((model) => {
 					const status = modelStatuses[model.id] || "not_downloaded";
 					const isSelected = currentModel === model.id;
