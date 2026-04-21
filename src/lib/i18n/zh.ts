@@ -81,6 +81,15 @@ export const translations = {
     PPModnet_MobileNetV2: {
       desc: 'PaddlePaddle 轻量级人像分割',
     },
+    'bria-rmbg': {
+      desc: 'BRIA AI RMBG 模型，通用场景高质量背景移除',
+    },
+    'bria-rmbg-fp16': {
+      desc: 'BRIA RMBG FP16 版本，半精度浮点，质量与体积平衡',
+    },
+    'bria-rmbg-quantized': {
+      desc: 'BRIA RMBG 量化版本，体积最小，质量可接受',
+    },
   },
 
   processingTitle: '处理中...',

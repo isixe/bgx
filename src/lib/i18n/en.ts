@@ -81,6 +81,15 @@ export const translations = {
     PPModnet_MobileNetV2: {
       desc: 'PaddlePaddle lightweight portrait segmentation',
     },
+    'bria-rmbg': {
+      desc: 'BRIA AI RMBG model, high quality background removal for general use',
+    },
+    'bria-rmbg-fp16': {
+      desc: 'BRIA RMBG FP16 version, half precision with good quality and smaller size',
+    },
+    'bria-rmbg-quantized': {
+      desc: 'BRIA RMBG quantized version, smallest size with acceptable quality',
+    },
   },
 
   processingTitle: 'Processing...',

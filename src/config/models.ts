@@ -9,6 +9,7 @@ const hfUrl = (repo: string, path: string) => ({
 });
 
 const REMBG_REPO = 'tomjackson2023/rembg';
+const BRIA_RMBG_REPO = 'briaai/RMBG-1.4';
 
 export const MODELS: ModelConfig[] = [
   {
@@ -65,5 +66,32 @@ export const MODELS: ModelConfig[] = [
     filename: 'isnet-anime.onnx',
     descKey: 'model.isnet-anime.desc',
     ...hfUrl(REMBG_REPO, 'isnet-anime.onnx')
+  },
+  {
+    id: 'bria-rmbg-quantized',
+    name: 'BRIA RMBG (Quantized)',
+    resolution: 1024,
+    size: '~44MB',
+    filename: 'model_quantized.onnx',
+    descKey: 'model.bria-rmbg-quantized.desc',
+    ...hfUrl(BRIA_RMBG_REPO, 'onnx/model_quantized.onnx')
+  },
+  {
+    id: 'bria-rmbg-fp16',
+    name: 'BRIA RMBG (FP16)',
+    resolution: 1024,
+    size: '~88MB',
+    filename: 'model_fp16.onnx',
+    descKey: 'model.bria-rmbg-fp16.desc',
+    ...hfUrl(BRIA_RMBG_REPO, 'onnx/model_fp16.onnx')
+  },
+  {
+    id: 'bria-rmbg',
+    name: 'BRIA RMBG',
+    resolution: 1024,
+    size: '~176MB',
+    filename: 'model.onnx',
+    descKey: 'model.bria-rmbg.desc',
+    ...hfUrl(BRIA_RMBG_REPO, 'onnx/model.onnx')
   },
 ];
