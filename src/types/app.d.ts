@@ -6,6 +6,7 @@ export type ModelConfig = {
   filename: string;
   descKey: TranslationKey;
   downloadUrl: string;
+  feedbackUrl: string;
 };
 
 export type ModelStatus = 'not_downloaded' | 'downloading' | 'downloaded' | 'error';

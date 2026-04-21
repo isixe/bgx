@@ -1,4 +1,4 @@
-import { getModelPath, getModelById } from './modelUtils';
+import { getModelById } from './modelUtils';
 
 const DB_NAME = 'bgx-models-db';
 const DB_VERSION = 1;
@@ -35,103 +35,108 @@ function openDB(): Promise<IDBDatabase> {
 	});
 }
 
-async function getModelUrl(modelId: string): Promise<string> {
-	const model = getModelById(modelId);
-	const localPath = `/models/${model.filename}`;
+async function fetchWithFallback(model: { downloadUrl: string; feedbackUrl: string }): Promise<Response> {
+	const errors: string[] = [];
 
-	try {
-		const response = await fetch(localPath, { method: 'HEAD' });
-		if (response.ok) {
-			return localPath;
+	// 优先尝试 downloadUrl
+	if (model.downloadUrl) {
+		try {
+			const response = await fetch(model.downloadUrl, {
+				headers: { Accept: '*/*' },
+			});
+			if (response.ok) return response;
+			errors.push(`downloadUrl: HTTP ${response.status}`);
+		} catch (err) {
+			errors.push(`downloadUrl: ${err instanceof Error ? err.message : String(err)}`);
 		}
-	} catch {
+	} else {
+		errors.push('downloadUrl: empty');
 	}
 
-	return model.downloadUrl;
+	// 回退到 feedbackUrl
+	if (!model.feedbackUrl) {
+		errors.push('feedbackUrl: empty');
+		throw new Error(`Failed to download model from all URLs: ${errors.join('; ')}`);
+	}
+
+	try {
+		const response = await fetch(model.feedbackUrl, {
+			headers: { Accept: '*/*' },
+		});
+		if (response.ok) return response;
+		errors.push(`feedbackUrl: HTTP ${response.status}`);
+	} catch (err) {
+		errors.push(`feedbackUrl: ${err instanceof Error ? err.message : String(err)}`);
+	}
+
+	throw new Error(`Failed to download model from all URLs: ${errors.join('; ')}`);
 }
 
 export async function downloadModel(
 	modelId: string,
 	onProgress?: (progress: DownloadProgress) => void
 ): Promise<void> {
-	const modelUrl = await getModelUrl(modelId);
+	const model = getModelById(modelId);
+	const response = await fetchWithFallback(model);
 
-	try {
-		const response = await fetch(modelUrl, {
-			headers: {
-				Accept: '*/*',
-			},
-		});
+	const total = parseInt(response.headers.get('content-length') || '0', 10);
+	const reader = response.body?.getReader();
 
-		if (!response.ok) {
-			throw new Error(`Failed to download model: ${response.status} ${response.statusText}`);
-		}
+	if (!reader) {
+		throw new Error('Response body is not readable');
+	}
 
-		const total = parseInt(response.headers.get('content-length') || '0', 10);
-		const reader = response.body?.getReader();
+	const chunks: Uint8Array[] = [];
+	let loaded = 0;
 
-		if (!reader) {
-			throw new Error('Response body is not readable');
-		}
+	while (true) {
+		const { done, value } = await reader.read();
+		if (done) break;
 
-		const chunks: Uint8Array[] = [];
-		let loaded = 0;
+		chunks.push(value);
+		loaded += value.length;
 
-		while (true) {
-			const { done, value } = await reader.read();
-
-			if (done) {
-				break;
-			}
-
-			chunks.push(value);
-			loaded += value.length;
-
-			if (onProgress && total > 0) {
-				onProgress({
-					loaded,
-					total,
-					percentage: Math.round((loaded / total) * 100),
-				});
-			}
-		}
-
-		const allChunks = new Uint8Array(loaded);
-		let position = 0;
-		for (const chunk of chunks) {
-			allChunks.set(chunk, position);
-			position += chunk.length;
-		}
-
-		const db = await openDB();
-		const transaction = db.transaction([STORE_NAME], 'readwrite');
-		const store = transaction.objectStore(STORE_NAME);
-
-		const record: ModelRecord = {
-			modelId,
-			data: allChunks.buffer,
-			size: loaded,
-			timestamp: Date.now(),
-		};
-
-		await new Promise<void>((resolve, reject) => {
-			const request = store.put(record);
-			request.onsuccess = () => resolve();
-			request.onerror = () => reject(request.error);
-		});
-
-		db.close();
-
-		if (onProgress) {
+		if (onProgress && total > 0) {
 			onProgress({
 				loaded,
-				total: loaded,
-				percentage: 100,
+				total,
+				percentage: Math.round((loaded / total) * 100),
 			});
 		}
-	} catch (error) {
-		console.error(`Failed to download model ${modelId}:`, error);
-		throw error;
+	}
+
+	const allChunks = new Uint8Array(loaded);
+	let position = 0;
+	for (const chunk of chunks) {
+		allChunks.set(chunk, position);
+		position += chunk.length;
+	}
+
+	const db = await openDB();
+	const transaction = db.transaction([STORE_NAME], 'readwrite');
+	const store = transaction.objectStore(STORE_NAME);
+
+	const record: ModelRecord = {
+		modelId,
+		data: allChunks.buffer,
+		size: loaded,
+		timestamp: Date.now(),
+	};
+
+	await new Promise<void>((resolve, reject) => {
+		const request = store.put(record);
+		request.onsuccess = () => resolve();
+		request.onerror = () => reject(request.error);
+	});
+
+	db.close();
+
+	if (onProgress) {
+		onProgress({
+			loaded,
+			total: loaded,
+			percentage: 100,
+		});
 	}
 }
 
