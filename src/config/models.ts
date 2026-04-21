@@ -9,7 +9,6 @@ const hfUrl = (repo: string, path: string) => ({
 });
 
 const REMBG_REPO = 'tomjackson2023/rembg';
-const BRIA_REPO = 'briaai/RMBG-2.0';
 
 export const MODELS: ModelConfig[] = [
   {
@@ -65,41 +64,5 @@ export const MODELS: ModelConfig[] = [
     filename: 'isnet-anime.onnx',
     descKey: 'model.isnet-anime.desc',
     ...hfUrl(REMBG_REPO, 'isnet-anime.onnx')
-  },
-  {
-    id: 'bria-rmbg-2.0-fp16',
-    name: 'BRIA RMBG 2.0 (FP16)',
-    resolution: 1024,
-    size: '~514MB',
-    filename: 'model_fp16.onnx',
-    descKey: 'model.bria_rmbg_2_0_fp16.desc',
-    ...hfUrl(BRIA_REPO, 'model_fp16.onnx')
-  },
-  {
-    id: 'bria-rmbg-2.0-q4f16',
-    name: 'BRIA RMBG 2.0 (Q4F16)',
-    resolution: 1024,
-    size: '~234MB',
-    filename: 'model_q4f16.onnx',
-    descKey: 'model.bria_rmbg_2_0_q4f16.desc',
-    ...hfUrl(BRIA_REPO, 'model_q4f16.onnx')
-  },
-  {
-    id: 'bria-rmbg-2.0-int8',
-    name: 'BRIA RMBG 2.0 (INT8)',
-    resolution: 1024,
-    size: '~366MB',
-    filename: 'model_int8.onnx',
-    descKey: 'model.bria_rmbg_2_0_int8.desc',
-    ...hfUrl(BRIA_REPO, 'model_int8.onnx')
-  },
-  {
-    id: 'bria-rmbg-2.0',
-    name: 'BRIA RMBG 2.0',
-    resolution: 1024,
-    size: '~1.02GB',
-    filename: 'model.onnx',
-    descKey: 'model.bria_rmbg_2_0.desc',
-    ...hfUrl(BRIA_REPO, 'model.onnx')
   },
 ];
