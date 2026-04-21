@@ -143,6 +143,7 @@ export const translations = {
   modelDeletedReDownload: 'Model has been deleted, re-downloading...',
   modelDownloadFailed: 'Model download failed, please check your network connection and try again',
   modelDownloadFailedTitle: 'Download Failed',
+  cancelDownload: 'Cancel',
 
   language: 'Language',
   languageZh: '中文',

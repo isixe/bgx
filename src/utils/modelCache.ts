@@ -35,7 +35,10 @@ function openDB(): Promise<IDBDatabase> {
 	});
 }
 
-async function fetchWithFallback(model: { downloadUrl: string; feedbackUrl: string }): Promise<Response> {
+async function fetchWithFallback(
+	model: { downloadUrl: string; feedbackUrl: string },
+	signal?: AbortSignal
+): Promise<Response> {
 	const errors: string[] = [];
 
 	// 优先尝试 downloadUrl
@@ -43,10 +46,14 @@ async function fetchWithFallback(model: { downloadUrl: string; feedbackUrl: stri
 		try {
 			const response = await fetch(model.downloadUrl, {
 				headers: { Accept: '*/*' },
+				signal,
 			});
 			if (response.ok) return response;
 			errors.push(`downloadUrl: HTTP ${response.status}`);
 		} catch (err) {
+			if (err instanceof Error && err.name === 'AbortError') {
+				throw err;
+			}
 			errors.push(`downloadUrl: ${err instanceof Error ? err.message : String(err)}`);
 		}
 	} else {
@@ -62,81 +69,116 @@ async function fetchWithFallback(model: { downloadUrl: string; feedbackUrl: stri
 	try {
 		const response = await fetch(model.feedbackUrl, {
 			headers: { Accept: '*/*' },
+			signal,
 		});
 		if (response.ok) return response;
 		errors.push(`feedbackUrl: HTTP ${response.status}`);
 	} catch (err) {
+		if (err instanceof Error && err.name === 'AbortError') {
+			throw err;
+		}
 		errors.push(`feedbackUrl: ${err instanceof Error ? err.message : String(err)}`);
 	}
 
 	throw new Error(`Failed to download model from all URLs: ${errors.join('; ')}`);
 }
 
+// 存儲正在進行的下載請求的 AbortController
+const downloadControllers = new Map<string, AbortController>();
+
+export function cancelDownload(modelId: string): void {
+	const controller = downloadControllers.get(modelId);
+	if (controller) {
+		controller.abort();
+		downloadControllers.delete(modelId);
+	}
+}
+
+export function isDownloading(modelId: string): boolean {
+	return downloadControllers.has(modelId);
+}
+
 export async function downloadModel(
 	modelId: string,
 	onProgress?: (progress: DownloadProgress) => void
 ): Promise<void> {
-	const model = getModelById(modelId);
-	const response = await fetchWithFallback(model);
+	// 如果已經有正在進行的下載，先取消它
+	cancelDownload(modelId);
 
-	const total = parseInt(response.headers.get('content-length') || '0', 10);
-	const reader = response.body?.getReader();
+	const controller = new AbortController();
+	downloadControllers.set(modelId, controller);
 
-	if (!reader) {
-		throw new Error('Response body is not readable');
-	}
+	try {
+		const model = getModelById(modelId);
+		const response = await fetchWithFallback(model, controller.signal);
 
-	const chunks: Uint8Array[] = [];
-	let loaded = 0;
+		const total = parseInt(response.headers.get('content-length') || '0', 10);
+		const reader = response.body?.getReader();
 
-	while (true) {
-		const { done, value } = await reader.read();
-		if (done) break;
+		if (!reader) {
+			throw new Error('Response body is not readable');
+		}
 
-		chunks.push(value);
-		loaded += value.length;
+		const chunks: Uint8Array[] = [];
+		let loaded = 0;
 
-		if (onProgress && total > 0) {
+		while (true) {
+			// 檢查是否已取消
+			if (controller.signal.aborted) {
+				throw new Error('Download cancelled');
+			}
+
+			const { done, value } = await reader.read();
+			if (done) break;
+
+			chunks.push(value);
+			loaded += value.length;
+
+			if (onProgress && total > 0) {
+				onProgress({
+					loaded,
+					total,
+					percentage: Math.round((loaded / total) * 100),
+				});
+			}
+		}
+
+		const allChunks = new Uint8Array(loaded);
+		let position = 0;
+		for (const chunk of chunks) {
+			allChunks.set(chunk, position);
+			position += chunk.length;
+		}
+
+		const db = await openDB();
+		const transaction = db.transaction([STORE_NAME], 'readwrite');
+		const store = transaction.objectStore(STORE_NAME);
+
+		const record: ModelRecord = {
+			modelId,
+			data: allChunks.buffer,
+			size: loaded,
+			timestamp: Date.now(),
+		};
+
+		await new Promise<void>((resolve, reject) => {
+			const request = store.put(record);
+			request.onsuccess = () => resolve();
+			request.onerror = () => reject(request.error);
+		});
+
+		db.close();
+
+		if (onProgress) {
 			onProgress({
 				loaded,
-				total,
-				percentage: Math.round((loaded / total) * 100),
+				total: loaded,
+				percentage: 100,
 			});
 		}
-	}
-
-	const allChunks = new Uint8Array(loaded);
-	let position = 0;
-	for (const chunk of chunks) {
-		allChunks.set(chunk, position);
-		position += chunk.length;
-	}
-
-	const db = await openDB();
-	const transaction = db.transaction([STORE_NAME], 'readwrite');
-	const store = transaction.objectStore(STORE_NAME);
-
-	const record: ModelRecord = {
-		modelId,
-		data: allChunks.buffer,
-		size: loaded,
-		timestamp: Date.now(),
-	};
-
-	await new Promise<void>((resolve, reject) => {
-		const request = store.put(record);
-		request.onsuccess = () => resolve();
-		request.onerror = () => reject(request.error);
-	});
-
-	db.close();
-
-	if (onProgress) {
-		onProgress({
-			loaded,
-			total: loaded,
-			percentage: 100,
-		});
+	} finally {
+		// 清理 controller
+		downloadControllers.delete(modelId);
 	}
 }
 

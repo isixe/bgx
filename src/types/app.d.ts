@@ -56,6 +56,8 @@ export type AppState = {
   setModelDownloadProgress: (modelId: string, progress: DownloadProgressInfo | null) => void;
   // 共享的模型下载方法
   downloadModelWithProgress: (modelId: string) => Promise<void>;
+  // 取消模型下载
+  cancelModelDownload: (modelId: string) => void;
 };
 
 export type UseRemoveBackgroundOptions = {

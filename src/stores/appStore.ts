@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { AppState, ModelStatus } from '../types/app';
-import { getCachedModelBlobUrl, revokeCachedUrl, downloadModel, isModelCached, getAllCachedModels } from '../utils/modelCache';
+import { getCachedModelBlobUrl, revokeCachedUrl, downloadModel, cancelDownload, isModelCached, getAllCachedModels } from '../utils/modelCache';
 import { MODELS } from '../config/models';
 
 function getInitialDarkMode(): boolean {
@@ -77,7 +77,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // 共享的模型下载方法
   downloadModelWithProgress: async (modelId: string) => {
     const state = get();
-    
+
     // 如果已经在下载中，不重复下载
     if (state.modelStatuses[modelId] === 'downloading') {
       return;
@@ -94,11 +94,25 @@ export const useAppStore = create<AppState>((set, get) => ({
       get().updateModelStatus(modelId, 'downloaded');
       get().setModelDownloadProgress(modelId, null);
     } catch (error) {
+      // 檢查是否是用戶取消
+      if (error instanceof Error && error.message === 'Download cancelled') {
+        console.log(`Model ${modelId} download cancelled by user`);
+        get().updateModelStatus(modelId, 'not_downloaded');
+        get().setModelDownloadProgress(modelId, null);
+        return;
+      }
       console.error(`Failed to download model ${modelId}:`, error);
       get().updateModelStatus(modelId, 'error');
       get().setModelDownloadProgress(modelId, null);
       throw error;
     }
+  },
+
+  // 取消模型下載
+  cancelModelDownload: (modelId: string) => {
+    cancelDownload(modelId);
+    get().updateModelStatus(modelId, 'not_downloaded');
+    get().setModelDownloadProgress(modelId, null);
   },
 
   setCurrentModel: async (model) => {

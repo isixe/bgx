@@ -15,6 +15,7 @@ export function ModelsPage() {
 		modelDownloadProgresses,
 		downloadModelWithProgress,
 		updateModelStatus,
+		cancelModelDownload,
 	} = useAppStore();
 
 	const handleDownload = async (modelId: string) => {
@@ -32,6 +33,10 @@ export function ModelsPage() {
 		} catch (error) {
 			console.error(`Failed to delete model ${modelId}:`, error);
 		}
+	};
+
+	const handleCancelDownload = (modelId: string) => {
+		cancelModelDownload(modelId);
 	};
 
 	const selectModel = (modelId: string) => {
@@ -209,11 +214,22 @@ export function ModelsPage() {
 										<span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
 											{t("downloading")}
 										</span>
-										<span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
-											{progress.percentage}%
-											{progress.total > 0 &&
-												` (${formatBytes(progress.loaded)} / ${formatBytes(progress.total)})`}
-										</span>
+										<div className="flex items-center gap-3">
+											<span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
+												{progress.percentage}%
+												{progress.total > 0 &&
+													` (${formatBytes(progress.loaded)} / ${formatBytes(progress.total)})`}
+											</span>
+											<button
+												onClick={() => handleCancelDownload(model.id)}
+												className={`text-xs px-2 py-1 rounded transition-colors ${
+													isDarkMode
+														? "bg-slate-700 hover:bg-slate-600 text-slate-300"
+														: "bg-slate-200 hover:bg-slate-300 text-slate-600"
+												}`}>
+												{t("cancelDownload")}
+											</button>
+										</div>
 									</div>
 									<div
 										className={`h-2 rounded-full overflow-hidden ${
