@@ -1,4 +1,3 @@
-import type { TranslationKey } from '../lib/i18n';
 import type { ModelConfig } from '../types/app';
 import { MODELS } from '../config/models';
 
@@ -12,7 +11,7 @@ export function getModelById(modelId: string): ModelConfig {
 
 export function getLocalizedModel(
   modelId: string,
-  t: (key: TranslationKey) => string
+  t: (key: string) => string
 ): { name: string; description: string } {
   const model = getModelById(modelId);
   return {

@@ -81,6 +81,18 @@ export const translations = {
     PPModnet_MobileNetV2: {
       desc: 'PaddlePaddle lightweight portrait segmentation',
     },
+    'bria_rmbg_2_0': {
+      desc: 'BRIA AI RMBG 2.0 - State-of-the-art background removal with highest quality',
+    },
+    'bria_rmbg_2_0_fp16': {
+      desc: 'BRIA RMBG 2.0 FP16 - Half precision, faster with good quality',
+    },
+    'bria_rmbg_2_0_q4f16': {
+      desc: 'BRIA RMBG 2.0 Q4F16 - Quantized 4-bit, smallest size with decent quality',
+    },
+    'bria_rmbg_2_0_int8': {
+      desc: 'BRIA RMBG 2.0 INT8 - 8-bit quantized, balanced speed and quality',
+    },
   },
 
   processingTitle: 'Processing...',
@@ -132,6 +144,8 @@ export const translations = {
   modelDownloadingTitle: 'Downloading Model',
   modelDownloadingDesc: 'First use requires downloading the model file, please wait...',
   modelDeletedReDownload: 'Model has been deleted, re-downloading...',
+  modelDownloadFailed: 'Model download failed, please check your network connection and try again',
+  modelDownloadFailedTitle: 'Download Failed',
 
   language: 'Language',
   languageZh: '中文',

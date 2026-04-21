@@ -1,16 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "../../lib/i18n";
 import { MODELS } from "../../config/models";
 import {
 	downloadModel,
 	deleteModel,
-	type DownloadProgress,
 } from "../../utils/modelCache";
-
-interface ModelDownloadProgress {
-	[modelId: string]: DownloadProgress | null;
-}
 
 export function ModelsPage() {
 	const { t } = useTranslation();
@@ -22,39 +16,26 @@ export function ModelsPage() {
 		isDarkMode,
 		modelStatuses,
 		updateModelStatus,
+		modelDownloadProgresses,
+		setModelDownloadProgress,
 	} = useAppStore();
-	const [downloadProgress, setDownloadProgress] = useState<ModelDownloadProgress>({});
-	const [downloadingModels, setDownloadingModels] = useState<Set<string>>(new Set());
 
 	const handleDownload = async (modelId: string) => {
-		if (downloadingModels.has(modelId)) return;
+		if (modelStatuses[modelId] === "downloading") return;
 
-		setDownloadingModels((prev) => new Set(prev).add(modelId));
 		updateModelStatus(modelId, "downloading");
-		setDownloadProgress((prev) => ({
-			...prev,
-			[modelId]: { loaded: 0, total: 0, percentage: 0 },
-		}));
+		setModelDownloadProgress(modelId, { loaded: 0, total: 0, percentage: 0 });
 
 		try {
 			await downloadModel(modelId, (progress) => {
-				setDownloadProgress((prev) => ({
-					...prev,
-					[modelId]: progress,
-				}));
+				setModelDownloadProgress(modelId, progress);
 			});
 
 			updateModelStatus(modelId, "downloaded");
-			setDownloadProgress((prev) => ({ ...prev, [modelId]: null }));
+			setModelDownloadProgress(modelId, null);
 		} catch {
 			updateModelStatus(modelId, "error");
-			setDownloadProgress((prev) => ({ ...prev, [modelId]: null }));
-		} finally {
-			setDownloadingModels((prev) => {
-				const newSet = new Set(prev);
-				newSet.delete(modelId);
-				return newSet;
-			});
+			setModelDownloadProgress(modelId, null);
 		}
 	};
 
@@ -103,7 +84,7 @@ export function ModelsPage() {
 					const status = modelStatuses[model.id] || "not_downloaded";
 					const isSelected = currentModel === model.id;
 					const isDownloading = status === "downloading";
-					const progress = downloadProgress[model.id];
+					const progress = modelDownloadProgresses[model.id];
 
 					return (
 						<div

@@ -4,12 +4,18 @@ export type ModelConfig = {
   resolution: number;
   size: string;
   filename: string;
-  descKey: TranslationKey;
+  descKey: string;
   downloadUrl: string;
   feedbackUrl: string;
 };
 
 export type ModelStatus = 'not_downloaded' | 'downloading' | 'downloaded' | 'error';
+
+export interface DownloadProgressInfo {
+  loaded: number;
+  total: number;
+  percentage: number;
+}
 
 export type AppState = {
   currentModel: string;
@@ -30,6 +36,8 @@ export type AppState = {
   // 全局模型状态记录
   modelStatuses: Record<string, ModelStatus>;
   isModelStatusesLoaded: boolean;
+  // 全局下载进度状态（跨页面保持）
+  modelDownloadProgresses: Record<string, DownloadProgressInfo | null>;
 
   setCurrentModel: (model: string) => Promise<void>;
   setCurrentPage: (page: 'main' | 'models') => void;
@@ -46,6 +54,8 @@ export type AppState = {
   // 全局模型状态管理
   initializeModelStatuses: () => Promise<void>;
   updateModelStatus: (modelId: string, status: ModelStatus) => void;
+  // 全局下载进度管理
+  setModelDownloadProgress: (modelId: string, progress: DownloadProgressInfo | null) => void;
 };
 
 export type UseRemoveBackgroundOptions = {
@@ -58,4 +68,4 @@ export type UseRemoveBackgroundReturn = {
   processImage: (imageDataUrl: string, modelId: string, preloadedModelUrl?: string | null) => Promise<void>;
 };
 
-type TranslationKey = string;
+

@@ -23,7 +23,15 @@ function getStoredLanguage(): Language | null {
   return null;
 }
 
-export const i18n = {
+export const i18n: {
+  currentLang: Language;
+  listeners: Set<() => void>;
+  subscribe: (listener: () => void) => () => void;
+  notify: () => void;
+  setLanguage: (lang: Language) => void;
+  t: (key: TranslationKey | string) => string;
+  getLanguage: () => Language;
+} = {
   currentLang: DEFAULT_LANGUAGE,
   listeners: new Set<() => void>(),
 

@@ -81,6 +81,18 @@ export const translations = {
     PPModnet_MobileNetV2: {
       desc: 'PaddlePaddle 轻量级人像分割',
     },
+    'bria_rmbg_2_0': {
+      desc: 'BRIA AI RMBG 2.0 - 最先进的背景移除模型，最高质量',
+    },
+    'bria_rmbg_2_0_fp16': {
+      desc: 'BRIA RMBG 2.0 FP16 - 半精度，速度更快，质量良好',
+    },
+    'bria_rmbg_2_0_q4f16': {
+      desc: 'BRIA RMBG 2.0 Q4F16 - 4位量化，体积最小，质量适中',
+    },
+    'bria_rmbg_2_0_int8': {
+      desc: 'BRIA RMBG 2.0 INT8 - 8位量化，速度与质量平衡',
+    },
   },
 
   processingTitle: '处理中...',
@@ -132,6 +144,8 @@ export const translations = {
   modelDownloadingTitle: '正在下载模型',
   modelDownloadingDesc: '首次使用需要下载模型文件，请稍候...',
   modelDeletedReDownload: '模型已被删除，正在重新下载...',
+  modelDownloadFailed: '模型下载失败，请检查网络连接后重试',
+  modelDownloadFailedTitle: '下载失败',
 
   language: '语言',
   languageZh: '中文',

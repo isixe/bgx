@@ -33,6 +33,8 @@ const initialState = {
   // 全局模型状态
   modelStatuses: {} as Record<string, ModelStatus>,
   isModelStatusesLoaded: false,
+  // 全局下载进度状态（跨页面保持）
+  modelDownloadProgresses: {} as Record<string, { loaded: number; total: number; percentage: number } | null>,
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -64,6 +66,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateModelStatus: (modelId: string, status: ModelStatus) => {
     set((state) => ({
       modelStatuses: { ...state.modelStatuses, [modelId]: status },
+    }));
+  },
+
+  // 设置模型下载进度
+  setModelDownloadProgress: (modelId: string, progress: { loaded: number; total: number; percentage: number } | null) => {
+    set((state) => ({
+      modelDownloadProgresses: { ...state.modelDownloadProgresses, [modelId]: progress },
     }));
   },
 
@@ -121,6 +130,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         isModelLoading: false,
         isModelDownloading: false,
         modelDownloadProgress: 0,
+        error: 'model_download_failed',
       });
       // 更新全局状态为错误
       get().updateModelStatus(model, 'error');

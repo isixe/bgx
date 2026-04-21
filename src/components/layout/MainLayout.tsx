@@ -237,7 +237,7 @@ function SidebarContent({
 					<button onClick={() => useAppStore.getState().setError(null)} className="ml-3 text-white/70 hover:text-white">
 						✕
 					</button>
-					{error}
+					{error === 'model_download_failed' ? t('modelDownloadFailed') : error}
 				</div>
 			)}
 
