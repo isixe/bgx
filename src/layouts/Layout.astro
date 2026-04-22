@@ -1,129 +1,138 @@
 ---
-import '../styles/globals.css';
+import "../styles/globals.css";
 
 interface Props {
-  title?: string;
-  description?: string;
-  keywords?: string;
-  ogImage?: string;
-  ogImageAlt?: string;
-  siteName?: string;
-  locale?: string;
-  canonicalUrl?: string;
-  noindex?: boolean;
+	title?: string;
+	description?: string;
+	keywords?: string;
+	ogImage?: string;
+	ogImageAlt?: string;
+	siteName?: string;
+	locale?: string;
+	canonicalUrl?: string;
+	noindex?: boolean;
 }
 
 const {
-  title = 'BGX - AI Background Remover',
-  description = 'BGX - Free online AI background removal tool. Remove image backgrounds instantly in your browser with complete privacy protection. No upload needed, all processing done locally.',
-  keywords = 'background removal, AI background remover, image editing, remove background, photo editor, privacy, local processing, free tool',
-  ogImage = '/og-image.png',
-  ogImageAlt = 'BGX - AI Background Removal Tool',
-  siteName = 'BGX',
-  locale = 'en_US',
-  canonicalUrl,
-  noindex = false,
+	title = "BGX - AI Background Remover",
+	description = "BGX - Free online AI background removal tool. Remove image backgrounds instantly in your browser with complete privacy protection. No upload needed, all processing done locally.",
+	keywords = "background removal, AI background remover, image editing, remove background, photo editor, privacy, local processing, free tool",
+	ogImage = "/og-image.png",
+	ogImageAlt = "BGX - AI Background Removal Tool",
+	siteName = "BGX",
+	locale = "en_US",
+	canonicalUrl,
+	noindex = false,
 } = Astro.props;
 
-// Get base URL from current request
-const protocol = Astro.url.protocol;
-const host = Astro.url.host;
-const siteUrl = `${protocol}//${host}`;
+const siteUrl = location.origin;
 
 // Process canonical URL
-const fullCanonicalUrl = canonicalUrl 
-  ? (canonicalUrl.startsWith('http') ? canonicalUrl : `${siteUrl}${canonicalUrl}`)
-  : `${siteUrl}${Astro.url.pathname}`;
+const fullCanonicalUrl = canonicalUrl
+	? canonicalUrl.startsWith("http")
+		? canonicalUrl
+		: `${siteUrl}${canonicalUrl}`
+	: `${siteUrl}${Astro.url.pathname}`;
 
 // Process OG image URL
-const fullOgImageUrl = ogImage.startsWith('http') 
-  ? ogImage 
-  : `${siteUrl}${ogImage}`;
+const fullOgImageUrl = ogImage.startsWith("http") ? ogImage : `${siteUrl}${ogImage}`;
 ---
 
 <!doctype html>
-<html lang={locale.split('_')[0]}>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content={description} />
-    <meta name="keywords" content={keywords} />
-    <meta name="author" content="BGX" />
-    <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow'} />
+<html lang={locale.split("_")[0]}>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="description" content={description} />
+		<meta name="keywords" content={keywords} />
+		<meta name="author" content="BGX" />
+		<meta name="robots" content={noindex ? "noindex, nofollow" : "index, follow"} />
 
-    <!-- Canonical URL -->
-    <link rel="canonical" href={fullCanonicalUrl} />
+		<!-- Canonical URL -->
+		<link rel="canonical" href={fullCanonicalUrl} />
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content={fullCanonicalUrl} />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:image" content={fullOgImageUrl} />
-    <meta property="og:image:alt" content={ogImageAlt} />
-    <meta property="og:site_name" content={siteName} />
-    <meta property="og:locale" content={locale} />
+		<!-- Open Graph / Facebook -->
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={fullCanonicalUrl} />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:image" content={fullOgImageUrl} />
+		<meta property="og:image:alt" content={ogImageAlt} />
+		<meta property="og:site_name" content={siteName} />
+		<meta property="og:locale" content={locale} />
 
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content={fullCanonicalUrl} />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={fullOgImageUrl} />
-    <meta name="twitter:image:alt" content={ogImageAlt} />
+		<!-- Twitter -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:url" content={fullCanonicalUrl} />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		<meta name="twitter:image" content={fullOgImageUrl} />
+		<meta name="twitter:image:alt" content={ogImageAlt} />
 
-    <!-- Favicon -->
-    <link rel="icon" href="/favicon.ico" />
+		<!-- Favicon -->
+		<link rel="icon" href="/favicon.ico" />
 
-    <title>{title}</title>
-    <script is:inline>
-      (function() {
-        const titles = { zh: 'BGX - 背景移除工具', en: 'BGX - Background Remover' };
-        const stored = localStorage.getItem('bgx-language');
-        const lang = stored && ['zh', 'en'].includes(stored) ? stored : 
-          (navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en');
-        document.title = titles[lang];
-      })();
-    </script>
-  </head>
-  <body>
-    <slot />
-  </body>
+		<title>{title}</title>
+		<script is:inline>
+			(function () {
+				const titles = { zh: "BGX - 背景移除工具", en: "BGX - Background Remover" };
+				const stored = localStorage.getItem("bgx-language");
+				const lang =
+					stored && ["zh", "en"].includes(stored)
+						? stored
+						: navigator.language.toLowerCase().startsWith("zh")
+							? "zh"
+							: "en";
+				document.title = titles[lang];
+			})();
+		</script>
+	</head>
+	<body>
+		<slot />
+	</body>
 </html>
 
 <style is:global>
-  * {
-    box-sizing: border-box;
-  }
+	* {
+		box-sizing: border-box;
+	}
 
-  html {
-    scroll-behavior: smooth;
-  }
+	html {
+		scroll-behavior: smooth;
+	}
 
-  body {
-    margin: 0;
-    padding: 0;
-    height: 100dvh;
-    overflow: hidden;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  }
+	body {
+		margin: 0;
+		padding: 0;
+		height: 100dvh;
+		overflow: hidden;
+		font-family:
+			system-ui,
+			-apple-system,
+			BlinkMacSystemFont,
+			"Segoe UI",
+			Roboto,
+			"Helvetica Neue",
+			Arial,
+			sans-serif;
+	}
 
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
+	/* Custom scrollbar */
+	::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
 
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
+	::-webkit-scrollbar-track {
+		background: transparent;
+	}
 
-  ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
-  }
+	::-webkit-scrollbar-thumb {
+		background: #cbd5e1;
+		border-radius: 4px;
+	}
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-  }
+	::-webkit-scrollbar-thumb:hover {
+		background: #94a3b8;
+	}
 </style>
