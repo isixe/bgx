@@ -9,7 +9,6 @@ interface Props {
 	ogImageAlt?: string;
 	siteName?: string;
 	locale?: string;
-	canonicalUrl?: string;
 	noindex?: boolean;
 }
 
@@ -21,20 +20,11 @@ const {
 	ogImageAlt = "BGX - AI Background Removal Tool",
 	siteName = "BGX",
 	locale = "en_US",
-	canonicalUrl,
 	noindex = false,
 } = Astro.props;
 
-const siteUrl = location.origin;
-
-// Process canonical URL
-const fullCanonicalUrl = canonicalUrl
-	? canonicalUrl.startsWith("http")
-		? canonicalUrl
-		: `${siteUrl}${canonicalUrl}`
-	: `${siteUrl}${Astro.url.pathname}`;
-
 // Process OG image URL
+const siteUrl = "https://bgx.itea.dev";
 const fullOgImageUrl = ogImage.startsWith("http") ? ogImage : `${siteUrl}${ogImage}`;
 ---
 
@@ -49,11 +39,11 @@ const fullOgImageUrl = ogImage.startsWith("http") ? ogImage : `${siteUrl}${ogIma
 		<meta name="robots" content={noindex ? "noindex, nofollow" : "index, follow"} />
 
 		<!-- Canonical URL -->
-		<link rel="canonical" href={fullCanonicalUrl} />
+		<link rel="canonical" href={siteUrl} />
 
 		<!-- Open Graph / Facebook -->
 		<meta property="og:type" content="website" />
-		<meta property="og:url" content={fullCanonicalUrl} />
+		<meta property="og:url" content={siteUrl} />
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
 		<meta property="og:image" content={fullOgImageUrl} />
@@ -63,7 +53,7 @@ const fullOgImageUrl = ogImage.startsWith("http") ? ogImage : `${siteUrl}${ogIma
 
 		<!-- Twitter -->
 		<meta name="twitter:card" content="summary_large_image" />
-		<meta name="twitter:url" content={fullCanonicalUrl} />
+		<meta name="twitter:url" content={siteUrl} />
 		<meta name="twitter:title" content={title} />
 		<meta name="twitter:description" content={description} />
 		<meta name="twitter:image" content={fullOgImageUrl} />
