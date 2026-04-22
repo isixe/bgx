@@ -127,12 +127,6 @@ bgx/
 | `pnpm preview`   | Preview production build             |
 | `pnpm astro ...` | Run Astro CLI commands               |
 
-## Browser Requirements
-
-- Modern browsers with WebAssembly support
-- SharedArrayBuffer support (COOP/COEP headers configured)
-- GPU acceleration recommended for best performance
-
 ## License
 
 This project is licensed under the [MIT](LICENSE) License.
