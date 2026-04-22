@@ -1,43 +1,19 @@
-# Astro Starter Kit: Minimal
+# BGX
 
-```sh
-npm create astro@latest -- --template minimal
-```
+A free, privacy-first background removal tool powered by AI. All processing happens locally in your browser.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Features
 
-## 🚀 Project Structure
+- **AI-Powered Background Removal** - Uses advanced ONNX models (U2Net, ISNet, BRIA RMBG) for high-quality results
+- **Privacy Protected** - 100% client-side processing, images never leave your device
+- **Multiple AI Models** - Choose from 9+ specialized models for different use cases
+- **Multiple Export Formats** - PNG (transparent), JPG (white background), WebP
+- **Drag & Drop / Paste Support** - Upload images via drag-drop, file picker, or Ctrl+V paste
+- **Batch Processing Ready** - Process multiple images efficiently
+- **Bilingual Support** - English and Chinese interface
 
-Inside of your Astro project, you'll see the following folders and files:
+## Tech Stack
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
-
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+| Category | Technology |
+|----------|------------|
+| Framework | Astro 5.0 +

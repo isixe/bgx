@@ -1,15 +1,81 @@
 ---
 import '../styles/globals.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  keywords?: string;
+  ogImage?: string;
+  ogImageAlt?: string;
+  siteName?: string;
+  locale?: string;
+  canonicalUrl?: string;
+  noindex?: boolean;
+}
+
+const {
+  title = 'BGX - AI Background Remover',
+  description = 'BGX - Free online AI background removal tool. Remove image backgrounds instantly in your browser with complete privacy protection. No upload needed, all processing done locally.',
+  keywords = 'background removal, AI background remover, image editing, remove background, photo editor, privacy, local processing, free tool',
+  ogImage = '/og-image.png',
+  ogImageAlt = 'BGX - AI Background Removal Tool',
+  siteName = 'BGX',
+  locale = 'en_US',
+  canonicalUrl,
+  noindex = false,
+} = Astro.props;
+
+// Get base URL from current request
+const protocol = Astro.url.protocol;
+const host = Astro.url.host;
+const siteUrl = `${protocol}//${host}`;
+
+// Process canonical URL
+const fullCanonicalUrl = canonicalUrl 
+  ? (canonicalUrl.startsWith('http') ? canonicalUrl : `${siteUrl}${canonicalUrl}`)
+  : `${siteUrl}${Astro.url.pathname}`;
+
+// Process OG image URL
+const fullOgImageUrl = ogImage.startsWith('http') 
+  ? ogImage 
+  : `${siteUrl}${ogImage}`;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={locale.split('_')[0]}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="BGX - Remove image backgrounds in your browser, privacy-focused" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
-    <title>BGX</title>
+    <meta name="description" content={description} />
+    <meta name="keywords" content={keywords} />
+    <meta name="author" content="BGX" />
+    <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow'} />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href={fullCanonicalUrl} />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={fullCanonicalUrl} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={fullOgImageUrl} />
+    <meta property="og:image:alt" content={ogImageAlt} />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:locale" content={locale} />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content={fullCanonicalUrl} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={fullOgImageUrl} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
+
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.ico" />
+
+    <title>{title}</title>
     <script is:inline>
       (function() {
         const titles = { zh: 'BGX - 背景移除工具', en: 'BGX - Background Remover' };
