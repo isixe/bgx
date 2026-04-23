@@ -63,19 +63,6 @@ const fullOgImageUrl = ogImage.startsWith("http") ? ogImage : `${siteUrl}${ogIma
 		<link rel="icon" href="/favicon.ico" />
 
 		<title>{title}</title>
-		<script is:inline>
-			(function () {
-				const titles = { zh: "BGX - 背景移除工具", en: "BGX - Background Remover" };
-				const stored = localStorage.getItem("bgx-language");
-				const lang =
-					stored && ["zh", "en"].includes(stored)
-						? stored
-						: navigator.language.toLowerCase().startsWith("zh")
-							? "zh"
-							: "en";
-				document.title = titles[lang];
-			})();
-		</script>
 		<script src="https://analytics.itea.dev/tracker.min.js" id="analytics" data-website-id="bgx"></script>
 	</head>
 	<body>

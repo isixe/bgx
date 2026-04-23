@@ -9,6 +9,12 @@ const translations = { zh, en };
 // 服務器端和客戶端首次渲染使用一致的默認語言
 const DEFAULT_LANGUAGE: Language = 'en';
 
+// 各語言對應的頁面標題
+const titles: Record<Language, string> = {
+  zh: 'BGX - 背景移除工具',
+  en: 'BGX - Background Remover',
+};
+
 function getStoredLanguage(): Language | null {
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem('bgx-language') as Language | null;
@@ -50,6 +56,7 @@ export const i18n: {
     this.currentLang = lang;
     if (typeof window !== 'undefined') {
       localStorage.setItem('bgx-language', lang);
+      document.title = titles[lang];
     }
     this.notify();
   },
