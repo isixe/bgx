@@ -15,7 +15,6 @@ export function AppProvider() {
 		isDarkMode,
 		processingTrigger,
 		cachedModelUrl,
-		modelStatuses,
 		isModelStatusesLoaded,
 		setCurrentModel,
 		setResultImage,
@@ -88,7 +87,7 @@ export function AppProvider() {
 					setError(t("modelDeletedReDownload"));
 					setIsProcessing(false);
 					// 更新全局状态
-					updateModelStatus(currentModel, 'not_downloaded');
+					updateModelStatus(currentModel, "not_downloaded");
 					// 重新触发模型加载（会自动下载）
 					setCurrentModel(currentModel);
 					return;
@@ -131,7 +130,7 @@ export function AppProvider() {
 
 	// Update page title based on language
 	useEffect(() => {
-		document.title = i18n.t('pageTitle');
+		document.title = i18n.t("pageTitle");
 	}, [language]);
 
 	return <MainLayout />;

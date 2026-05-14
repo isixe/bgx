@@ -95,7 +95,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       get().setModelDownloadProgress(modelId, null);
     } catch (error) {
       // 檢查是否是用戶取消
-      if (error instanceof Error && error.message === 'Download cancelled') {
+      if (
+        error instanceof Error &&
+        (error.message === 'Download cancelled' || error.name === 'AbortError')
+      ) {
         console.log(`Model ${modelId} download cancelled by user`);
         get().updateModelStatus(modelId, 'not_downloaded');
         get().setModelDownloadProgress(modelId, null);

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "../../lib/i18n";
 import { ImageUploader } from "../features/ImageUploader";
@@ -13,7 +14,6 @@ export function MainLayout() {
 		resultImage,
 		isProcessing,
 		currentModel,
-		processedModel,
 		startProcessing,
 		reset,
 		currentPage,
@@ -25,7 +25,6 @@ export function MainLayout() {
 	} = useAppStore();
 	const { t } = useTranslation();
 
-	const isModelProcessed = processedModel === currentModel;
 	const error = useAppStore((state) => state.error);
 
 	// 从全局状态计算当前模型的下载状态
@@ -99,16 +98,23 @@ export function MainLayout() {
 							<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
 						</svg>
 						<div className="flex-1">
-							<p className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-slate-900"}`}>
-								{t("modelDownloadingTitle")}
-							</p>
-							<p className={`text-xs mt-0.5 ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>
-								{t("modelDownloadingDesc")}
-							</p>
-						</div>
-						<span className={`text-sm font-medium ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`}>
-							{modelDownloadProgress}%
-						</span>
+										<p className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-slate-900"}`}>
+											{t("modelDownloadingTitle")}
+										</p>
+										<p className={`text-xs mt-0.5 ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>
+											{t("modelDownloadingDesc")}
+										</p>
+									</div>
+									<div className="flex items-center gap-2">
+										<span className={`text-sm font-medium ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`}>
+											{modelDownloadProgress}%
+										</span>
+										<button
+											onClick={() => useAppStore.getState().cancelModelDownload(currentModel)}
+											className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${isDarkMode ? "bg-slate-700 text-slate-200 hover:bg-slate-600" : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}>
+											{t("cancelDownload")}
+										</button>
+									</div>
 					</div>
 					<div className={`mt-3 h-1.5 rounded-full overflow-hidden ${isDarkMode ? "bg-slate-700" : "bg-slate-200"}`}>
 						<div
@@ -149,7 +155,6 @@ export function MainLayout() {
 									originalImage={originalImage}
 									resultImage={resultImage}
 									isProcessing={isProcessing}
-									isModelProcessed={isModelProcessed}
 									startProcessing={startProcessing}
 									reset={reset}
 									t={t}
@@ -196,7 +201,6 @@ export function MainLayout() {
 							originalImage={originalImage}
 							resultImage={resultImage}
 							isProcessing={isProcessing}
-							isModelProcessed={isModelProcessed}
 							startProcessing={startProcessing}
 							reset={reset}
 							t={t}
@@ -215,7 +219,6 @@ interface SidebarContentProps {
 	originalImage: string | null;
 	resultImage: string | null;
 	isProcessing: boolean;
-	isModelProcessed: boolean;
 	startProcessing: () => void;
 	reset: () => void;
 	t: (key: string) => string;
@@ -228,13 +231,24 @@ function SidebarContent({
 	originalImage,
 	resultImage,
 	isProcessing,
-	isModelProcessed,
 	startProcessing,
 	reset,
 	t,
 	isDarkMode,
 	onAction,
 }: SidebarContentProps) {
+	const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	useEffect(() => {
+		if (error) {
+			if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+			errorTimerRef.current = setTimeout(() => {
+				useAppStore.getState().setError(null);
+			}, 5000);
+		}
+		return () => {
+			if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+		};
+	}, [error]);
 	const handleStartProcessing = () => {
 		startProcessing();
 		onAction?.();
@@ -273,7 +287,7 @@ function SidebarContent({
 
 				{resultImage && (
 					<div className="space-y-4">
-						{!isModelProcessed && !isProcessing && (
+						{!isProcessing && (
 							<button
 								onClick={handleStartProcessing}
 								className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700">

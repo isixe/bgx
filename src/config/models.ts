@@ -3,17 +3,11 @@ import type { ModelConfig } from '../types/app';
 const HF_HOST = 'https://huggingface.co';
 const ML_HOST = 'https://www.modelscope.cn/models';
 
-const loadUrl = (repo: string, path: string) => ({
-  downloadUrl: `${HF_HOST}/${repo}/resolve/main/${path}?download=true`,
-  feedbackUrl: `${ML_HOST}/${repo}/resolve/master/onnx/${path}`
-});
-
 const HF_REMBG = 'tomjackson2023/rembg';
 const HF_BRIA_RMBG_1_4 = 'briaai/RMBG-1.4';
 
 const ML_SHIERTIER_REMBG = "shiertier/rembg"
 const ML_AI_MODEL_SCOPE_1_4 = "AI-ModelScope/RMBG-1.4"
-const ML_AI_MODEL_SCOPE_2_0 = "AI-ModelScope/RMBG-2.0"
 
 export const MODELS: ModelConfig[] = [
   {

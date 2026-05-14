@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { removeBackground } from 'modern-rembg';
+import { removeBackground as removeBackgroundModern } from 'modern-rembg';
 import { getModelById } from '../utils/modelUtils';
 import { getCachedModelBlobUrl, revokeCachedUrl } from '../utils/modelCache';
 import type { UseRemoveBackgroundOptions, UseRemoveBackgroundReturn } from '../types/app';
@@ -47,23 +47,20 @@ export function useRemoveBackground(
 
         const model = getModelById(modelId);
 
-        // 优先使用预加载的模型 URL，如果没有则从 IndexedDB 获取
         let modelUrl = preloadedModelUrl;
         if (!modelUrl) {
           modelUrl = await getCachedModelBlobUrl(modelId);
         }
 
-        // 如果缓存中没有，使用原始路径
         if (!modelUrl) {
           modelUrl = `/models/${model.filename}`;
         }
 
-        // 保存缓存 URL 以便后续清理（如果不是原始路径）
         if (modelUrl !== `/models/${model.filename}`) {
           cachedUrlRef.current = modelUrl;
         }
 
-        const blob = await removeBackground(imageDataUrl, {
+        const blob = await removeBackgroundModern(imageDataUrl, {
           model: modelUrl,
           resolution: model.resolution,
         });
@@ -85,7 +82,6 @@ export function useRemoveBackground(
         options.onError?.(error instanceof Error ? error : new Error(String(error)));
       } finally {
         isProcessingRef.current = false;
-        // 清理缓存的 blob URL
         if (cachedUrlRef.current) {
           revokeCachedUrl(cachedUrlRef.current);
           cachedUrlRef.current = null;

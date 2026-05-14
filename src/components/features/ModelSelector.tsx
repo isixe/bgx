@@ -99,17 +99,17 @@ export function ModelSelector() {
 										key={modelId}
 										onClick={() => handleSelect(modelId)}
 										className={`
-													relative w-full px-4 py-3 pr-12 text-left transition-colors
-													${
-														currentModel === modelId
-															? isDarkMode
-																? "bg-indigo-900/30"
-																: "bg-indigo-50"
-															: isDarkMode
-																? "hover:bg-slate-700"
-																: "hover:bg-slate-50"
-													}
-												`}>
+												relative w-full px-4 py-3 pr-12 text-left transition-colors
+												${
+													currentModel === modelId
+														? isDarkMode
+															? "bg-indigo-900/30"
+															: "bg-indigo-50"
+														: isDarkMode
+															? "hover:bg-slate-700"
+															: "hover:bg-slate-50"
+												}
+											`}>
 										{currentModel === modelId && (
 											<div className="absolute right-3 top-1/2 -translate-y-1/2">
 												<svg
