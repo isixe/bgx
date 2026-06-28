@@ -50,6 +50,24 @@ export function ImagePreview() {
 	const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 	const containerRef = useRef<HTMLDivElement>(null);
 	const sliderRef = useRef<HTMLDivElement>(null);
+	const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+	const showToast = useCallback((msg: string) => {
+		setToastMessage(msg);
+		setTimeout(() => setToastMessage(null), 2000);
+	}, []);
+
+	const copyImageToClipboard = useCallback(async (resultImageUrl: string) => {
+		try {
+			const response = await fetch(resultImageUrl);
+			const blob = await response.blob();
+			await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+			showToast(t('copied'));
+		} catch (err) {
+			console.error("Copy failed:", err);
+			alert(t('copyFailed'));
+		}
+	}, [showToast, t]);
 
 	const activeBatchItem = batchMode
 		? batchQueue.find(item => item.id === activeBatchItemId) ?? null
@@ -158,7 +176,14 @@ export function ImagePreview() {
 		const someSelected = selectedBatchItemIds.length > 0 && !allSelected;
 
 		return (
-			<div className="w-full h-full flex items-center justify-center">
+			<div className="w-full h-full flex items-center justify-center relative">
+				{toastMessage && (
+					<div className={`absolute top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all ${
+						isDarkMode ? 'bg-green-600 text-white' : 'bg-green-600 text-white'
+					}`}>
+						{toastMessage}
+					</div>
+				)}
 				<div className={`relative w-full h-full rounded-none sm:rounded-lg overflow-hidden ${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>
 			{batchQueue.length === 0 ? (
 						<div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
@@ -272,6 +297,19 @@ export function ImagePreview() {
 											</div>
 
 											{item.status === 'completed' && (
+												<>
+												<button
+													onClick={(e) => {
+														e.stopPropagation();
+														copyImageToClipboard(item.resultImage!);
+													}}
+													className={`flex-shrink-0 p-1 rounded transition-colors ${isDarkMode ? 'hover:bg-slate-500 text-gray-300 hover:text-white' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
+													title={t('copyToClipboard')}
+												>
+													<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+														<path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+													</svg>
+												</button>
 												<button
 													onClick={(e) => {
 														e.stopPropagation();
@@ -284,6 +322,7 @@ export function ImagePreview() {
 														<path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
 													</svg>
 												</button>
+												</>
 											)}
 											{isSelected && item.status === 'completed' ? (
 												<button
