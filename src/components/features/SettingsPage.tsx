@@ -49,9 +49,56 @@ export function SettingsPage() {
 	];
 
 	return (
-		<div className="flex h-full overflow-hidden">
+		<div className="flex h-full overflow-hidden flex-col [@media(min-width:900px)]:flex-row">
+			{/* Mobile: header + horizontal tab bar */}
+			<div className="[@media(min-width:900px)]:hidden flex flex-col flex-shrink-0 border-b">
+				<div
+					className={`flex items-center justify-between px-4 h-12 border-b ${
+						isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"
+					}`}>
+					<h2
+						className={`text-sm font-semibold uppercase tracking-wider ${
+							isDarkMode ? "text-slate-300" : "text-slate-500"
+						}`}>
+						{t("settings")}
+					</h2>
+					<button
+						onClick={() => setCurrentPage("main")}
+						className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
+							isDarkMode
+								? "text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+								: "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+						}`}
+						title={t("aboutClose")}>
+						<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+							<path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+						</svg>
+					</button>
+				</div>
+				<div className={`flex overflow-x-auto gap-1 px-3 py-2 ${isDarkMode ? "bg-slate-800" : "bg-white"}`}>
+					{tabs.map((tab) => (
+						<button
+							key={tab.id}
+							onClick={() => setSettingsTab(tab.id)}
+							className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+								settingsTab === tab.id
+									? isDarkMode
+										? "bg-indigo-900/40 text-indigo-300"
+										: "bg-indigo-50 text-indigo-700"
+									: isDarkMode
+										? "text-slate-300 hover:bg-slate-700/60 hover:text-slate-100"
+										: "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+							}`}>
+							{tab.icon}
+							<span>{tab.label}</span>
+						</button>
+					))}
+				</div>
+			</div>
+
+			{/* Desktop: sidebar */}
 			<aside
-				className={`w-52 flex-shrink-0 border-r flex flex-col ${
+				className={`hidden [@media(min-width:900px)]:flex w-52 flex-shrink-0 border-r flex-col ${
 					isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"
 				}`}>
 				<div
@@ -264,7 +311,7 @@ export function SettingsPage() {
 										</div>
 
 										<p
-											className={`text-xs absolute bottom-5 left-1/2 -translate-x-1/2 ml-32 text-center ${isDarkMode ? "text-slate-600" : "text-slate-400"}`}>
+											className={`text-xs absolute bottom-5 left-1/2 -translate-x-1/2 text-center [@media(min-width:900px)]:ml-32 ${isDarkMode ? "text-slate-600" : "text-slate-400"}`}>
 											{t("footerText")}
 										</p>
 									</div>

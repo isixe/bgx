@@ -76,7 +76,7 @@ export function ModelsPage({ hideHeader = false }: ModelsPageProps) {
 				</div>
 			)}
 
-			<div className="space-y-3 overflow-y-auto flex-1 sm:mx-0 mx-5 pb-5">
+			<div className="space-y-3 overflow-y-auto flex-1 [@media(max-width:900px)]:mx-0 mx-5 pb-5">
 				{MODELS.map((model) => {
 					const status = modelStatuses[model.id] || "not_downloaded";
 					const isSelected = currentModel === model.id;
@@ -100,10 +100,7 @@ export function ModelsPage({ hideHeader = false }: ModelsPageProps) {
 								${isProcessing ? "opacity-50" : ""}
 							`}>
 							<div className="flex items-start justify-between gap-4">
-								<button
-									onClick={() => selectModel(model.id)}
-									disabled={isProcessing}
-									className="flex-1 text-left">
+								<button onClick={() => selectModel(model.id)} disabled={isProcessing} className="flex-1 text-left">
 									<div className="flex items-center gap-2">
 										<span
 											className={`text-base font-medium ${
@@ -148,10 +145,7 @@ export function ModelsPage({ hideHeader = false }: ModelsPageProps) {
 								<div className="flex items-center gap-2">
 									{status === "downloaded" && (
 										<div className="flex items-center gap-2">
-											<svg
-												className="h-6 w-6 text-green-500"
-												fill="currentColor"
-												viewBox="0 0 20 20">
+											<svg className="h-6 w-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
 												<path
 													fillRule="evenodd"
 													d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -217,14 +211,11 @@ export function ModelsPage({ hideHeader = false }: ModelsPageProps) {
 							{isDownloading && progress && (
 								<div className="mt-4">
 									<div className="flex items-center justify-between text-xs mb-1.5">
-										<span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
-											{t("downloading")}
-										</span>
+										<span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>{t("downloading")}</span>
 										<div className="flex items-center gap-3">
 											<span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
 												{progress.percentage}%
-												{progress.total > 0 &&
-													` (${formatBytes(progress.loaded)} / ${formatBytes(progress.total)})`}
+												{progress.total > 0 && ` (${formatBytes(progress.loaded)} / ${formatBytes(progress.total)})`}
 											</span>
 											<button
 												onClick={() => handleCancelDownload(model.id)}
@@ -237,10 +228,7 @@ export function ModelsPage({ hideHeader = false }: ModelsPageProps) {
 											</button>
 										</div>
 									</div>
-									<div
-										className={`h-2 rounded-full overflow-hidden ${
-											isDarkMode ? "bg-slate-700" : "bg-slate-200"
-										}`}>
+									<div className={`h-2 rounded-full overflow-hidden ${isDarkMode ? "bg-slate-700" : "bg-slate-200"}`}>
 										<div
 											className="h-full bg-indigo-600 transition-all duration-200"
 											style={{ width: `${progress.percentage}%` }}
