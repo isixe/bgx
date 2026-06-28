@@ -7,6 +7,7 @@ import { ModelSelector } from "../features/ModelSelector";
 import { ImagePreview } from "../features/ImagePreview";
 import { ExportPanel } from "../features/ExportPanel";
 import { ModelsPage } from "../features/ModelsPage";
+import { SettingsPage } from "../features/SettingsPage";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 import { downloadResultImage } from "../features/ImagePreview";
 
@@ -67,9 +68,9 @@ export function MainLayout() {
 						)}
 					</button>
 					<button
-						onClick={() => setCurrentPage(currentPage === "models" ? "main" : "models")}
+						onClick={() => setCurrentPage(currentPage === "settings" ? "main" : "settings")}
 						className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-							currentPage === "models"
+							currentPage === "settings"
 								? "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400"
 								: "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
 						}`}
@@ -136,12 +137,8 @@ export function MainLayout() {
 			{/* Mobile Layout */}
 			<div className="[@media(min-width:900px)]:hidden">
 				<main className={`${isDarkMode ? "bg-slate-800" : "bg-slate-100"}`}>
-					{currentPage === "models" ? (
-						<div className="overflow-hidden">
-							<div className="w-full max-w-3xl mx-auto">
-								<ModelsPage />
-							</div>
-						</div>
+					{currentPage === "settings" ? (
+						<SettingsPage />
 					) : !originalImage && !(batchMode && batchQueue.length > 0) ? (
 						<div className="flex items-center justify-center p-4" style={{ minHeight: "calc(100dvh - 56px)" }}>
 							<ImageUploader
@@ -183,12 +180,8 @@ export function MainLayout() {
 			{/* Desktop Layout */}
 			<div className="hidden [@media(min-width:900px)]:flex h-[calc(100dvh-56px)] overflow-hidden">
 				<main className={`flex-1 flex flex-col overflow-y-auto ${isDarkMode ? "bg-slate-800" : "bg-slate-100"}`}>
-					{currentPage === "models" ? (
-						<div className="overflow-y-auto h-full">
-							<div className="w-full max-w-3xl mx-auto">
-								<ModelsPage />
-							</div>
-						</div>
+					{currentPage === "settings" ? (
+						<SettingsPage />
 					) : !originalImage && !(batchMode && batchQueue.length > 0) ? (
 						<div className="flex items-center justify-center p-4 flex-1 min-h-0">
 							<ImageUploader
@@ -206,7 +199,7 @@ export function MainLayout() {
 				</main>
 
 				{/* Desktop Sidebar */}
-				{currentPage !== "models" && (
+				{currentPage !== "settings" && currentPage !== "models" && (
 					<aside
 						className={`w-[400px] flex-shrink-0 border-l ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} overflow-y-auto p-4`}>
 						<SidebarContent

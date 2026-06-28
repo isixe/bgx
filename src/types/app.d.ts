@@ -26,7 +26,8 @@ export type AppState = {
   error: string | null;
   isReadyToProcess: boolean;
   processedModel: string | null;
-  currentPage: 'main' | 'models';
+  currentPage: 'main' | 'models' | 'settings';
+  settingsTab: 'models' | 'about' | 'relatedTools';
   isDarkMode: boolean;
   processingTrigger: number;
   cachedModelUrl: string | null;
@@ -38,7 +39,8 @@ export type AppState = {
   modelDownloadProgresses: Record<string, DownloadProgressInfo | null>;
 
   setCurrentModel: (model: string) => Promise<void>;
-  setCurrentPage: (page: 'main' | 'models') => void;
+  setCurrentPage: (page: 'main' | 'models' | 'settings') => void;
+  setSettingsTab: (tab: 'models' | 'about' | 'relatedTools') => void;
   setOriginalImage: (image: string | null) => void;
   setResultImage: (image: string | null) => void;
   setIsProcessing: (isProcessing: boolean) => void;

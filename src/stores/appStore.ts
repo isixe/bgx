@@ -23,7 +23,8 @@ const initialState = {
   error: null as string | null,
   isReadyToProcess: false,
   processedModel: null as string | null,
-  currentPage: 'main' as 'main' | 'models',
+  currentPage: 'main' as 'main' | 'models' | 'settings',
+  settingsTab: 'models' as 'models' | 'about' | 'relatedTools',
   isDarkMode: getInitialDarkMode(),
   processingTrigger: 0,
   cachedModelUrl: null as string | null,
@@ -182,6 +183,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsReadyToProcess: (isReady) => set({ isReadyToProcess: isReady }),
   setProcessedModel: (model) => set({ processedModel: model }),
   setCurrentPage: (page) => set({ currentPage: page }),
+  setSettingsTab: (tab) => set({ settingsTab: tab }),
   setIsDarkMode: (isDark) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('bgx-dark-mode', String(isDark));
