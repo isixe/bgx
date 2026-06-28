@@ -156,6 +156,9 @@ export const translations = {
   settingsAbout: 'About',
   settingsRelatedTools: 'Related Tools',
   relatedToolsSubtitle: 'Here are some of my other projects. If you\'re interested in image processing tools, feel free to check them out.',
+  toolImageDashName: 'Image Dash',
+  toolImageDashDesc: 'Reverse Image & Text Search - Find any image fast with powerful reverse image search across Google, Yandex, Bing, and more',
+
   aboutTitle: 'About BGX',
   aboutDescription: 'A free, privacy-first background removal tool powered by AI. All processing happens locally in your browser.',
   aboutGithub: 'GitHub Repository',
