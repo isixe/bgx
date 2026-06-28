@@ -225,11 +225,14 @@ export function ImagePreview() {
 					</div>
 				)}
 
-				{/* Processing Overlay */}
 				{isProcessing && (
-					<div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-4 z-20">
-						<div className="w-10 h-10 border-3 border-white/30 border-t-white rounded-full animate-spin" />
-						<div className="text-white text-lg font-medium">
+					<div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-5 z-20 animate-overlay-in">
+						<div className="relative w-14 h-14">
+							<div className="absolute inset-0 rounded-full border-4 border-white/10" />
+							<div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-400 animate-spin" />
+							<div className="absolute inset-2 rounded-full border-4 border-transparent border-r-indigo-300 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }} />
+						</div>
+						<div className="text-white/70 text-sm">
 							{t('processingHint')}
 						</div>
 					</div>

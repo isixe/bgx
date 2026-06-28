@@ -23,14 +23,22 @@ export function useRemoveBackground(
     stopProgressAnimation();
     currentProgressRef.current = 0;
 
+    // Immediate bump to show responsiveness
+    options.onProgress?.(3);
+
+    const startTime = performance.now();
     progressIntervalRef.current = setInterval(() => {
+      const elapsed = performance.now() - startTime;
+      // Use elapsed time to determine speed: faster early, slower later
+      const speedMultiplier = Math.max(0.6, 1 - elapsed / 30000);
       const remaining = 90 - currentProgressRef.current;
+
       if (remaining > 0) {
-        const increment = remaining * 0.05 + Math.random() * 2;
+        const increment = (remaining * 0.045 + Math.random() * 1.5) * speedMultiplier;
         currentProgressRef.current = Math.min(90, currentProgressRef.current + increment);
         options.onProgress?.(Math.floor(currentProgressRef.current));
       }
-    }, 200);
+    }, 150);
   }, [options, stopProgressAnimation]);
 
   const processImage = useCallback(
