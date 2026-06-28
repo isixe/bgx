@@ -151,6 +151,16 @@ export const translations = {
 
   darkMode: 'Dark Mode',
   lightMode: 'Light Mode',
+
+  selectAll: 'Select All',
+  back: 'Back',
+  batchEmpty: 'No images yet',
+  batchStatusCompleted: 'Done',
+  batchStatusFailed: 'Failed',
+  batchStatusPending: 'Pending',
+  batchExport: 'Export',
+  batchExportAll: 'Export All',
+  batchExportSelected: 'Export Selected',
 } as const;
 
 export type TranslationKey = keyof typeof translations;

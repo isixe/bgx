@@ -1,12 +1,14 @@
 import { useEffect, useRef } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "../../lib/i18n";
+import type { BatchItem } from "../../types/app";
 import { ImageUploader } from "../features/ImageUploader";
 import { ModelSelector } from "../features/ModelSelector";
 import { ImagePreview } from "../features/ImagePreview";
 import { ExportPanel } from "../features/ExportPanel";
 import { ModelsPage } from "../features/ModelsPage";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
+import { downloadResultImage } from "../features/ImagePreview";
 
 export function MainLayout() {
 	const {
@@ -22,6 +24,12 @@ export function MainLayout() {
 		setIsDarkMode,
 		modelStatuses,
 		modelDownloadProgresses,
+		batchMode,
+		batchQueue,
+		selectedBatchItemIds,
+		selectAllBatchItems,
+		reprocessBatchItem,
+		setBatchMode,
 	} = useAppStore();
 	const { t } = useTranslation();
 
@@ -134,7 +142,7 @@ export function MainLayout() {
 								<ModelsPage />
 							</div>
 						</div>
-					) : !originalImage ? (
+					) : !originalImage && !(batchMode && batchQueue.length > 0) ? (
 						<div className="flex items-center justify-center p-4" style={{ minHeight: "calc(100dvh - 56px)" }}>
 							<ImageUploader
 								disabled={isModelDownloading}
@@ -147,7 +155,6 @@ export function MainLayout() {
 							<div className="h-[300px]">
 								<ImagePreview />
 							</div>
-							{/* Mobile Controls */}
 							<div
 								className={`border-t ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} p-4`}>
 								<SidebarContent
@@ -159,6 +166,13 @@ export function MainLayout() {
 									reset={reset}
 									t={t}
 									isDarkMode={isDarkMode}
+									batchMode={batchMode}
+									batchQueue={batchQueue}
+									selectedBatchItemIds={selectedBatchItemIds}
+									currentModel={currentModel}
+									selectAllBatchItems={selectAllBatchItems}
+									reprocessBatchItem={reprocessBatchItem}
+									setBatchMode={setBatchMode}
 								/>
 							</div>
 						</div>
@@ -175,7 +189,7 @@ export function MainLayout() {
 								<ModelsPage />
 							</div>
 						</div>
-					) : !originalImage ? (
+					) : !originalImage && !(batchMode && batchQueue.length > 0) ? (
 						<div className="flex items-center justify-center p-4 flex-1 min-h-0">
 							<ImageUploader
 								disabled={isModelDownloading}
@@ -184,7 +198,6 @@ export function MainLayout() {
 						</div>
 					) : (
 						<div className="flex flex-col flex-1 min-h-0">
-							{/* Image Preview */}
 							<div className="flex-1 min-h-0">
 								<ImagePreview />
 							</div>
@@ -205,6 +218,13 @@ export function MainLayout() {
 							reset={reset}
 							t={t}
 							isDarkMode={isDarkMode}
+							batchMode={batchMode}
+							batchQueue={batchQueue}
+							selectedBatchItemIds={selectedBatchItemIds}
+							currentModel={currentModel}
+							selectAllBatchItems={selectAllBatchItems}
+							reprocessBatchItem={reprocessBatchItem}
+							setBatchMode={setBatchMode}
 						/>
 					</aside>
 				)}
@@ -224,6 +244,13 @@ interface SidebarContentProps {
 	t: (key: string) => string;
 	isDarkMode: boolean;
 	onAction?: () => void;
+	batchMode: boolean;
+	batchQueue: BatchItem[];
+	selectedBatchItemIds: string[];
+	currentModel: string;
+	selectAllBatchItems: (selectAll: boolean) => void;
+	reprocessBatchItem: (id: string, modelId: string) => void;
+	setBatchMode: (mode: boolean) => void;
 }
 
 function SidebarContent({
@@ -236,6 +263,13 @@ function SidebarContent({
 	t,
 	isDarkMode,
 	onAction,
+	batchMode,
+	batchQueue,
+	selectedBatchItemIds,
+	currentModel,
+	selectAllBatchItems,
+	reprocessBatchItem,
+	setBatchMode,
 }: SidebarContentProps) {
 	const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	useEffect(() => {
@@ -259,6 +293,43 @@ function SidebarContent({
 		onAction?.();
 	};
 
+	const isBatchProcessing = batchQueue.some((item) => item.status === 'processing');
+	const hasCompletedBatchItems = batchQueue.some((item) => item.status === 'completed');
+	const hasSelectedCompleted = batchQueue.some(
+		(item) => selectedBatchItemIds.includes(item.id) && item.status === 'completed',
+	);
+
+	const handleBatchExportAll = () => {
+		const toExport = selectedBatchItemIds.length > 0
+			? batchQueue.filter((item) => selectedBatchItemIds.includes(item.id) && item.status === 'completed')
+			: batchQueue.filter((item) => item.status === 'completed');
+		for (const item of toExport) {
+			if (item.resultImage) {
+				downloadResultImage(item.originalImage, item.resultImage, item.name, 'png');
+			}
+		}
+		onAction?.();
+	};
+
+	const handleBatchReprocess = () => {
+		const toReprocess = selectedBatchItemIds.length > 0
+			? batchQueue.filter((item) => selectedBatchItemIds.includes(item.id) && item.status === 'completed')
+			: batchQueue.filter((item) => item.status === 'completed');
+		for (const item of toReprocess) {
+			reprocessBatchItem(item.id, currentModel);
+		}
+		if (selectedBatchItemIds.length > 0) {
+			selectAllBatchItems(false);
+		}
+		onAction?.();
+	};
+
+	const handleNewImage = () => {
+		setBatchMode(false);
+		reset();
+		onAction?.();
+	};
+
 	return (
 		<>
 			{error && (
@@ -275,8 +346,8 @@ function SidebarContent({
 				</div>
 			)}
 
-			<div className="space-y-4">
-				{originalImage && !resultImage && !isProcessing && (
+			<div className={`space-y-4 ${isBatchProcessing ? 'pointer-events-none opacity-70' : ''}`}>
+				{originalImage && !resultImage && !isProcessing && !batchMode && (
 					<button
 						onClick={handleStartProcessing}
 						disabled={!originalImage}
@@ -285,7 +356,7 @@ function SidebarContent({
 					</button>
 				)}
 
-				{resultImage && (
+				{resultImage && !batchMode && (
 					<div className="space-y-4">
 						{!isProcessing && (
 							<button
@@ -304,9 +375,36 @@ function SidebarContent({
 					</div>
 				)}
 
+				{batchMode && batchQueue.length > 0 && (
+					<div className="space-y-4">
+						<button
+							onClick={handleBatchReprocess}
+							disabled={!hasCompletedBatchItems}
+							className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
+							{t("reprocess")}{selectedBatchItemIds.length > 0 ? ` (${selectedBatchItemIds.length})` : ''}
+						</button>
+
+						<button
+							onClick={handleNewImage}
+							disabled={isBatchProcessing}
+							className={`w-full rounded-lg border px-4 py-3 text-sm font-medium transition-all disabled:opacity-50 ${isDarkMode ? "border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}>
+							{t("processNewImage")}
+						</button>
+					</div>
+				)}
+
 				<ModelSelector />
 
-				{originalImage && <ExportPanel disabled={isProcessing} />}
+				{batchMode && (
+					<button
+						onClick={handleBatchExportAll}
+						disabled={!hasCompletedBatchItems}
+						className="mt-4 w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
+						{selectedBatchItemIds.length > 0 ? t("batchExportSelected") : t("batchExportAll")}
+					</button>
+				)}
+
+				{originalImage && !batchMode && <ExportPanel disabled={isProcessing} />}
 			</div>
 		</>
 	);

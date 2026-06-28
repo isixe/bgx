@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AppState, ModelStatus } from '../types/app';
+import type { AppState, ModelStatus, BatchItem, BatchItemStatus } from '../types/app';
 import { getCachedModelBlobUrl, revokeCachedUrl, downloadModel, cancelDownload, isModelCached, getAllCachedModels } from '../utils/modelCache';
 import { MODELS } from '../config/models';
 
@@ -33,6 +33,11 @@ const initialState = {
   isModelStatusesLoaded: false,
   // 全局下载进度状态（跨页面保持）
   modelDownloadProgresses: {} as Record<string, { loaded: number; total: number; percentage: number } | null>,
+  batchMode: false,
+  batchQueue: [] as BatchItem[],
+  activeBatchItemId: null as string | null,
+  viewingBatchResult: false,
+    selectedBatchItemIds: [] as string[],
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -184,6 +189,102 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isDarkMode: isDark });
   },
   startProcessing: () => set((state) => ({ isReadyToProcess: true, processingTrigger: state.processingTrigger + 1 })),
+
+  setBatchMode: (mode) => set({ batchMode: mode }),
+
+  addToBatchQueue: async (file: File) => {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+
+    const id = crypto.randomUUID();
+    const item: BatchItem = {
+      id,
+      originalImage: dataUrl,
+      resultImage: null,
+      status: 'pending',
+      modelId: get().currentModel,
+      name: file.name,
+    };
+
+    set((state) => ({
+      batchQueue: [...state.batchQueue, item],
+    }));
+
+    // 自动触发处理
+    get().updateBatchItemStatus(id, 'pending');
+  },
+
+  selectBatchItem: (id: string) => {
+    set({
+      activeBatchItemId: id,
+      viewingBatchResult: true,
+      selectedBatchItemIds: [],
+    });
+  },
+
+  backToBatchQueue: () => {
+    set({
+      activeBatchItemId: null,
+      viewingBatchResult: false,
+      selectedBatchItemIds: [],
+    });
+  },
+
+  selectBatchQueueItem: (id: string) => {
+    set((state) => ({
+      selectedBatchItemIds: state.selectedBatchItemIds.includes(id)
+        ? state.selectedBatchItemIds.filter((i) => i !== id)
+        : [...state.selectedBatchItemIds, id],
+    }));
+  },
+
+  selectAllBatchItems: (selectAll: boolean) => {
+    set((state) => ({
+      selectedBatchItemIds: selectAll
+        ? state.batchQueue.filter((item) => item.status !== 'processing').map((item) => item.id)
+        : [],
+    }));
+  },
+
+  removeBatchItem: (id: string) => {
+    set((state) => ({
+      batchQueue: state.batchQueue.filter((item) => item.id !== id),
+    }));
+  },
+
+  clearBatchQueue: () => {
+    set({
+      batchQueue: [],
+      activeBatchItemId: null,
+      viewingBatchResult: false,
+      selectedBatchItemIds: [],
+    });
+  },
+
+  reprocessBatchItem: (id: string, modelId: string) => {
+    set((state) => ({
+      batchQueue: state.batchQueue.map((item) =>
+        item.id === id
+          ? { ...item, status: 'pending' as BatchItemStatus, modelId, resultImage: null, error: null }
+          : item
+      ),
+    }));
+  },
+
+  updateBatchItemStatus: (id: string, status: BatchItemStatus, resultImage?: string | null, error?: string | null) => {
+    set((state) => ({
+      batchQueue: state.batchQueue.map((item) =>
+        item.id === id
+          ? { ...item, status, ...(resultImage !== undefined ? { resultImage } : {}), ...(error !== undefined ? { error } : {}) }
+          : item
+      ),
+    }));
+  },
+
   reset: () => {
     const state = get();
     if (state.cachedModelUrl) {

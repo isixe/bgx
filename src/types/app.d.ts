@@ -58,7 +58,37 @@ export type AppState = {
   downloadModelWithProgress: (modelId: string) => Promise<void>;
   // 取消模型下载
   cancelModelDownload: (modelId: string) => void;
+
+  // 批量处理
+  batchMode: boolean;
+  batchQueue: BatchItem[];
+  activeBatchItemId: string | null;
+  viewingBatchResult: boolean;
+  selectedBatchItemIds: string[];
+
+  setBatchMode: (mode: boolean) => void;
+  addToBatchQueue: (file: File) => Promise<void>;
+  selectBatchItem: (id: string) => void;
+  selectBatchQueueItem: (id: string) => void;
+  selectAllBatchItems: (selectAll: boolean) => void;
+  backToBatchQueue: () => void;
+  removeBatchItem: (id: string) => void;
+  clearBatchQueue: () => void;
+  reprocessBatchItem: (id: string, modelId: string) => void;
+  updateBatchItemStatus: (id: string, status: BatchItemStatus, resultImage?: string | null, error?: string | null) => void;
 };
+
+export type BatchItemStatus = 'pending' | 'processing' | 'completed' | 'error';
+
+export interface BatchItem {
+  id: string;
+  originalImage: string;
+  resultImage: string | null;
+  status: BatchItemStatus;
+  modelId: string;
+  name: string;
+  error?: string | null;
+}
 
 export type UseRemoveBackgroundOptions = {
   onProgress?: (progress: number) => void;

@@ -151,6 +151,16 @@ export const translations = {
 
   darkMode: '深色模式',
   lightMode: '浅色模式',
+
+  selectAll: '全选',
+  back: '返回',
+  batchEmpty: '暂无图片',
+  batchStatusCompleted: '完成',
+  batchStatusFailed: '失败',
+  batchStatusPending: '等待中',
+  batchExport: '导出',
+  batchExportAll: '全部导出',
+  batchExportSelected: '导出选中',
 } as const;
 
 export type TranslationKey = keyof typeof translations;

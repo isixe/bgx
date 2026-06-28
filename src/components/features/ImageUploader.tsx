@@ -23,7 +23,7 @@ interface ImageUploaderProps {
 }
 
 export function ImageUploader({ disabled = false, disabledMessage }: ImageUploaderProps) {
-	const { setOriginalImage, setError, currentModel, setCurrentModel, isDarkMode } = useAppStore();
+	const { setOriginalImage, setError, currentModel, setCurrentModel, isDarkMode, setBatchMode, addToBatchQueue, clearBatchQueue } = useAppStore();
 	const { t } = useTranslation();
 	const [isDragging, setIsDragging] = useState(false);
 	const [isModelOpen, setIsModelOpen] = useState(false);
@@ -57,34 +57,46 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
 		return ext ? validExts.includes(ext) : false;
 	};
 
-	const handleFile = useCallback(
-		(file: File) => {
+	const handleFiles = useCallback(
+		(files: File[]) => {
 			if (disabled) return;
 
-			if (!isValidImageType(file)) {
-				setError(t("errorUnsupportedFormat"));
-				return;
-			}
-
-			if (file.size > 30 * 1024 * 1024) {
-				setError(t("errorFileTooLarge"));
-				return;
-			}
-
-			const reader = new FileReader();
-			reader.onload = (e) => {
-				const result = e.target?.result as string;
-				if (result) {
-					setOriginalImage(result);
-					setError(null);
+			const validFiles: File[] = [];
+			for (const file of files) {
+				if (!isValidImageType(file)) {
+					setError(t("errorUnsupportedFormat"));
+					continue;
 				}
-			};
-			reader.onerror = () => {
-				setError(t("errorReadFailed"));
-			};
-			reader.readAsDataURL(file);
+				if (file.size > 30 * 1024 * 1024) {
+					setError(t("errorFileTooLarge"));
+					continue;
+				}
+				validFiles.push(file);
+			}
+
+			if (validFiles.length === 0) return;
+
+			if (validFiles.length === 1) {
+				clearBatchQueue();
+				setBatchMode(false);
+				const reader = new FileReader();
+				reader.onload = (e) => {
+					const result = e.target?.result as string;
+					if (result) {
+						setOriginalImage(result);
+						setError(null);
+					}
+				};
+				reader.onerror = () => {
+					setError(t("errorReadFailed"));
+				};
+				reader.readAsDataURL(validFiles[0]);
+			} else {
+				setBatchMode(true);
+				validFiles.forEach((file) => addToBatchQueue(file));
+			}
 		},
-		[setOriginalImage, setError, t, disabled],
+		[setOriginalImage, setError, t, disabled, setBatchMode, addToBatchQueue, clearBatchQueue],
 	);
 
 	const handleDrop = useCallback(
@@ -93,12 +105,12 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
 			if (disabled) return;
 			setIsDragging(false);
 
-			const file = e.dataTransfer.files[0];
-			if (file) {
-				handleFile(file);
+			const files = Array.from(e.dataTransfer.files);
+			if (files.length > 0) {
+				handleFiles(files);
 			}
 		},
-		[handleFile, disabled],
+		[handleFiles, disabled],
 	);
 
 	const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -119,12 +131,16 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
 
 	const handleFileInput = useCallback(
 		(e: React.ChangeEvent<HTMLInputElement>) => {
-			const file = e.target.files?.[0];
-			if (file) {
-				handleFile(file);
+			const files = e.target.files ? Array.from(e.target.files) : [];
+			if (files.length > 0) {
+				handleFiles(files);
+			}
+			// Reset so selecting the same files again triggers onChange
+			if (fileInputRef.current) {
+				fileInputRef.current.value = '';
 			}
 		},
-		[handleFile],
+		[handleFiles],
 	);
 
 	useEffect(() => {
@@ -137,7 +153,7 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
 				if (items[i].type.startsWith("image/")) {
 					const blob = items[i].getAsFile();
 					if (blob) {
-						handleFile(blob);
+						handleFiles([blob]);
 						break;
 					}
 				}
@@ -148,7 +164,7 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
 		return () => {
 			document.removeEventListener("paste", handlePaste);
 		};
-	}, [handleFile, disabled]);
+	}, [handleFiles, disabled]);
 
 	return (
 		<div
@@ -176,6 +192,7 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
 				ref={fileInputRef}
 				type="file"
 				accept={SUPPORTED_EXTENSIONS}
+				multiple
 				onChange={handleFileInput}
 				className="hidden"
 				disabled={disabled}

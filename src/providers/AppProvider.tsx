@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useAppStore } from "../stores/appStore";
 import { useRemoveBackground } from "../hooks/useRemoveBackground";
 import { MainLayout } from "../components/layout/MainLayout";
@@ -25,6 +25,9 @@ export function AppProvider() {
 		setProcessedModel,
 		initializeModelStatuses,
 		updateModelStatus,
+		batchMode,
+		batchQueue,
+		updateBatchItemStatus,
 	} = useAppStore();
 
 	// 应用启动时初始化所有模型状态
@@ -70,6 +73,67 @@ export function AppProvider() {
 		onError: handleError,
 		onSuccess: handleSuccess,
 	});
+
+	const processingBatchItemIdRef = useRef<string | null>(null);
+
+	const handleBatchProgress = useCallback(() => {
+		// 批量模式下不显示进度百分比
+	}, []);
+
+	const handleBatchError = useCallback(
+		(error: Error) => {
+			const itemId = processingBatchItemIdRef.current;
+			if (itemId) {
+				updateBatchItemStatus(itemId, 'error', null, error.message);
+				processingBatchItemIdRef.current = null;
+			}
+		},
+		[updateBatchItemStatus],
+	);
+
+	const handleBatchSuccess = useCallback(
+		(result: string) => {
+			const itemId = processingBatchItemIdRef.current;
+			if (itemId) {
+				updateBatchItemStatus(itemId, 'completed', result);
+				processingBatchItemIdRef.current = null;
+			}
+		},
+		[updateBatchItemStatus],
+	);
+
+	const { processImage: processBatchImage } = useRemoveBackground({
+		onProgress: handleBatchProgress,
+		onError: handleBatchError,
+		onSuccess: handleBatchSuccess,
+	});
+
+	// Batch queue processing
+	useEffect(() => {
+		if (!batchMode) return;
+
+		const processQueue = async () => {
+			if (processingBatchItemIdRef.current) return;
+
+			const pendingItem = batchQueue.find((item) => item.status === 'pending');
+			if (!pendingItem) return;
+
+			processingBatchItemIdRef.current = pendingItem.id;
+			updateBatchItemStatus(pendingItem.id, 'processing');
+
+			const isStillCached = await isModelCached(pendingItem.modelId);
+			if (!isStillCached) {
+				updateBatchItemStatus(pendingItem.id, 'error', null, 'Model not available');
+				processingBatchItemIdRef.current = null;
+				return;
+			}
+
+			const freshCachedUrl = await getCachedModelBlobUrl(pendingItem.modelId);
+			await processBatchImage(pendingItem.originalImage, pendingItem.modelId, freshCachedUrl);
+		};
+
+		processQueue();
+	}, [batchMode, batchQueue, processBatchImage, updateBatchItemStatus]);
 
 	useEffect(() => {
 		const checkAndProcess = async () => {
