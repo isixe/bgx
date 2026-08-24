@@ -14,9 +14,7 @@ export default defineConfig({
     tailwind(),
   ],
   vite: {
-    optimizeDeps: {
-      exclude: ['onnxruntime-web', 'modern-rembg'],
-    },
+    optimizeDeps: {},
     server: {
       headers: {
         'Cross-Origin-Opener-Policy': 'same-origin',
@@ -27,6 +25,9 @@ export default defineConfig({
       alias: {
         '@': path.resolve(__dirname, './src'),
       },
+    },
+    worker: {
+      format: 'es',
     },
   },
 });

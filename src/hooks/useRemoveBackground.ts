@@ -1,45 +1,22 @@
-import { useCallback, useRef } from 'react';
-import { removeBackground as removeBackgroundModern } from 'modern-rembg';
+import { useCallback, useRef, useEffect } from 'react';
 import { getModelById } from '../utils/modelUtils';
 import { getCachedModelBlobUrl, revokeCachedUrl } from '../utils/modelCache';
+import { getOnnxWorkerClient } from '../workers/onnx-worker-client';
 import type { UseRemoveBackgroundOptions, UseRemoveBackgroundReturn } from '../types/app';
 
 export function useRemoveBackground(
-  options: UseRemoveBackgroundOptions = {},
+  options: UseRemoveBackgroundOptions = {}
 ): UseRemoveBackgroundReturn {
   const isProcessingRef = useRef<boolean>(false);
-  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const currentProgressRef = useRef<number>(0);
   const cachedUrlRef = useRef<string | null>(null);
 
-  const stopProgressAnimation = useCallback(() => {
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = null;
-    }
-  }, []);
-
-  const startProgressAnimation = useCallback(() => {
-    stopProgressAnimation();
-    currentProgressRef.current = 0;
-
-    // Immediate bump to show responsiveness
-    options.onProgress?.(3);
-
-    const startTime = performance.now();
-    progressIntervalRef.current = setInterval(() => {
-      const elapsed = performance.now() - startTime;
-      // Use elapsed time to determine speed: faster early, slower later
-      const speedMultiplier = Math.max(0.6, 1 - elapsed / 30000);
-      const remaining = 90 - currentProgressRef.current;
-
-      if (remaining > 0) {
-        const increment = (remaining * 0.045 + Math.random() * 1.5) * speedMultiplier;
-        currentProgressRef.current = Math.min(90, currentProgressRef.current + increment);
-        options.onProgress?.(Math.floor(currentProgressRef.current));
+  useEffect(() => {
+    return () => {
+      if (isProcessingRef.current) {
+        getOnnxWorkerClient().cancel();
       }
-    }, 150);
-  }, [options, stopProgressAnimation]);
+    };
+  }, []);
 
   const processImage = useCallback(
     async (imageDataUrl: string, modelId: string, preloadedModelUrl: string | null = null) => {
@@ -51,7 +28,6 @@ export function useRemoveBackground(
 
       try {
         options.onProgress?.(0);
-        startProgressAnimation();
 
         const model = getModelById(modelId);
 
@@ -68,25 +44,21 @@ export function useRemoveBackground(
           cachedUrlRef.current = modelUrl;
         }
 
-        const blob = await removeBackgroundModern(imageDataUrl, {
-          model: modelUrl,
-          resolution: model.resolution,
-        });
+        const worker = getOnnxWorkerClient();
+        const result = await worker.processImage(
+          imageDataUrl,
+          modelUrl,
+          model.resolution,
+          (progress) => options.onProgress?.(progress)
+        );
 
-        stopProgressAnimation();
-
-        options.onProgress?.(95);
-
-        const resultDataUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-
-        options.onProgress?.(100);
-        options.onSuccess?.(resultDataUrl);
+        if (result.type === 'success' && result.result) {
+          options.onProgress?.(100);
+          options.onSuccess?.(result.result);
+        } else if (result.type === 'error') {
+          options.onError?.(new Error(result.error || 'Unknown error'));
+        }
       } catch (error) {
-        stopProgressAnimation();
         options.onError?.(error instanceof Error ? error : new Error(String(error)));
       } finally {
         isProcessingRef.current = false;
@@ -96,7 +68,7 @@ export function useRemoveBackground(
         }
       }
     },
-    [options, startProgressAnimation, stopProgressAnimation],
+    [options]
   );
 
   return {
