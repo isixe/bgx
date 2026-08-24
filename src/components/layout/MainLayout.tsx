@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "../../lib/i18n";
+import { useGlobalDragDrop } from "../../hooks/useGlobalDragDrop";
 import type { BatchItem } from "../../types/app";
 import { ImageUploader } from "../features/ImageUploader";
 import { ModelSelector } from "../features/ModelSelector";
@@ -36,10 +37,13 @@ export function MainLayout() {
 
 	const error = useAppStore((state) => state.error);
 
-	// 从全局状态计算当前模型的下载状态
 	const isModelDownloading = modelStatuses[currentModel] === "downloading";
 	const currentModelProgress = modelDownloadProgresses[currentModel];
 	const modelDownloadProgress = currentModelProgress?.percentage ?? 0;
+
+	const { isDragging, dragProps } = useGlobalDragDrop({
+		disabled: isModelDownloading || currentPage === "settings",
+	});
 
 	return (
 		<div className={`h-[100dvh] overflow-y-auto ${isDarkMode ? "bg-slate-900" : "bg-slate-50"}`}>
@@ -134,94 +138,156 @@ export function MainLayout() {
 				</div>
 			)}
 
-			{/* Mobile Layout */}
-			<div className="[@media(min-width:900px)]:hidden">
-				<main className={`${isDarkMode ? "bg-slate-800" : "bg-slate-100"}`}>
-					{currentPage === "settings" ? (
-						<SettingsPage />
-					) : !originalImage && !(batchMode && batchQueue.length > 0) ? (
-						<div className="flex items-center justify-center p-4" style={{ minHeight: "calc(100dvh - 56px)" }}>
-							<ImageUploader
-								disabled={isModelDownloading}
-								disabledMessage={isModelDownloading ? t("modelDownloadingTitle") : undefined}
-							/>
-						</div>
-					) : (
-						<div className="flex flex-col">
-							{/* Image Preview */}
-							<div className="h-[300px]">
-								<ImagePreview />
-							</div>
-							<div
-								className={`border-t ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} p-4`}>
-								<SidebarContent
-									error={error}
-									originalImage={originalImage}
-									resultImage={resultImage}
-									isProcessing={isProcessing}
-									startProcessing={startProcessing}
-									reset={reset}
-									t={t}
-									isDarkMode={isDarkMode}
-									batchMode={batchMode}
-									batchQueue={batchQueue}
-									selectedBatchItemIds={selectedBatchItemIds}
-									currentModel={currentModel}
-									selectAllBatchItems={selectAllBatchItems}
-									reprocessBatchItem={reprocessBatchItem}
-									setBatchMode={setBatchMode}
-								/>
-							</div>
-						</div>
-					)}
-				</main>
-			</div>
-
-			{/* Desktop Layout */}
-			<div className="hidden [@media(min-width:900px)]:flex h-[calc(100dvh-56px)] overflow-hidden">
-				<main className={`flex-1 flex flex-col overflow-y-auto ${isDarkMode ? "bg-slate-800" : "bg-slate-100"}`}>
-					{currentPage === "settings" ? (
-						<SettingsPage />
-					) : !originalImage && !(batchMode && batchQueue.length > 0) ? (
-						<div className="flex items-center justify-center p-4 flex-1 min-h-0">
-							<ImageUploader
-								disabled={isModelDownloading}
-								disabledMessage={isModelDownloading ? t("modelDownloadingTitle") : undefined}
-							/>
-						</div>
-					) : (
-						<div className="flex flex-col flex-1 min-h-0">
-							<div className="flex-1 min-h-0">
-								<ImagePreview />
-							</div>
-						</div>
-					)}
-				</main>
-
-				{/* Desktop Sidebar */}
-				{currentPage !== "settings" && currentPage !== "models" && (
-					<aside
-						className={`w-[400px] flex-shrink-0 border-l ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} overflow-y-auto p-4`}>
-						<SidebarContent
-							error={error}
-							originalImage={originalImage}
-							resultImage={resultImage}
-							isProcessing={isProcessing}
-							startProcessing={startProcessing}
-							reset={reset}
-							t={t}
-							isDarkMode={isDarkMode}
-							batchMode={batchMode}
-							batchQueue={batchQueue}
-							selectedBatchItemIds={selectedBatchItemIds}
-							currentModel={currentModel}
-							selectAllBatchItems={selectAllBatchItems}
-							reprocessBatchItem={reprocessBatchItem}
-							setBatchMode={setBatchMode}
+		{/* Mobile Layout */}
+		<div className="[@media(min-width:900px)]:hidden">
+			<main
+				{...dragProps}
+				className={`${isDarkMode ? "bg-slate-800" : "bg-slate-100"} relative`}>
+				{currentPage === "settings" ? (
+					<SettingsPage />
+				) : !originalImage && !(batchMode && batchQueue.length > 0) ? (
+					<div className="flex items-center justify-center p-4" style={{ minHeight: "calc(100dvh - 56px)" }}>
+						<ImageUploader
+							disabled={isModelDownloading}
+							disabledMessage={isModelDownloading ? t("modelDownloadingTitle") : undefined}
 						/>
-					</aside>
+					</div>
+				) : (
+					<div className="flex flex-col">
+						{/* Image Preview */}
+						<div className="h-[300px]">
+							<ImagePreview />
+						</div>
+						<div
+							className={`border-t ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} p-4`}>
+							<SidebarContent
+								error={error}
+								originalImage={originalImage}
+								resultImage={resultImage}
+								isProcessing={isProcessing}
+								startProcessing={startProcessing}
+								reset={reset}
+								t={t}
+								isDarkMode={isDarkMode}
+								batchMode={batchMode}
+								batchQueue={batchQueue}
+								selectedBatchItemIds={selectedBatchItemIds}
+								currentModel={currentModel}
+								selectAllBatchItems={selectAllBatchItems}
+								reprocessBatchItem={reprocessBatchItem}
+								setBatchMode={setBatchMode}
+							/>
+						</div>
+					</div>
 				)}
-			</div>
+
+				{isDragging && (
+					<div
+						className={`absolute inset-0 z-50 flex items-center justify-center ${
+							isDarkMode ? "bg-indigo-900/80" : "bg-indigo-50/90"
+						}`}>
+						<div className={`rounded-xl border-2 border-dashed p-8 ${
+							isDarkMode ? "border-indigo-400 bg-slate-800/50" : "border-indigo-500 bg-white/50"
+						}`}>
+							<div className="flex flex-col items-center gap-3">
+								<svg
+									className={`h-12 w-12 ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`}
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24">
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={1.5}
+										d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+									/>
+								</svg>
+								<span className={`text-lg font-medium ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`}>
+									{t("uploaderDrop")}
+								</span>
+							</div>
+						</div>
+					</div>
+				)}
+			</main>
+		</div>
+
+		{/* Desktop Layout */}
+		<div className="hidden [@media(min-width:900px)]:flex h-[calc(100dvh-56px)] overflow-hidden">
+			<main
+				{...dragProps}
+				className={`flex-1 flex flex-col overflow-y-auto relative ${isDarkMode ? "bg-slate-800" : "bg-slate-100"}`}>
+				{currentPage === "settings" ? (
+					<SettingsPage />
+				) : !originalImage && !(batchMode && batchQueue.length > 0) ? (
+					<div className="flex items-center justify-center p-4 flex-1 min-h-0">
+						<ImageUploader
+							disabled={isModelDownloading}
+							disabledMessage={isModelDownloading ? t("modelDownloadingTitle") : undefined}
+						/>
+					</div>
+				) : (
+					<div className="flex flex-col flex-1 min-h-0">
+						<div className="flex-1 min-h-0">
+							<ImagePreview />
+						</div>
+					</div>
+				)}
+
+				{isDragging && (
+					<div
+						className={`absolute inset-0 z-50 flex items-center justify-center ${
+							isDarkMode ? "bg-indigo-900/80" : "bg-indigo-50/90"
+						}`}>
+						<div className={`rounded-xl border-2 border-dashed p-8 ${
+							isDarkMode ? "border-indigo-400 bg-slate-800/50" : "border-indigo-500 bg-white/50"
+						}`}>
+							<div className="flex flex-col items-center gap-3">
+								<svg
+									className={`h-12 w-12 ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`}
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24">
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={1.5}
+										d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+									/>
+								</svg>
+								<span className={`text-lg font-medium ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`}>
+									{t("uploaderDrop")}
+								</span>
+							</div>
+						</div>
+					</div>
+				)}
+			</main>
+
+			{/* Desktop Sidebar */}
+			{currentPage !== "settings" && currentPage !== "models" && (
+				<aside
+					className={`w-[400px] flex-shrink-0 border-l ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"} overflow-y-auto p-4`}>
+					<SidebarContent
+						error={error}
+						originalImage={originalImage}
+						resultImage={resultImage}
+						isProcessing={isProcessing}
+						startProcessing={startProcessing}
+						reset={reset}
+						t={t}
+						isDarkMode={isDarkMode}
+						batchMode={batchMode}
+						batchQueue={batchQueue}
+						selectedBatchItemIds={selectedBatchItemIds}
+						currentModel={currentModel}
+						selectAllBatchItems={selectAllBatchItems}
+						reprocessBatchItem={reprocessBatchItem}
+						setBatchMode={setBatchMode}
+					/>
+				</aside>
+			)}
+		</div>
 		</div>
 	);
 }

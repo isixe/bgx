@@ -23,12 +23,22 @@ interface ImageUploaderProps {
 }
 
 export function ImageUploader({ disabled = false, disabledMessage }: ImageUploaderProps) {
-	const { setOriginalImage, setError, currentModel, setCurrentModel, isDarkMode, setBatchMode, addToBatchQueue, clearBatchQueue } = useAppStore();
+	const {
+		setOriginalImage,
+		setError,
+		currentModel,
+		setCurrentModel,
+		isDarkMode,
+		setBatchMode,
+		addToBatchQueue,
+		clearBatchQueue,
+	} = useAppStore();
 	const { t } = useTranslation();
 	const [isDragging, setIsDragging] = useState(false);
 	const [isModelOpen, setIsModelOpen] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const modelDropdownRef = useRef<HTMLDivElement>(null);
+	const dragCounterRef = useRef(0);
 
 	const currentModelInfo = getModelById(currentModel);
 	const localizedCurrentModel = getLocalizedModel(currentModel, t);
@@ -99,10 +109,35 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
 		[setOriginalImage, setError, t, disabled, setBatchMode, addToBatchQueue, clearBatchQueue],
 	);
 
+	const handleDragEnter = useCallback(
+		(e: React.DragEvent) => {
+			e.preventDefault();
+			if (disabled) return;
+			dragCounterRef.current++;
+			if (dragCounterRef.current === 1) {
+				setIsDragging(true);
+			}
+		},
+		[disabled],
+	);
+
+	const handleDragOver = useCallback((e: React.DragEvent) => {
+		e.preventDefault();
+	}, []);
+
+	const handleDragLeave = useCallback((e: React.DragEvent) => {
+		e.preventDefault();
+		dragCounterRef.current--;
+		if (dragCounterRef.current === 0) {
+			setIsDragging(false);
+		}
+	}, []);
+
 	const handleDrop = useCallback(
 		(e: React.DragEvent) => {
 			e.preventDefault();
 			if (disabled) return;
+			dragCounterRef.current = 0;
 			setIsDragging(false);
 
 			const files = Array.from(e.dataTransfer.files);
@@ -112,17 +147,6 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
 		},
 		[handleFiles, disabled],
 	);
-
-	const handleDragOver = useCallback((e: React.DragEvent) => {
-		e.preventDefault();
-		if (disabled) return;
-		setIsDragging(true);
-	}, [disabled]);
-
-	const handleDragLeave = useCallback((e: React.DragEvent) => {
-		e.preventDefault();
-		setIsDragging(false);
-	}, []);
 
 	const handleClick = useCallback(() => {
 		if (disabled) return;
@@ -137,7 +161,7 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
 			}
 			// Reset so selecting the same files again triggers onChange
 			if (fileInputRef.current) {
-				fileInputRef.current.value = '';
+				fileInputRef.current.value = "";
 			}
 		},
 		[handleFiles],
@@ -169,11 +193,12 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
 	return (
 		<div
 			onDrop={handleDrop}
+			onDragEnter={handleDragEnter}
 			onDragOver={handleDragOver}
 			onDragLeave={handleDragLeave}
 			onClick={handleClick}
 			className={`
-        relative mx-4 sm:mx-6 lg:mx-auto max-w-3xl px-6 sm:px-10 lg:px-40 py-14 rounded-xl border-2 border-dashed text-center transition-all duration-200
+        relative mx-4 sm:mx-6 lg:mx-auto max-w-3xl px-6 sm:px-10 lg:px-40 py-14 rounded-xl border-2 border-dashed text-center transition-all duration-200.
         ${
 					disabled
 						? isDarkMode
@@ -200,17 +225,17 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
 
 			<div
 				className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full ${
-					disabled
-						? isDarkMode
-							? "bg-slate-700"
-							: "bg-slate-200"
-						: isDarkMode
-							? "bg-indigo-900/50"
-							: "bg-indigo-100"
+					disabled ? (isDarkMode ? "bg-slate-700" : "bg-slate-200") : isDarkMode ? "bg-indigo-900/50" : "bg-indigo-100"
 				}`}>
 				<svg
 					className={`h-8 w-8 ${
-						disabled ? (isDarkMode ? "text-slate-500" : "text-slate-400") : isDarkMode ? "text-indigo-400" : "text-indigo-600"
+						disabled
+							? isDarkMode
+								? "text-slate-500"
+								: "text-slate-400"
+							: isDarkMode
+								? "text-indigo-400"
+								: "text-indigo-600"
 					}`}
 					fill="none"
 					stroke="currentColor"
