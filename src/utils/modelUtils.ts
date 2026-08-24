@@ -11,7 +11,7 @@ export function getModelById(modelId: string): ModelConfig {
 
 export function getLocalizedModel(
   modelId: string,
-  t: (key: string) => string
+  t: (key: string) => string,
 ): { name: string; description: string } {
   const model = getModelById(modelId);
   return {

@@ -5,7 +5,7 @@ import { getCachedModelBlobUrl, revokeCachedUrl } from '../utils/modelCache';
 import type { UseRemoveBackgroundOptions, UseRemoveBackgroundReturn } from '../types/app';
 
 export function useRemoveBackground(
-  options: UseRemoveBackgroundOptions = {}
+  options: UseRemoveBackgroundOptions = {},
 ): UseRemoveBackgroundReturn {
   const isProcessingRef = useRef<boolean>(false);
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -44,7 +44,7 @@ export function useRemoveBackground(
   const processImage = useCallback(
     async (imageDataUrl: string, modelId: string, preloadedModelUrl: string | null = null) => {
       if (isProcessingRef.current) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
       isProcessingRef.current = true;
@@ -96,7 +96,7 @@ export function useRemoveBackground(
         }
       }
     },
-    [options, startProgressAnimation, stopProgressAnimation]
+    [options, startProgressAnimation, stopProgressAnimation],
   );
 
   return {

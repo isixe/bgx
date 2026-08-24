@@ -6,8 +6,8 @@ const ML_HOST = 'https://www.modelscope.cn/models';
 const HF_REMBG = 'tomjackson2023/rembg';
 const HF_BRIA_RMBG_1_4 = 'briaai/RMBG-1.4';
 
-const ML_SHIERTIER_REMBG = "shiertier/rembg"
-const ML_AI_MODEL_SCOPE_1_4 = "AI-ModelScope/RMBG-1.4"
+const ML_SHIERTIER_REMBG = 'shiertier/rembg';
+const ML_AI_MODEL_SCOPE_1_4 = 'AI-ModelScope/RMBG-1.4';
 
 export const MODELS: ModelConfig[] = [
   {
@@ -18,7 +18,7 @@ export const MODELS: ModelConfig[] = [
     filename: 'u2netp.onnx',
     descKey: 'model.u2netp.desc',
     downloadUrl: `${HF_HOST}/${HF_REMBG}/resolve/main/u2netp.onnx?download=true`,
-    feedbackUrl: "https://unpkg.com/@rmbg/model-u2netp@0.0.1/u2netp.onnx",
+    feedbackUrl: 'https://unpkg.com/@rmbg/model-u2netp@0.0.1/u2netp.onnx',
   },
   {
     id: 'u2net',
@@ -99,5 +99,5 @@ export const MODELS: ModelConfig[] = [
     descKey: 'model.bria-rmbg.desc',
     downloadUrl: `${HF_HOST}/${HF_BRIA_RMBG_1_4}/resolve/main/onnx/model.onnx?download=true`,
     feedbackUrl: `${ML_HOST}/${ML_AI_MODEL_SCOPE_1_4}/resolve/master/onnx/model.onnx`,
-  }
+  },
 ];

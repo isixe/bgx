@@ -7,296 +7,296 @@ const STORE_NAME = 'models';
 export type ModelCacheStatus = 'not_downloaded' | 'downloading' | 'downloaded' | 'error';
 
 export interface DownloadProgress {
-	loaded: number;
-	total: number;
-	percentage: number;
+  loaded: number;
+  total: number;
+  percentage: number;
 }
 
 interface ModelRecord {
-	modelId: string;
-	data: ArrayBuffer;
-	size: number;
-	timestamp: number;
+  modelId: string;
+  data: ArrayBuffer;
+  size: number;
+  timestamp: number;
 }
 
 function openDB(): Promise<IDBDatabase> {
-	return new Promise((resolve, reject) => {
-		const request = indexedDB.open(DB_NAME, DB_VERSION);
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-		request.onerror = () => reject(request.error);
-		request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
 
-		request.onupgradeneeded = (event) => {
-			const db = (event.target as IDBOpenDBRequest).result;
-			if (!db.objectStoreNames.contains(STORE_NAME)) {
-				db.createObjectStore(STORE_NAME, { keyPath: 'modelId' });
-			}
-		};
-	});
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'modelId' });
+      }
+    };
+  });
 }
 
 async function fetchWithFallback(
-	model: { downloadUrl: string; feedbackUrl: string },
-	signal?: AbortSignal
+  model: { downloadUrl: string; feedbackUrl: string },
+  signal?: AbortSignal,
 ): Promise<Response> {
-	const errors: string[] = [];
+  const errors: string[] = [];
 
-	// 优先尝试 downloadUrl
-	if (model.downloadUrl) {
-		try {
-			const response = await fetch(model.downloadUrl, {
-				headers: { Accept: '*/*' },
-				signal,
-			});
-			if (response.ok) return response;
-			errors.push(`downloadUrl: HTTP ${response.status}`);
-		} catch (err) {
-			if (err instanceof Error && err.name === 'AbortError') {
-				throw err;
-			}
-			errors.push(`downloadUrl: ${err instanceof Error ? err.message : String(err)}`);
-		}
-	} else {
-		errors.push('downloadUrl: empty');
-	}
+  // 优先尝试 downloadUrl
+  if (model.downloadUrl) {
+    try {
+      const response = await fetch(model.downloadUrl, {
+        headers: { Accept: '*/*' },
+        signal,
+      });
+      if (response.ok) return response;
+      errors.push(`downloadUrl: HTTP ${response.status}`);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw err;
+      }
+      errors.push(`downloadUrl: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  } else {
+    errors.push('downloadUrl: empty');
+  }
 
-	// 回退到 feedbackUrl
-	if (!model.feedbackUrl) {
-		errors.push('feedbackUrl: empty');
-		throw new Error(`Failed to download model from all URLs: ${errors.join('; ')}`);
-	}
+  // 回退到 feedbackUrl
+  if (!model.feedbackUrl) {
+    errors.push('feedbackUrl: empty');
+    throw new Error(`Failed to download model from all URLs: ${errors.join('; ')}`);
+  }
 
-	try {
-		const response = await fetch(model.feedbackUrl, {
-			headers: { Accept: '*/*' },
-			signal,
-		});
-		if (response.ok) return response;
-		errors.push(`feedbackUrl: HTTP ${response.status}`);
-	} catch (err) {
-		if (err instanceof Error && err.name === 'AbortError') {
-			throw err;
-		}
-		errors.push(`feedbackUrl: ${err instanceof Error ? err.message : String(err)}`);
-	}
+  try {
+    const response = await fetch(model.feedbackUrl, {
+      headers: { Accept: '*/*' },
+      signal,
+    });
+    if (response.ok) return response;
+    errors.push(`feedbackUrl: HTTP ${response.status}`);
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw err;
+    }
+    errors.push(`feedbackUrl: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
-	throw new Error(`Failed to download model from all URLs: ${errors.join('; ')}`);
+  throw new Error(`Failed to download model from all URLs: ${errors.join('; ')}`);
 }
 
 // 存儲正在進行的下載請求的 AbortController
 const downloadControllers = new Map<string, AbortController>();
 
 export function cancelDownload(modelId: string): void {
-	const controller = downloadControllers.get(modelId);
-	if (controller) {
-		controller.abort();
-		downloadControllers.delete(modelId);
-	}
+  const controller = downloadControllers.get(modelId);
+  if (controller) {
+    controller.abort();
+    downloadControllers.delete(modelId);
+  }
 }
 
 export function isDownloading(modelId: string): boolean {
-	return downloadControllers.has(modelId);
+  return downloadControllers.has(modelId);
 }
 
 export async function downloadModel(
-	modelId: string,
-	onProgress?: (progress: DownloadProgress) => void
+  modelId: string,
+  onProgress?: (progress: DownloadProgress) => void,
 ): Promise<void> {
-	// 如果已經有正在進行的下載，先取消它
-	cancelDownload(modelId);
+  // 如果已經有正在進行的下載，先取消它
+  cancelDownload(modelId);
 
-	const controller = new AbortController();
-	downloadControllers.set(modelId, controller);
+  const controller = new AbortController();
+  downloadControllers.set(modelId, controller);
 
-	try {
-		const model = getModelById(modelId);
-		const response = await fetchWithFallback(model, controller.signal);
+  try {
+    const model = getModelById(modelId);
+    const response = await fetchWithFallback(model, controller.signal);
 
-		const total = parseInt(response.headers.get('content-length') || '0', 10);
-		const reader = response.body?.getReader();
+    const total = parseInt(response.headers.get('content-length') || '0', 10);
+    const reader = response.body?.getReader();
 
-		if (!reader) {
-			throw new Error('Response body is not readable');
-		}
+    if (!reader) {
+      throw new Error('Response body is not readable');
+    }
 
-		const chunks: Uint8Array[] = [];
-		let loaded = 0;
+    const chunks: Uint8Array[] = [];
+    let loaded = 0;
 
-		while (true) {
-			// 檢查是否已取消
-			if (controller.signal.aborted) {
-				throw new Error('Download cancelled');
-			}
+    while (true) {
+      // 檢查是否已取消
+      if (controller.signal.aborted) {
+        throw new Error('Download cancelled');
+      }
 
-			const { done, value } = await reader.read();
-			if (done) break;
+      const { done, value } = await reader.read();
+      if (done) break;
 
-			chunks.push(value);
-			loaded += value.length;
+      chunks.push(value);
+      loaded += value.length;
 
-			if (onProgress && total > 0) {
-				onProgress({
-					loaded,
-					total,
-					percentage: Math.round((loaded / total) * 100),
-				});
-			}
-		}
+      if (onProgress && total > 0) {
+        onProgress({
+          loaded,
+          total,
+          percentage: Math.round((loaded / total) * 100),
+        });
+      }
+    }
 
-		const allChunks = new Uint8Array(loaded);
-		let position = 0;
-		for (const chunk of chunks) {
-			allChunks.set(chunk, position);
-			position += chunk.length;
-		}
+    const allChunks = new Uint8Array(loaded);
+    let position = 0;
+    for (const chunk of chunks) {
+      allChunks.set(chunk, position);
+      position += chunk.length;
+    }
 
-		const db = await openDB();
-		const transaction = db.transaction([STORE_NAME], 'readwrite');
-		const store = transaction.objectStore(STORE_NAME);
+    const db = await openDB();
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
 
-		const record: ModelRecord = {
-			modelId,
-			data: allChunks.buffer,
-			size: loaded,
-			timestamp: Date.now(),
-		};
+    const record: ModelRecord = {
+      modelId,
+      data: allChunks.buffer,
+      size: loaded,
+      timestamp: Date.now(),
+    };
 
-		await new Promise<void>((resolve, reject) => {
-			const request = store.put(record);
-			request.onsuccess = () => resolve();
-			request.onerror = () => reject(request.error);
-		});
+    await new Promise<void>((resolve, reject) => {
+      const request = store.put(record);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
 
-		db.close();
+    db.close();
 
-		if (onProgress) {
-			onProgress({
-				loaded,
-				total: loaded,
-				percentage: 100,
-			});
-		}
-	} finally {
-		// 清理 controller
-		downloadControllers.delete(modelId);
-	}
+    if (onProgress) {
+      onProgress({
+        loaded,
+        total: loaded,
+        percentage: 100,
+      });
+    }
+  } finally {
+    // 清理 controller
+    downloadControllers.delete(modelId);
+  }
 }
 
 export async function deleteModel(modelId: string): Promise<void> {
-	const db = await openDB();
-	const transaction = db.transaction([STORE_NAME], 'readwrite');
-	const store = transaction.objectStore(STORE_NAME);
+  const db = await openDB();
+  const transaction = db.transaction([STORE_NAME], 'readwrite');
+  const store = transaction.objectStore(STORE_NAME);
 
-	await new Promise<void>((resolve, reject) => {
-		const request = store.delete(modelId);
-		request.onsuccess = () => resolve();
-		request.onerror = () => reject(request.error);
-	});
+  await new Promise<void>((resolve, reject) => {
+    const request = store.delete(modelId);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
 
-	db.close();
+  db.close();
 }
 
 export async function isModelCached(modelId: string): Promise<boolean> {
-	try {
-		const db = await openDB();
-		const transaction = db.transaction([STORE_NAME], 'readonly');
-		const store = transaction.objectStore(STORE_NAME);
+  try {
+    const db = await openDB();
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
 
-		const record = await new Promise<ModelRecord | undefined>((resolve, reject) => {
-			const request = store.get(modelId);
-			request.onsuccess = () => resolve(request.result);
-			request.onerror = () => reject(request.error);
-		});
+    const record = await new Promise<ModelRecord | undefined>((resolve, reject) => {
+      const request = store.get(modelId);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
 
-		db.close();
-		return record !== undefined;
-	} catch {
-		return false;
-	}
+    db.close();
+    return record !== undefined;
+  } catch {
+    return false;
+  }
 }
 
 export async function getCachedModelBlobUrl(modelId: string): Promise<string | null> {
-	try {
-		const db = await openDB();
-		const transaction = db.transaction([STORE_NAME], 'readonly');
-		const store = transaction.objectStore(STORE_NAME);
+  try {
+    const db = await openDB();
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
 
-		const record = await new Promise<ModelRecord | undefined>((resolve, reject) => {
-			const request = store.get(modelId);
-			request.onsuccess = () => resolve(request.result);
-			request.onerror = () => reject(request.error);
-		});
+    const record = await new Promise<ModelRecord | undefined>((resolve, reject) => {
+      const request = store.get(modelId);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
 
-		db.close();
+    db.close();
 
-		if (!record) {
-			return null;
-		}
+    if (!record) {
+      return null;
+    }
 
-		const blob = new Blob([record.data], { type: 'application/octet-stream' });
-		return URL.createObjectURL(blob);
-	} catch (error) {
-		console.error(`Failed to get cached model ${modelId}:`, error);
-		return null;
-	}
+    const blob = new Blob([record.data], { type: 'application/octet-stream' });
+    return URL.createObjectURL(blob);
+  } catch (error) {
+    console.error(`Failed to get cached model ${modelId}:`, error);
+    return null;
+  }
 }
 
 export async function getCachedModelData(modelId: string): Promise<ArrayBuffer | null> {
-	try {
-		const db = await openDB();
-		const transaction = db.transaction([STORE_NAME], 'readonly');
-		const store = transaction.objectStore(STORE_NAME);
+  try {
+    const db = await openDB();
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
 
-		const record = await new Promise<ModelRecord | undefined>((resolve, reject) => {
-			const request = store.get(modelId);
-			request.onsuccess = () => resolve(request.result);
-			request.onerror = () => reject(request.error);
-		});
+    const record = await new Promise<ModelRecord | undefined>((resolve, reject) => {
+      const request = store.get(modelId);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
 
-		db.close();
+    db.close();
 
-		return record?.data || null;
-	} catch (error) {
-		console.error(`Failed to get cached model data ${modelId}:`, error);
-		return null;
-	}
+    return record?.data || null;
+  } catch (error) {
+    console.error(`Failed to get cached model data ${modelId}:`, error);
+    return null;
+  }
 }
 
 export async function getAllCachedModels(): Promise<string[]> {
-	try {
-		const db = await openDB();
-		const transaction = db.transaction([STORE_NAME], 'readonly');
-		const store = transaction.objectStore(STORE_NAME);
+  try {
+    const db = await openDB();
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
 
-		const records = await new Promise<ModelRecord[]>((resolve, reject) => {
-			const request = store.getAll();
-			request.onsuccess = () => resolve(request.result);
-			request.onerror = () => reject(request.error);
-		});
+    const records = await new Promise<ModelRecord[]>((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
 
-		db.close();
-		return records.map((r) => r.modelId);
-	} catch {
-		return [];
-	}
+    db.close();
+    return records.map((r) => r.modelId);
+  } catch {
+    return [];
+  }
 }
 
 export async function clearAllModels(): Promise<void> {
-	const db = await openDB();
-	const transaction = db.transaction([STORE_NAME], 'readwrite');
-	const store = transaction.objectStore(STORE_NAME);
+  const db = await openDB();
+  const transaction = db.transaction([STORE_NAME], 'readwrite');
+  const store = transaction.objectStore(STORE_NAME);
 
-	await new Promise<void>((resolve, reject) => {
-		const request = store.clear();
-		request.onsuccess = () => resolve();
-		request.onerror = () => reject(request.error);
-	});
+  await new Promise<void>((resolve, reject) => {
+    const request = store.clear();
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
 
-	db.close();
+  db.close();
 }
 
 export function revokeCachedUrl(url: string): void {
-	if (url.startsWith('blob:')) {
-		URL.revokeObjectURL(url);
-	}
+  if (url.startsWith('blob:')) {
+    URL.revokeObjectURL(url);
+  }
 }

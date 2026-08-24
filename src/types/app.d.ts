@@ -77,7 +77,12 @@ export type AppState = {
   removeBatchItem: (id: string) => void;
   clearBatchQueue: () => void;
   reprocessBatchItem: (id: string, modelId: string) => void;
-  updateBatchItemStatus: (id: string, status: BatchItemStatus, resultImage?: string | null, error?: string | null) => void;
+  updateBatchItemStatus: (
+    id: string,
+    status: BatchItemStatus,
+    resultImage?: string | null,
+    error?: string | null,
+  ) => void;
 };
 
 export type BatchItemStatus = 'pending' | 'processing' | 'completed' | 'error';
@@ -99,7 +104,9 @@ export type UseRemoveBackgroundOptions = {
 };
 
 export type UseRemoveBackgroundReturn = {
-  processImage: (imageDataUrl: string, modelId: string, preloadedModelUrl?: string | null) => Promise<void>;
+  processImage: (
+    imageDataUrl: string,
+    modelId: string,
+    preloadedModelUrl?: string | null,
+  ) => Promise<void>;
 };
-
-

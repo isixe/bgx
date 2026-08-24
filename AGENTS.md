@@ -4,9 +4,11 @@
 **Branch:** main
 
 ## OVERVIEW
+
 Astro + React background removal web app using ONNX runtime-web (U2Net/U2Netp/ISNet Anime models). Client-side inference only.
 
 ## STRUCTURE
+
 ```
 bgx/
 ├── src/
@@ -26,16 +28,18 @@ bgx/
 ```
 
 ## WHERE TO LOOK
-| Task | Location | Notes |
-|------|----------|-------|
-| Image processing | `src/hooks/useRemoveBackground.ts` | Core removal hook using modern-rembg |
-| Model selection | `src/config/models.ts` | Model configs (u2netp, u2net, isnet-anime) |
-| State management | `src/stores/appStore.ts` | Zustand store for app state |
-| UI components | `src/components/features/*.tsx` | React components (ImageUploader, ExportPanel, etc.) |
-| i18n | `src/lib/i18n/` | Language files (en.ts, zh.ts) |
-| Language switch | `src/components/ui/LanguageSwitcher.tsx` | Language toggle UI |
+
+| Task             | Location                                 | Notes                                               |
+| ---------------- | ---------------------------------------- | --------------------------------------------------- |
+| Image processing | `src/hooks/useRemoveBackground.ts`       | Core removal hook using modern-rembg                |
+| Model selection  | `src/config/models.ts`                   | Model configs (u2netp, u2net, isnet-anime)          |
+| State management | `src/stores/appStore.ts`                 | Zustand store for app state                         |
+| UI components    | `src/components/features/*.tsx`          | React components (ImageUploader, ExportPanel, etc.) |
+| i18n             | `src/lib/i18n/`                          | Language files (en.ts, zh.ts)                       |
+| Language switch  | `src/components/ui/LanguageSwitcher.tsx` | Language toggle UI                                  |
 
 ## CONVENTIONS
+
 - React components use `.tsx`, Astro pages use `.astro`
 - Zustand store with TypeScript interfaces in `appStore.ts`
 - Path aliases configured: `@/*` → `src/*`
@@ -43,6 +47,7 @@ bgx/
 - Uses pnpm (not npm) - pnpm-lock.yaml present
 
 ## ANTI-PATTERNS (THIS PROJECT)
+
 - No CI/CD workflows (no `.github/workflows`)
 - No ESLint/Prettier config - uses Astro defaults
 - No tests configured (no vitest/jest)
@@ -52,6 +57,7 @@ bgx/
 - Duplicate AppProvider: both `src/providers/AppProvider.tsx` and `src/components/layout/AppProvider.tsx`
 
 ## COMMANDS
+
 ```bash
 pnpm dev      # Start dev server at localhost:4321
 pnpm build    # Build to ./dist/
@@ -59,6 +65,7 @@ pnpm preview  # Preview production build
 ```
 
 ## NOTES
+
 - Uses COOP/COEP headers for SharedArrayBuffer support (required for ONNX WASM threading)
 - Vite optimizeDeps excludes `onnxruntime-web` - loaded at runtime
 - Supports image paste (Ctrl+V), drag-drop, file picker

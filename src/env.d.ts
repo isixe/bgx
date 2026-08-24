@@ -6,6 +6,6 @@ declare module 'modern-rembg' {
     options?: {
       model?: string;
       resolution?: number;
-    }
+    },
   ): Promise<Blob>;
 }

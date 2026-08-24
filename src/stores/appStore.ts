@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import type { AppState, ModelStatus, BatchItem, BatchItemStatus } from '../types/app';
-import { getCachedModelBlobUrl, revokeCachedUrl, downloadModel, cancelDownload, isModelCached, getAllCachedModels } from '../utils/modelCache';
+import {
+  getCachedModelBlobUrl,
+  revokeCachedUrl,
+  downloadModel,
+  cancelDownload,
+  isModelCached,
+  getAllCachedModels,
+} from '../utils/modelCache';
 import { MODELS } from '../config/models';
 
 function getInitialDarkMode(): boolean {
@@ -33,12 +40,15 @@ const initialState = {
   modelStatuses: {} as Record<string, ModelStatus>,
   isModelStatusesLoaded: false,
   // 全局下载进度状态（跨页面保持）
-  modelDownloadProgresses: {} as Record<string, { loaded: number; total: number; percentage: number } | null>,
+  modelDownloadProgresses: {} as Record<
+    string,
+    { loaded: number; total: number; percentage: number } | null
+  >,
   batchMode: false,
   batchQueue: [] as BatchItem[],
   activeBatchItemId: null as string | null,
   viewingBatchResult: false,
-    selectedBatchItemIds: [] as string[],
+  selectedBatchItemIds: [] as string[],
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -74,7 +84,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // 设置模型下载进度
-  setModelDownloadProgress: (modelId: string, progress: { loaded: number; total: number; percentage: number } | null) => {
+  setModelDownloadProgress: (
+    modelId: string,
+    progress: { loaded: number; total: number; percentage: number } | null,
+  ) => {
     set((state) => ({
       modelDownloadProgresses: { ...state.modelDownloadProgresses, [modelId]: progress },
     }));
@@ -154,7 +167,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       } else {
         // 未缓存，需要下载
         set({ isModelLoading: false });
-        
+
         // 使用共享的下载方法
         await get().downloadModelWithProgress(model);
 
@@ -175,7 +188,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  setOriginalImage: (image) => set({ originalImage: image, isReadyToProcess: !!image, error: null }),
+  setOriginalImage: (image) =>
+    set({ originalImage: image, isReadyToProcess: !!image, error: null }),
   setResultImage: (image) => set({ resultImage: image }),
   setIsProcessing: (isProcessing) => set({ isProcessing }),
   setProgress: (progress) => set({ progress }),
@@ -190,7 +204,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     set({ isDarkMode: isDark });
   },
-  startProcessing: () => set((state) => ({ isReadyToProcess: true, processingTrigger: state.processingTrigger + 1 })),
+  startProcessing: () =>
+    set((state) => ({ isReadyToProcess: true, processingTrigger: state.processingTrigger + 1 })),
 
   setBatchMode: (mode) => set({ batchMode: mode }),
 
@@ -271,18 +286,34 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({
       batchQueue: state.batchQueue.map((item) =>
         item.id === id
-          ? { ...item, status: 'pending' as BatchItemStatus, modelId, resultImage: null, error: null }
-          : item
+          ? {
+              ...item,
+              status: 'pending' as BatchItemStatus,
+              modelId,
+              resultImage: null,
+              error: null,
+            }
+          : item,
       ),
     }));
   },
 
-  updateBatchItemStatus: (id: string, status: BatchItemStatus, resultImage?: string | null, error?: string | null) => {
+  updateBatchItemStatus: (
+    id: string,
+    status: BatchItemStatus,
+    resultImage?: string | null,
+    error?: string | null,
+  ) => {
     set((state) => ({
       batchQueue: state.batchQueue.map((item) =>
         item.id === id
-          ? { ...item, status, ...(resultImage !== undefined ? { resultImage } : {}), ...(error !== undefined ? { error } : {}) }
-          : item
+          ? {
+              ...item,
+              status,
+              ...(resultImage !== undefined ? { resultImage } : {}),
+              ...(error !== undefined ? { error } : {}),
+            }
+          : item,
       ),
     }));
   },

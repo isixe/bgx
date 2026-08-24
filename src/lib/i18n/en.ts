@@ -6,7 +6,8 @@ export const translations = {
 
   heroBadge: 'Completely Free, No Registration',
   heroTitle: 'AI-Powered Background Removal',
-  heroDescription: 'Use advanced AI models to automatically identify and remove image backgrounds. Supports portraits, products, e-commerce images, and more.',
+  heroDescription:
+    'Use advanced AI models to automatically identify and remove image backgrounds. Supports portraits, products, e-commerce images, and more.',
 
   featuresTitle: 'Features',
   featurePrivacy: 'Privacy Protection',
@@ -38,7 +39,8 @@ export const translations = {
   uploaderPaste: 'Or press Ctrl+V to paste image',
   modelLabel: 'Model:',
   uploaderDrop: 'Release to upload image',
-  errorUnsupportedFormat: 'Unsupported image format. Please upload JPG, PNG, WebP, BMP, TIFF, SVG, AVIF, or HEIC.',
+  errorUnsupportedFormat:
+    'Unsupported image format. Please upload JPG, PNG, WebP, BMP, TIFF, SVG, AVIF, or HEIC.',
   errorFileTooLarge: 'Image size cannot exceed 30MB',
   errorReadFailed: 'Failed to read image',
 
@@ -111,7 +113,8 @@ export const translations = {
   downloadImage: 'Download Image',
   copyToClipboard: 'Copy to Clipboard (PNG)',
   copied: 'Copied to Clipboard',
-  copyFailed: 'Unable to copy to clipboard, possibly due to browser restrictions. Please click "Download Image" to save.',
+  copyFailed:
+    'Unable to copy to clipboard, possibly due to browser restrictions. Please click "Download Image" to save.',
   clipboardHint: '* Clipboard copy always uses PNG format to preserve transparency',
   processNewImage: 'Process New Image',
 
@@ -155,12 +158,15 @@ export const translations = {
   settingsModelSettings: 'Model Settings',
   settingsAbout: 'About',
   settingsRelatedTools: 'Related Tools',
-  relatedToolsSubtitle: 'Here are some of my other projects. If you\'re interested in image processing tools, feel free to check them out.',
+  relatedToolsSubtitle:
+    "Here are some of my other projects. If you're interested in image processing tools, feel free to check them out.",
   toolImageDashName: 'Image Dash',
-  toolImageDashDesc: 'Reverse Image & Text Search - Find any image fast with powerful reverse image search across Google, Yandex, Bing, and more',
+  toolImageDashDesc:
+    'Reverse Image & Text Search - Find any image fast with powerful reverse image search across Google, Yandex, Bing, and more',
 
   aboutTitle: 'About BGX',
-  aboutDescription: 'A free, privacy-first background removal tool powered by AI. All processing happens locally in your browser.',
+  aboutDescription:
+    'A free, privacy-first background removal tool powered by AI. All processing happens locally in your browser.',
   aboutGithub: 'GitHub Repository',
   aboutVersion: 'Version',
   aboutLicense: 'License',

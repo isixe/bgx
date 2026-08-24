@@ -5,7 +5,8 @@ import { AppProvider } from '../providers/AppProvider';
 // Generate metadata dynamically (similar to Next.js generateMetadata)
 const metadata = {
   title: 'BGX - AI Background Remover',
-  description: 'Free online AI background removal tool. Remove image backgrounds instantly in your browser with complete privacy protection. No upload needed, all processing done locally.',
+  description:
+    'Free online AI background removal tool. Remove image backgrounds instantly in your browser with complete privacy protection. No upload needed, all processing done locally.',
   keywords: [
     'background removal',
     'AI background remover',
@@ -15,7 +16,7 @@ const metadata = {
     'privacy',
     'local processing',
     'free tool',
-    'BGX'
+    'BGX',
   ],
   ogImage: '/og-image.png',
   ogImageAlt: 'BGX - AI Background Removal Tool',
@@ -24,7 +25,7 @@ const metadata = {
 };
 ---
 
-<Layout 
+<Layout
   title={metadata.title}
   description={metadata.description}
   keywords={metadata.keywords.join(', ')}

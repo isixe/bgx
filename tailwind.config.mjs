@@ -46,7 +46,7 @@ export default {
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'shimmer': 'shimmer 2s linear infinite',
+        shimmer: 'shimmer 2s linear infinite',
         'progress-pulse': 'progress-pulse 2s ease-in-out infinite',
         'overlay-in': 'overlay-in 0.3s ease-out',
       },

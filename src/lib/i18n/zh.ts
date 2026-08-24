@@ -38,7 +38,8 @@ export const translations = {
   uploaderPaste: '也可以 Ctrl+V 粘贴图片',
   modelLabel: '模型:',
   uploaderDrop: '松开鼠标上传图片',
-  errorUnsupportedFormat: '不支持的图片格式，请上传 JPG、PNG、WebP、BMP、TIFF、SVG、AVIF 或 HEIC 格式',
+  errorUnsupportedFormat:
+    '不支持的图片格式，请上传 JPG、PNG、WebP、BMP、TIFF、SVG、AVIF 或 HEIC 格式',
   errorFileTooLarge: '图片大小不能超过 30MB',
   errorReadFailed: '读取图片失败',
 
@@ -157,7 +158,8 @@ export const translations = {
   settingsRelatedTools: '相关工具',
   relatedToolsSubtitle: '以下我的一些其他项目，如果你对图片处理工具感兴趣，欢迎使用它们',
   toolImageDashName: 'Image Dash',
-  toolImageDashDesc: '反向图片与文本搜索 - 强大的反向图片搜索，在 Google、Yandex、Bing 等平台快速查找图片',
+  toolImageDashDesc:
+    '反向图片与文本搜索 - 强大的反向图片搜索，在 Google、Yandex、Bing 等平台快速查找图片',
 
   aboutTitle: '关于 BGX',
   aboutDescription: '一款免费、保护隐私的 AI 背景移除工具。所有处理均在本地浏览器中完成。',
