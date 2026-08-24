@@ -90,6 +90,7 @@ export function useTranslation() {
       if (storedLang && storedLang !== i18n.currentLang) {
         i18n.setLanguage(storedLang);
       }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsHydrated(true);
     }
   }, [isHydrated]);

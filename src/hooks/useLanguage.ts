@@ -22,6 +22,7 @@ export function useLanguage() {
   useEffect(() => {
     const clientLang = initClientLanguage();
     i18n.setLanguage(clientLang);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLanguageState(clientLang);
 
     const handleLanguageChange = (e: CustomEvent<Language>) => {
