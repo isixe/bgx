@@ -85,6 +85,7 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
         };
         reader.readAsDataURL(validFiles[0]);
       } else {
+        clearBatchQueue();
         setBatchMode(true);
         validFiles.forEach((file) => addToBatchQueue(file));
       }
