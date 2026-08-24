@@ -180,6 +180,7 @@ export const translations = {
   batchExport: '导出',
   batchExportAll: '全部导出',
   batchExportSelected: '导出选中',
+  batchExportZip: '导出 ZIP',
 } as const;
 
 export type TranslationKey = keyof typeof translations;

@@ -22,6 +22,7 @@
     "astro": "^5.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "jszip": "^3.10.1",
     "lucide-react": "^1.8.0",
     "modern-rembg": "latest",
     "onnxruntime-web": "^1.18.0",

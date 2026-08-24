@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import JSZip from "jszip";
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../lib/i18n';
 import { useGlobalDragDrop } from '../../hooks/useGlobalDragDrop';
@@ -430,6 +431,32 @@ function SidebarContent({
     onAction?.();
   };
 
+  const handleBatchExportZip = async () => {
+    const toExport = selectedBatchItemIds.length > 0
+      ? batchQueue.filter((item) => selectedBatchItemIds.includes(item.id) && item.status === 'completed')
+      : batchQueue.filter((item) => item.status === 'completed');
+
+    if (toExport.length === 0) return;
+
+    const zip = new JSZip();
+    for (const item of toExport) {
+      if (!item.resultImage) continue;
+      const response = await fetch(item.resultImage);
+      const blob = await response.blob();
+      const baseName = item.name.replace(/\.[^.]+$/, '');
+      zip.file(`${baseName}-removed.png`, blob);
+    }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(zipBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `bgx-export-${Date.now()}.zip`;
+    link.click();
+    URL.revokeObjectURL(url);
+    onAction?.();
+  };
+
   const handleBatchReprocess = () => {
     const toReprocess =
       selectedBatchItemIds.length > 0
@@ -532,13 +559,20 @@ function SidebarContent({
         <ModelSelector />
 
         {batchMode && (
-          <button
-            onClick={handleBatchExportAll}
-            disabled={!hasCompletedBatchItems}
-            className="mt-4 w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {selectedBatchItemIds.length > 0 ? t('batchExportSelected') : t('batchExportAll')}
-          </button>
+          <div className="mt-4 space-y-2">
+            <button
+              onClick={handleBatchExportAll}
+              disabled={!hasCompletedBatchItems}
+              className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
+              {selectedBatchItemIds.length > 0 ? t("batchExportSelected") : t("batchExportAll")}
+            </button>
+            <button
+              onClick={handleBatchExportZip}
+              disabled={!hasCompletedBatchItems}
+              className={`w-full rounded-lg px-4 py-3 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 ${isDarkMode ? "border border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}>
+              {t("batchExportZip")}
+            </button>
+          </div>
         )}
 
         {originalImage && !batchMode && <ExportPanel disabled={isProcessing} />}

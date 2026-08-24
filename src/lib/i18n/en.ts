@@ -184,6 +184,7 @@ export const translations = {
   batchExport: 'Export',
   batchExportAll: 'Export All',
   batchExportSelected: 'Export Selected',
+  batchExportZip: 'Export as ZIP',
 } as const;
 
 export type TranslationKey = keyof typeof translations;
