@@ -82,7 +82,7 @@ export function SettingsPage() {
   ];
 
   return (
-    <div className="flex h-[calc(100dvh-56px)] overflow-hidden flex-col [@media(min-width:900px)]:h-full [@media(min-width:900px)]:flex-row">
+    <div className="flex h-full overflow-hidden flex-col [@media(min-width:900px)]:flex-row">
       {/* Mobile: header + horizontal tab bar */}
       <div className="[@media(min-width:900px)]:hidden flex flex-col flex-shrink-0 border-b">
         <div
@@ -212,8 +212,8 @@ export function SettingsPage() {
             )}
 
             {settingsTab === 'about' && (
-              <div className="h-full flex flex-col">
-                <div className="flex-1 overflow-y-auto px-6 py-5">
+              <div className="px-6 py-5 flex flex-col min-h-0 flex-1">
+                <div className="space-y-6 overflow-y-auto flex-1 min-h-0">
                   <div className="space-y-6">
                     <div>
                       <h2
@@ -417,7 +417,7 @@ export function SettingsPage() {
                 </div>
 
                 <p
-                  className={`flex-shrink-0 px-6 py-4 text-xs text-center ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}
+                  className={`flex-shrink-0 py-4 text-xs text-center ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}
                 >
                   {t('footerText')}
                 </p>
