@@ -44,6 +44,7 @@ const initialState = {
     string,
     { loaded: number; total: number; percentage: number } | null
   >,
+  savingModels: [] as string[],
   batchMode: false,
   batchQueue: [] as BatchItem[],
   activeBatchItemId: null as string | null,
@@ -93,35 +94,52 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
   },
 
-  // 共享的模型下载方法
-  downloadModelWithProgress: async (modelId: string) => {
+  addSavingModel: (modelId: string) => {
+    set((state) => ({
+      savingModels: state.savingModels.includes(modelId)
+        ? state.savingModels
+        : [...state.savingModels, modelId],
+    }));
+  },
+
+  removeSavingModel: (modelId: string) => {
+    set((state) => ({
+      savingModels: state.savingModels.filter((id) => id !== modelId),
+    }));
+  },
+
+  downloadModelWithProgress: async (modelId: string): Promise<string> => {
     const state = get();
 
-    // 如果已经在下载中，不重复下载
     if (state.modelStatuses[modelId] === 'downloading') {
-      return;
+      return '';
     }
 
     get().updateModelStatus(modelId, 'downloading');
     get().setModelDownloadProgress(modelId, { loaded: 0, total: 0, percentage: 0 });
 
     try {
-      await downloadModel(modelId, (progress) => {
+      const result = await downloadModel(modelId, (progress) => {
         get().setModelDownloadProgress(modelId, progress);
       });
 
       get().updateModelStatus(modelId, 'downloaded');
       get().setModelDownloadProgress(modelId, null);
+
+      get().addSavingModel(modelId);
+      result.savePromise
+        .then(() => get().removeSavingModel(modelId))
+        .catch(() => get().removeSavingModel(modelId));
+
+      return result.blobUrl;
     } catch (error) {
-      // 檢查是否是用戶取消
       if (
         error instanceof Error &&
         (error.message === 'Download cancelled' || error.name === 'AbortError')
       ) {
-        console.log(`Model ${modelId} download cancelled by user`);
         get().updateModelStatus(modelId, 'not_downloaded');
         get().setModelDownloadProgress(modelId, null);
-        return;
+        return '';
       }
       console.error(`Failed to download model ${modelId}:`, error);
       get().updateModelStatus(modelId, 'error');
@@ -165,17 +183,12 @@ export const useAppStore = create<AppState>((set, get) => ({
         // 更新全局状态
         get().updateModelStatus(model, 'downloaded');
       } else {
-        // 未缓存，需要下载
         set({ isModelLoading: false });
 
-        // 使用共享的下载方法
-        await get().downloadModelWithProgress(model);
-
-        // 下载完成，加载到内存
-        const cachedUrl = await getCachedModelBlobUrl(model);
-        set({
-          cachedModelUrl: cachedUrl,
-        });
+        const blobUrl = await get().downloadModelWithProgress(model);
+        if (blobUrl) {
+          set({ cachedModelUrl: blobUrl });
+        }
       }
     } catch (error) {
       console.error('Failed to load/download model:', error);

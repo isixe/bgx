@@ -73,7 +73,9 @@ export function AppProvider() {
     onSuccess: handleSuccess,
   });
 
-  const poolRef = useRef<ReturnType<typeof import('../workers/onnx-worker-pool')['getOnnxWorkerPool']> | null>(null);
+  const poolRef = useRef<ReturnType<
+    (typeof import('../workers/onnx-worker-pool'))['getOnnxWorkerPool']
+  > | null>(null);
   const submittedIdsRef = useRef(new Set<string>());
 
   useEffect(() => {
@@ -89,7 +91,7 @@ export function AppProvider() {
     if (!batchMode) return;
 
     const pendingItems = batchQueue.filter(
-      (item) => item.status === 'pending' && !submittedIdsRef.current.has(item.id)
+      (item) => item.status === 'pending' && !submittedIdsRef.current.has(item.id),
     );
     if (pendingItems.length === 0) return;
 
@@ -115,25 +117,28 @@ export function AppProvider() {
 
         const model = getModelById(item.modelId);
 
-        poolRef.current!.processImage(
-          item.id,
-          item.originalImage,
-          freshCachedUrl,
-          model.resolution,
-          () => {},
-        ).then((result) => {
-          submittedIdsRef.current.delete(item.id);
-          if (result.type === 'success' && result.result) {
-            updateBatchItemStatus(item.id, 'completed', result.result);
-          } else if (result.type === 'error') {
-            updateBatchItemStatus(item.id, 'error', null, result.error);
-          } else {
-            updateBatchItemStatus(item.id, 'pending');
-          }
-        }).catch(() => {
-          submittedIdsRef.current.delete(item.id);
-          updateBatchItemStatus(item.id, 'error', null, 'Unknown error');
-        });
+        poolRef
+          .current!.processImage(
+            item.id,
+            item.originalImage,
+            freshCachedUrl,
+            model.resolution,
+            () => {},
+          )
+          .then((result) => {
+            submittedIdsRef.current.delete(item.id);
+            if (result.type === 'success' && result.result) {
+              updateBatchItemStatus(item.id, 'completed', result.result);
+            } else if (result.type === 'error') {
+              updateBatchItemStatus(item.id, 'error', null, result.error);
+            } else {
+              updateBatchItemStatus(item.id, 'pending');
+            }
+          })
+          .catch(() => {
+            submittedIdsRef.current.delete(item.id);
+            updateBatchItemStatus(item.id, 'error', null, 'Unknown error');
+          });
       };
 
       processItem();

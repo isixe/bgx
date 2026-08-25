@@ -98,11 +98,29 @@ export function isDownloading(modelId: string): boolean {
   return downloadControllers.has(modelId);
 }
 
+async function persistModelToDB(modelId: string, data: ArrayBuffer, size: number): Promise<void> {
+  const db = await openDB();
+  const transaction = db.transaction([STORE_NAME], 'readwrite');
+  const store = transaction.objectStore(STORE_NAME);
+
+  await new Promise<void>((resolve, reject) => {
+    const request = store.put({ modelId, data, size, timestamp: Date.now() });
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+
+  db.close();
+}
+
+export interface DownloadResult {
+  blobUrl: string;
+  savePromise: Promise<void>;
+}
+
 export async function downloadModel(
   modelId: string,
   onProgress?: (progress: DownloadProgress) => void,
-): Promise<void> {
-  // 如果已經有正在進行的下載，先取消它
+): Promise<DownloadResult> {
   cancelDownload(modelId);
 
   const controller = new AbortController();
@@ -123,7 +141,6 @@ export async function downloadModel(
     let loaded = 0;
 
     while (true) {
-      // 檢查是否已取消
       if (controller.signal.aborted) {
         throw new Error('Download cancelled');
       }
@@ -150,34 +167,15 @@ export async function downloadModel(
       position += chunk.length;
     }
 
-    const db = await openDB();
-    const transaction = db.transaction([STORE_NAME], 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
+    onProgress?.({ loaded, total: loaded, percentage: 100 });
 
-    const record: ModelRecord = {
-      modelId,
-      data: allChunks.buffer,
-      size: loaded,
-      timestamp: Date.now(),
-    };
+    const blob = new Blob([allChunks], { type: 'application/octet-stream' });
+    const blobUrl = URL.createObjectURL(blob);
 
-    await new Promise<void>((resolve, reject) => {
-      const request = store.put(record);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    const savePromise = persistModelToDB(modelId, allChunks.buffer, loaded);
 
-    db.close();
-
-    if (onProgress) {
-      onProgress({
-        loaded,
-        total: loaded,
-        percentage: 100,
-      });
-    }
+    return { blobUrl, savePromise };
   } finally {
-    // 清理 controller
     downloadControllers.delete(modelId);
   }
 }

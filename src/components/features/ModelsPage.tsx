@@ -17,6 +17,7 @@ export function ModelsPage({ hideHeader = false }: ModelsPageProps) {
     isDarkMode,
     modelStatuses,
     modelDownloadProgresses,
+    savingModels,
     downloadModelWithProgress,
     updateModelStatus,
     cancelModelDownload,
@@ -89,6 +90,7 @@ export function ModelsPage({ hideHeader = false }: ModelsPageProps) {
           const status = modelStatuses[model.id] || 'not_downloaded';
           const isSelected = currentModel === model.id;
           const isDownloading = status === 'downloading';
+          const isSaving = savingModels.includes(model.id);
           const progress = modelDownloadProgresses[model.id];
 
           return (
@@ -172,6 +174,13 @@ export function ModelsPage({ hideHeader = false }: ModelsPageProps) {
                           clipRule="evenodd"
                         />
                       </svg>
+                      {isSaving && (
+                        <span
+                          className={`text-xs ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`}
+                        >
+                          {t('saving')}
+                        </span>
+                      )}
                       <button
                         onClick={() => handleDelete(model.id)}
                         className={`p-1.5 rounded-lg transition-colors ${

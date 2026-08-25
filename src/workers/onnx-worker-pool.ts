@@ -43,10 +43,7 @@ export class OnnxWorkerPool {
   }
 
   private createWorkerSlot(): WorkerSlot {
-    const worker = new Worker(
-      new URL('./onnx-worker.ts', import.meta.url),
-      { type: 'module' }
-    );
+    const worker = new Worker(new URL('./onnx-worker.ts', import.meta.url), { type: 'module' });
 
     worker.onmessage = (event) => {
       const { type, ...data } = event.data;
@@ -107,8 +104,15 @@ export class OnnxWorkerPool {
       slot.currentTaskId = null;
     }
 
-    if (!this.fallbackMode && result.type === 'error' && result.error && WASM_ERROR_PATTERN.test(result.error)) {
-      console.warn('[OnnxWorkerPool] WASM error detected, switching to fallback mode (single worker)');
+    if (
+      !this.fallbackMode &&
+      result.type === 'error' &&
+      result.error &&
+      WASM_ERROR_PATTERN.test(result.error)
+    ) {
+      console.warn(
+        '[OnnxWorkerPool] WASM error detected, switching to fallback mode (single worker)',
+      );
       this.enableFallback();
     }
 
@@ -151,7 +155,10 @@ export class OnnxWorkerPool {
         this.drainFallbackQueue();
       })
       .catch((error) => {
-        task.resolve({ type: 'error', error: error instanceof Error ? error.message : String(error) });
+        task.resolve({
+          type: 'error',
+          error: error instanceof Error ? error.message : String(error),
+        });
         this.fallbackProcessing = false;
         this.drainFallbackQueue();
       });

@@ -5,7 +5,13 @@ import { removeBackground } from 'modern-rembg';
 
 type WorkerMessage =
   | { type: 'PROCESS_IMAGE'; imageDataUrl: string; modelUrl: string; resolution: number }
-  | { type: 'PROCESS_IMAGE_TASK'; taskId: string; imageDataUrl: string; modelUrl: string; resolution: number }
+  | {
+      type: 'PROCESS_IMAGE_TASK';
+      taskId: string;
+      imageDataUrl: string;
+      modelUrl: string;
+      resolution: number;
+    }
   | { type: 'CANCEL' }
   | { type: 'CANCEL_TASK'; taskId: string };
 

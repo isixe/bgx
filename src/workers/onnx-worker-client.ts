@@ -19,10 +19,7 @@ export class OnnxWorkerClient {
       throw new Error('Web Workers are not supported in this environment');
     }
 
-    this.worker = new Worker(
-      new URL('./onnx-worker.ts', import.meta.url),
-      { type: 'module' }
-    );
+    this.worker = new Worker(new URL('./onnx-worker.ts', import.meta.url), { type: 'module' });
 
     this.worker.onmessage = (event) => {
       const { type, ...data } = event.data;
@@ -65,7 +62,7 @@ export class OnnxWorkerClient {
     imageDataUrl: string,
     modelUrl: string,
     resolution: number,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
   ): Promise<WorkerResult> {
     if (!this.worker) {
       throw new Error('Worker not initialized');

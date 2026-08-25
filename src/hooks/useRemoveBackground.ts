@@ -3,10 +3,12 @@ import { getModelById } from '../utils/modelUtils';
 import { getCachedModelBlobUrl, revokeCachedUrl } from '../utils/modelCache';
 import type { UseRemoveBackgroundOptions, UseRemoveBackgroundReturn } from '../types/app';
 
-let workerClient: ReturnType<typeof import('../workers/onnx-worker-client')['getOnnxWorkerClient']> | null = null;
+let workerClient: ReturnType<
+  (typeof import('../workers/onnx-worker-client'))['getOnnxWorkerClient']
+> | null = null;
 
 export function useRemoveBackground(
-  options: UseRemoveBackgroundOptions = {}
+  options: UseRemoveBackgroundOptions = {},
 ): UseRemoveBackgroundReturn {
   const isProcessingRef = useRef<boolean>(false);
   const cachedUrlRef = useRef<string | null>(null);
@@ -72,7 +74,7 @@ export function useRemoveBackground(
         }
       }
     },
-    [options]
+    [options],
   );
 
   return {

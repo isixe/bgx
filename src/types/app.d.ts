@@ -37,6 +37,8 @@ export type AppState = {
   isModelStatusesLoaded: boolean;
   // 全局下载进度状态（跨页面保持）
   modelDownloadProgresses: Record<string, DownloadProgressInfo | null>;
+  // 正在静默写入 IndexedDB 的模型
+  savingModels: string[];
 
   setCurrentModel: (model: string) => Promise<void>;
   setCurrentPage: (page: 'main' | 'models' | 'settings') => void;
@@ -56,9 +58,9 @@ export type AppState = {
   updateModelStatus: (modelId: string, status: ModelStatus) => void;
   // 全局下载进度管理
   setModelDownloadProgress: (modelId: string, progress: DownloadProgressInfo | null) => void;
-  // 共享的模型下载方法
-  downloadModelWithProgress: (modelId: string) => Promise<void>;
-  // 取消模型下载
+  addSavingModel: (modelId: string) => void;
+  removeSavingModel: (modelId: string) => void;
+  downloadModelWithProgress: (modelId: string) => Promise<string>;
   cancelModelDownload: (modelId: string) => void;
 
   // 批量处理

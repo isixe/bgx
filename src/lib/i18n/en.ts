@@ -147,6 +147,7 @@ export const translations = {
   modelDownloadFailed: 'Model download failed, please check your network connection and try again',
   modelDownloadFailedTitle: 'Download Failed',
   cancelDownload: 'Cancel',
+  saving: 'Caching...',
 
   language: 'Language',
   languageZh: '中文',

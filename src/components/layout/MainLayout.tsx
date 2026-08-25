@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import JSZip from "jszip";
+import JSZip from 'jszip';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../lib/i18n';
 import { useGlobalDragDrop } from '../../hooks/useGlobalDragDrop';
@@ -432,9 +432,12 @@ function SidebarContent({
   };
 
   const handleBatchExportZip = async () => {
-    const toExport = selectedBatchItemIds.length > 0
-      ? batchQueue.filter((item) => selectedBatchItemIds.includes(item.id) && item.status === 'completed')
-      : batchQueue.filter((item) => item.status === 'completed');
+    const toExport =
+      selectedBatchItemIds.length > 0
+        ? batchQueue.filter(
+            (item) => selectedBatchItemIds.includes(item.id) && item.status === 'completed',
+          )
+        : batchQueue.filter((item) => item.status === 'completed');
 
     if (toExport.length === 0) return;
 
@@ -563,14 +566,16 @@ function SidebarContent({
             <button
               onClick={handleBatchExportAll}
               disabled={!hasCompletedBatchItems}
-              className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
-              {selectedBatchItemIds.length > 0 ? t("batchExportSelected") : t("batchExportAll")}
+              className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {selectedBatchItemIds.length > 0 ? t('batchExportSelected') : t('batchExportAll')}
             </button>
             <button
               onClick={handleBatchExportZip}
               disabled={!hasCompletedBatchItems}
-              className={`w-full rounded-lg px-4 py-3 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 ${isDarkMode ? "border border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}>
-              {t("batchExportZip")}
+              className={`w-full rounded-lg px-4 py-3 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 ${isDarkMode ? 'border border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+            >
+              {t('batchExportZip')}
             </button>
           </div>
         )}
