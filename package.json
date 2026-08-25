@@ -11,7 +11,8 @@
     "format:fix": "prettier --write .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "postinstall": "node -e \"const fs=require('fs'),s='node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm',d='public/ort-wasm-simd-threaded.wasm';if(fs.existsSync(s)){fs.copyFileSync(s,d);console.log('WASM copied to public/')}else{console.log('WASM not found, skipping')}\""
   },
   "dependencies": {
     "@astrojs/react": "^4.0.0",

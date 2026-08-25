@@ -24,6 +24,8 @@ export default defineConfig({
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
+        // 强制使用 WASM-only bundle，避免 JSEP/WebGPU 加载失败
+        'onnxruntime-web': 'onnxruntime-web/wasm',
       },
     },
     worker: {

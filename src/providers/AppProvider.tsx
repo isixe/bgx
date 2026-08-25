@@ -4,6 +4,7 @@ import { useRemoveBackground } from '../hooks/useRemoveBackground';
 import { MainLayout } from '../components/layout/MainLayout';
 import { useTranslation, i18n } from '../lib/i18n';
 import { isModelCached, getCachedModelBlobUrl } from '../utils/modelCache';
+import { getModelById } from '../utils/modelUtils';
 
 export function AppProvider() {
   const { language, t } = useTranslation();
@@ -30,15 +31,12 @@ export function AppProvider() {
     updateBatchItemStatus,
   } = useAppStore();
 
-  // 应用启动时初始化所有模型状态
   useEffect(() => {
     initializeModelStatuses();
   }, [initializeModelStatuses]);
 
-  // 初始化时预加载默认模型
   useEffect(() => {
     if (isModelStatusesLoaded) {
-      // 组件挂载时，预加载当前选中的模型
       setCurrentModel(currentModel);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -75,66 +73,72 @@ export function AppProvider() {
     onSuccess: handleSuccess,
   });
 
-  const processingBatchItemIdRef = useRef<string | null>(null);
+  const poolRef = useRef<ReturnType<typeof import('../workers/onnx-worker-pool')['getOnnxWorkerPool']> | null>(null);
+  const submittedIdsRef = useRef(new Set<string>());
 
-  const handleBatchProgress = useCallback(() => {
-    // 批量模式下不显示进度百分比
+  useEffect(() => {
+    import('../workers/onnx-worker-pool').then((mod) => {
+      poolRef.current = mod.getOnnxWorkerPool();
+    });
+    return () => {
+      poolRef.current?.cancelAll();
+    };
   }, []);
 
-  const handleBatchError = useCallback(
-    (error: Error) => {
-      const itemId = processingBatchItemIdRef.current;
-      if (itemId) {
-        updateBatchItemStatus(itemId, 'error', null, error.message);
-        processingBatchItemIdRef.current = null;
-      }
-    },
-    [updateBatchItemStatus],
-  );
-
-  const handleBatchSuccess = useCallback(
-    (result: string) => {
-      const itemId = processingBatchItemIdRef.current;
-      if (itemId) {
-        updateBatchItemStatus(itemId, 'completed', result);
-        processingBatchItemIdRef.current = null;
-      }
-    },
-    [updateBatchItemStatus],
-  );
-
-  const { processImage: processBatchImage } = useRemoveBackground({
-    onProgress: handleBatchProgress,
-    onError: handleBatchError,
-    onSuccess: handleBatchSuccess,
-  });
-
-  // Batch queue processing
   useEffect(() => {
     if (!batchMode) return;
 
-    const processQueue = async () => {
-      if (processingBatchItemIdRef.current) return;
+    const pendingItems = batchQueue.filter(
+      (item) => item.status === 'pending' && !submittedIdsRef.current.has(item.id)
+    );
+    if (pendingItems.length === 0) return;
 
-      const pendingItem = batchQueue.find((item) => item.status === 'pending');
-      if (!pendingItem) return;
+    for (const item of pendingItems) {
+      submittedIdsRef.current.add(item.id);
 
-      processingBatchItemIdRef.current = pendingItem.id;
-      updateBatchItemStatus(pendingItem.id, 'processing');
+      const processItem = async () => {
+        const isStillCached = await isModelCached(item.modelId);
+        if (!isStillCached) {
+          submittedIdsRef.current.delete(item.id);
+          updateBatchItemStatus(item.id, 'error', null, 'Model not available');
+          return;
+        }
 
-      const isStillCached = await isModelCached(pendingItem.modelId);
-      if (!isStillCached) {
-        updateBatchItemStatus(pendingItem.id, 'error', null, 'Model not available');
-        processingBatchItemIdRef.current = null;
-        return;
-      }
+        const freshCachedUrl = await getCachedModelBlobUrl(item.modelId);
+        if (!freshCachedUrl) {
+          submittedIdsRef.current.delete(item.id);
+          updateBatchItemStatus(item.id, 'error', null, 'Model URL unavailable');
+          return;
+        }
 
-      const freshCachedUrl = await getCachedModelBlobUrl(pendingItem.modelId);
-      await processBatchImage(pendingItem.originalImage, pendingItem.modelId, freshCachedUrl);
-    };
+        updateBatchItemStatus(item.id, 'processing');
 
-    processQueue();
-  }, [batchMode, batchQueue, processBatchImage, updateBatchItemStatus]);
+        const model = getModelById(item.modelId);
+
+        poolRef.current!.processImage(
+          item.id,
+          item.originalImage,
+          freshCachedUrl,
+          model.resolution,
+          () => {},
+        ).then((result) => {
+          submittedIdsRef.current.delete(item.id);
+          if (result.type === 'success' && result.result) {
+            updateBatchItemStatus(item.id, 'completed', result.result);
+          } else if (result.type === 'error') {
+            updateBatchItemStatus(item.id, 'error', null, result.error);
+          } else {
+            updateBatchItemStatus(item.id, 'pending');
+          }
+        }).catch(() => {
+          submittedIdsRef.current.delete(item.id);
+          updateBatchItemStatus(item.id, 'error', null, 'Unknown error');
+        });
+      };
+
+      processItem();
+    }
+  }, [batchMode, batchQueue, updateBatchItemStatus]);
 
   useEffect(() => {
     const checkAndProcess = async () => {

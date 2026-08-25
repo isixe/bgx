@@ -1,8 +1,9 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { getModelById } from '../utils/modelUtils';
 import { getCachedModelBlobUrl, revokeCachedUrl } from '../utils/modelCache';
-import { getOnnxWorkerClient } from '../workers/onnx-worker-client';
 import type { UseRemoveBackgroundOptions, UseRemoveBackgroundReturn } from '../types/app';
+
+let workerClient: ReturnType<typeof import('../workers/onnx-worker-client')['getOnnxWorkerClient']> | null = null;
 
 export function useRemoveBackground(
   options: UseRemoveBackgroundOptions = {}
@@ -13,7 +14,7 @@ export function useRemoveBackground(
   useEffect(() => {
     return () => {
       if (isProcessingRef.current) {
-        getOnnxWorkerClient().cancel();
+        workerClient?.cancel();
       }
     };
   }, []);
@@ -44,12 +45,15 @@ export function useRemoveBackground(
           cachedUrlRef.current = modelUrl;
         }
 
-        const worker = getOnnxWorkerClient();
-        const result = await worker.processImage(
+        if (!workerClient) {
+          const mod = await import('../workers/onnx-worker-client');
+          workerClient = mod.getOnnxWorkerClient();
+        }
+        const result = await workerClient.processImage(
           imageDataUrl,
           modelUrl,
           model.resolution,
-          (progress) => options.onProgress?.(progress)
+          (progress) => options.onProgress?.(progress),
         );
 
         if (result.type === 'success' && result.result) {

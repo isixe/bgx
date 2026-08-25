@@ -120,3 +120,5 @@ export function disposeOnnxWorkerClient(): void {
     clientInstance = null;
   }
 }
+
+export { OnnxWorkerPool, getOnnxWorkerPool, disposeOnnxWorkerPool } from './onnx-worker-pool';

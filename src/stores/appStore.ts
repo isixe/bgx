@@ -217,7 +217,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       reader.readAsDataURL(file);
     });
 
-    const id = crypto.randomUUID();
+    const id =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     const item: BatchItem = {
       id,
       originalImage: dataUrl,
