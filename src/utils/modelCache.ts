@@ -4,6 +4,10 @@ const DB_NAME = 'bgx-models-db';
 const DB_VERSION = 1;
 const STORE_NAME = 'models';
 
+// 内存缓存：用于在 savePromise 完成前临时保存模型数据
+// 防止用户在模型写入 IndexedDB 期间点击模型导致重新下载
+const inMemoryModelData = new Map<string, ArrayBuffer>();
+
 export type ModelCacheStatus = 'not_downloaded' | 'downloading' | 'downloaded' | 'error';
 
 export interface DownloadProgress {
@@ -81,6 +85,18 @@ async function fetchWithFallback(
   }
 
   throw new Error(`Failed to download model from all URLs: ${errors.join('; ')}`);
+}
+
+export function cacheModelDataInMemory(modelId: string, data: ArrayBuffer): void {
+  inMemoryModelData.set(modelId, data);
+}
+
+export function getModelDataFromMemory(modelId: string): ArrayBuffer | null {
+  return inMemoryModelData.get(modelId) || null;
+}
+
+export function clearModelDataFromMemory(modelId: string): void {
+  inMemoryModelData.delete(modelId);
 }
 
 // 存儲正在進行的下載請求的 AbortController
@@ -172,6 +188,7 @@ export async function downloadModel(
     const blob = new Blob([allChunks], { type: 'application/octet-stream' });
     const blobUrl = URL.createObjectURL(blob);
 
+    cacheModelDataInMemory(modelId, allChunks.buffer);
     const savePromise = persistModelToDB(modelId, allChunks.buffer, loaded);
 
     return { blobUrl, savePromise };

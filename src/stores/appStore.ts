@@ -7,6 +7,8 @@ import {
   cancelDownload,
   isModelCached,
   getAllCachedModels,
+  getModelDataFromMemory,
+  clearModelDataFromMemory,
 } from '../utils/modelCache';
 import { MODELS } from '../config/models';
 
@@ -128,8 +130,14 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       get().addSavingModel(modelId);
       result.savePromise
-        .then(() => get().removeSavingModel(modelId))
-        .catch(() => get().removeSavingModel(modelId));
+        .then(() => {
+          get().removeSavingModel(modelId);
+          clearModelDataFromMemory(modelId);
+        })
+        .catch(() => {
+          get().removeSavingModel(modelId);
+          clearModelDataFromMemory(modelId);
+        });
 
       return result.blobUrl;
     } catch (error) {
@@ -170,7 +178,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
 
     try {
-      // 先检查模型是否已在 IndexedDB 中
+      // 先检查内存缓存（模型刚下载完，正在保存到 IndexedDB）
+      const memoryData = getModelDataFromMemory(model);
+      if (memoryData) {
+        const blob = new Blob([memoryData], { type: 'application/octet-stream' });
+        const blobUrl = URL.createObjectURL(blob);
+        set({
+          cachedModelUrl: blobUrl,
+          isModelLoading: false,
+        });
+        get().updateModelStatus(model, 'downloaded');
+        return;
+      }
+
+      // 再检查 IndexedDB
       const isCached = await isModelCached(model);
 
       if (isCached) {
