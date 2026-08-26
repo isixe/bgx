@@ -119,10 +119,12 @@ async function persistModelToDB(modelId: string, data: ArrayBuffer, size: number
   const transaction = db.transaction([STORE_NAME], 'readwrite');
   const store = transaction.objectStore(STORE_NAME);
 
+  store.put({ modelId, data, size, timestamp: Date.now() });
+
   await new Promise<void>((resolve, reject) => {
-    const request = store.put({ modelId, data, size, timestamp: Date.now() });
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(new Error('Transaction aborted'));
   });
 
   db.close();
@@ -202,10 +204,12 @@ export async function deleteModel(modelId: string): Promise<void> {
   const transaction = db.transaction([STORE_NAME], 'readwrite');
   const store = transaction.objectStore(STORE_NAME);
 
+  store.delete(modelId);
+
   await new Promise<void>((resolve, reject) => {
-    const request = store.delete(modelId);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(new Error('Transaction aborted'));
   });
 
   db.close();
@@ -301,10 +305,12 @@ export async function clearAllModels(): Promise<void> {
   const transaction = db.transaction([STORE_NAME], 'readwrite');
   const store = transaction.objectStore(STORE_NAME);
 
+  store.clear();
+
   await new Promise<void>((resolve, reject) => {
-    const request = store.clear();
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(new Error('Transaction aborted'));
   });
 
   db.close();
