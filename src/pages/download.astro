@@ -1,0 +1,33 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { DownloadPage } from '../components/features/DownloadPage';
+
+const metadata = {
+  title: 'BGX - Download Desktop App',
+  description:
+    'Download the BGX desktop app for Windows, macOS and Linux. Free, offline AI background removal with batch processing.',
+  keywords: [
+    'bgx desktop',
+    'download bgx',
+    'background remover desktop app',
+    'offline background removal',
+    'ai background remover',
+  ],
+  ogImage: '/og-image.png',
+  ogImageAlt: 'BGX Desktop App Download',
+  siteName: 'BGX',
+  locale: 'en_US',
+};
+---
+
+<Layout
+  title={metadata.title}
+  description={metadata.description}
+  keywords={metadata.keywords.join(', ')}
+  ogImage={metadata.ogImage}
+  ogImageAlt={metadata.ogImageAlt}
+  siteName={metadata.siteName}
+  locale={metadata.locale}
+>
+  <DownloadPage client:load />
+</Layout>
