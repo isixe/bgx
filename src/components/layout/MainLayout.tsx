@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import JSZip from 'jszip';
+import { Monitor } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../lib/i18n';
 import { useGlobalDragDrop } from '../../hooks/useGlobalDragDrop';
@@ -111,6 +112,14 @@ export function MainLayout() {
             </svg>
           </button>
           <LanguageSwitcher />
+          <a
+            href="/download"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+            title={t('desktopApp')}
+            aria-label={t('desktopApp')}
+          >
+            <Monitor className="h-4 w-4" />
+          </a>
           <a
             href="https://github.com/isixe/bgx"
             target="_blank"
