@@ -26,3 +26,7 @@ pnpm-debug.log*
 .idea/
 .history/
 .vscode/
+
+# local agent / tool session state
+.omo/
+.sisyphus/
