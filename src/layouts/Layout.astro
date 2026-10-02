@@ -10,6 +10,8 @@ interface Props {
   siteName?: string;
   locale?: string;
   noindex?: boolean;
+  /** Extra origins to preconnect to (e.g. GitHub API on the download page). */
+  preconnect?: string[];
 }
 
 const {
@@ -21,6 +23,7 @@ const {
   siteName = 'BGX',
   locale = 'en_US',
   noindex = false,
+  preconnect = [],
 } = Astro.props;
 
 // Process OG image URL
@@ -62,7 +65,28 @@ const fullOgImageUrl = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogIma
     <!-- Favicon -->
     <link rel="icon" href="/favicon.ico" />
 
+    <!-- Preconnect hints (page-specific origins, e.g. GitHub API) -->
+    {preconnect.map((origin) => <link rel="preconnect" href={origin} crossorigin />)}
+
     <title>{title}</title>
+
+    <!-- Dark mode anti-flash: apply the stored theme before first paint.
+         Runs on <html> before body renders, so no white flash in dark mode. -->
+    <script is:inline>
+      (function () {
+        try {
+          var stored = localStorage.getItem('bgx-dark-mode');
+          var dark =
+            stored !== null
+              ? stored === 'true'
+              : window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {
+          /* localStorage unavailable — fall back to light mode */
+        }
+      })();
+    </script>
+
     <!-- Analytics: injected at runtime, skipped entirely in the desktop (Electron) app. -->
     <script is:inline>
       if (!navigator.userAgent.includes('Electron')) {

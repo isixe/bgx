@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { DownloadPage } from '../components/features/DownloadPage';
+import { fetchLatestRelease, type ReleaseInfo } from '../lib/release';
 
 const metadata = {
   title: 'BGX - Download Desktop App',
@@ -18,6 +19,13 @@ const metadata = {
   siteName: 'BGX',
   locale: 'en_US',
 };
+
+let initialRelease: ReleaseInfo | null = null;
+try {
+  initialRelease = await fetchLatestRelease(6000);
+} catch {
+  // Build/dev environment may be offline — client falls back to cache or error state.
+}
 ---
 
 <Layout
@@ -28,6 +36,7 @@ const metadata = {
   ogImageAlt={metadata.ogImageAlt}
   siteName={metadata.siteName}
   locale={metadata.locale}
+  preconnect={['https://api.github.com']}
 >
-  <DownloadPage client:load />
+  <DownloadPage client:load initialRelease={initialRelease} />
 </Layout>
