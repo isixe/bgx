@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build Windows installers and publish release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify tag matches package.json version
+        shell: bash
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          pkg_version="$(node -p "require('./package.json').version")"
+          if [ "$tag_version" != "$pkg_version" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version v$pkg_version" >&2
+            exit 1
+          fi
+
+      - name: Build web app
+        run: pnpm build
+
+      - name: Download Electron binary
+        run: pnpm exec install-electron
+
+      - name: Package Windows installers
+        run: pnpm exec electron-builder --win --publish never
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: windows-installers
+          path: |
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
+          generate_release_notes: true
