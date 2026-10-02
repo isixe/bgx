@@ -19,6 +19,9 @@ pnpm-debug.log*
 .env
 .env.production
 
+# local machine config (store path etc)
+.npmrc
+
 # macOS-specific files
 .DS_Store
 
