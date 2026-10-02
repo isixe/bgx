@@ -186,6 +186,36 @@ export const translations = {
   batchExportAll: 'Export All',
   batchExportSelected: 'Export Selected',
   batchExportZip: 'Export as ZIP',
+
+  desktopApp: 'Desktop App',
+
+  downloadPage: {
+    documentTitle: 'BGX - Download Desktop App',
+    title: 'BGX Desktop App',
+    subtitle:
+      'The full desktop application with offline background removal, powered by the same AI engine as the web version.',
+    versionLabel: 'Latest release',
+    recommended: 'Matched to your system',
+    loading: 'Loading the latest release…',
+    loadFailed: 'Could not load release information. Check your network and try again.',
+    retry: 'Retry',
+    windows: 'Windows',
+    macOS: 'macOS',
+    linux: 'Linux',
+    kindWinInstaller: 'Installer (x64)',
+    kindWinPortable: 'Portable executable',
+    kindMacDmg: 'Disk Image (DMG)',
+    kindMacZip: 'Archive (ZIP)',
+    kindLinuxAppImage: 'AppImage',
+    kindLinuxDeb: 'Debian Package (.deb)',
+    download: 'Download',
+    noAssets: 'No downloadable files for this platform in the latest release.',
+    footerNote: 'Files are downloaded directly from the latest GitHub Release.',
+    backToWeb: 'Open the web version',
+    featureOffline: 'Works fully offline once installed',
+    featureBatch: 'Batch processing with the same AI models',
+    featureFree: 'Free and open source, no account required',
+  },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

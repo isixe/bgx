@@ -182,6 +182,35 @@ export const translations = {
   batchExportAll: '全部导出',
   batchExportSelected: '导出选中',
   batchExportZip: '导出 ZIP',
+
+  desktopApp: '桌面端',
+
+  downloadPage: {
+    documentTitle: 'BGX - 下载桌面端',
+    title: 'BGX 桌面端',
+    subtitle: '完整功能的桌面应用，支持离线抠图，与网页版使用同一套 AI 引擎。',
+    versionLabel: '最新版本',
+    recommended: '匹配你的系统',
+    loading: '正在获取最新版本信息…',
+    loadFailed: '获取版本信息失败，请检查网络后重试。',
+    retry: '重试',
+    windows: 'Windows',
+    macOS: 'macOS',
+    linux: 'Linux',
+    kindWinInstaller: '安装版 (x64)',
+    kindWinPortable: '便携版',
+    kindMacDmg: '磁盘映像 (DMG)',
+    kindMacZip: '压缩包 (ZIP)',
+    kindLinuxAppImage: 'AppImage',
+    kindLinuxDeb: 'Debian 安装包 (.deb)',
+    download: '下载',
+    noAssets: '最新版本中没有适用于该平台的下载文件。',
+    footerNote: '文件直接来自 GitHub 最新 Release，点击即可开始下载。',
+    backToWeb: '使用网页版',
+    featureOffline: '安装后可完全离线使用',
+    featureBatch: '支持批量处理，模型与网页版一致',
+    featureFree: '免费开源，无需注册',
+  },
 } as const;
 
 export type TranslationKey = keyof typeof translations;
