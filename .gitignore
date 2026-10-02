@@ -1,5 +1,7 @@
 # build output
 dist/
+# electron-builder output
+release/
 # generated types
 .astro/
 

@@ -127,6 +127,24 @@ bgx/
 | `pnpm preview`   | Preview production build             |
 | `pnpm astro ...` | Run Astro CLI commands               |
 
+## Desktop App (Electron)
+
+BGX also ships as a cross-platform desktop app. The Electron shell serves the static build through a privileged `app://` protocol with `COOP`/`COEP` headers, so WebAssembly threading (`SharedArrayBuffer`) and all background-removal features work fully offline.
+
+| Command             | Action                                              |
+| ------------------- | --------------------------------------------------- |
+| `pnpm dev:electron` | Run Astro dev server and open the Electron window   |
+| `pnpm start`        | Launch Electron against an existing `./dist/` build |
+| `pnpm build:win`    | Build the site and package Windows installers       |
+
+Packaging output goes to `./release/` (never `./dist/`, which belongs to Astro):
+
+- `BGX-<version>-win-x64.exe` - NSIS installer (selectable install directory, desktop shortcut)
+- `BGX-<version>-portable.exe` - portable executable (no installation required)
+- `win-unpacked/` - unpacked app for direct execution
+
+Other platforms can be packaged by replacing `--win` with `--mac` or `--linux`.
+
 ## License
 
 This project is licensed under the [MIT](LICENSE) License.

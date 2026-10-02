@@ -63,8 +63,16 @@ const fullOgImageUrl = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogIma
     <link rel="icon" href="/favicon.ico" />
 
     <title>{title}</title>
-    <script src="https://analytics.itea.dev/tracker.min.js" id="analytics" data-website-id="bgx"
-    ></script>
+    <!-- Analytics: injected at runtime, skipped entirely in the desktop (Electron) app. -->
+    <script is:inline>
+      if (!navigator.userAgent.includes('Electron')) {
+        const tracker = document.createElement('script');
+        tracker.src = 'https://analytics.itea.dev/tracker.min.js';
+        tracker.id = 'analytics';
+        tracker.dataset.websiteId = 'bgx';
+        document.head.appendChild(tracker);
+      }
+    </script>
   </head>
   <body>
     <slot />
