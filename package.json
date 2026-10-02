@@ -2,6 +2,11 @@
   "name": "bgx",
   "type": "module",
   "version": "0.2.0",
+  "description": "Client-side AI background removal tool",
+  "author": {
+    "name": "isixe",
+    "email": "isixe@outlook.com"
+  },
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "astro dev --host 0.0.0.0",
@@ -40,6 +45,33 @@
       "target": [
         "nsis",
         "portable"
+      ]
+    },
+    "linux": {
+      "icon": "public/favicon.png",
+      "category": "Graphics",
+      "synopsis": "AI background removal",
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    },
+    "mac": {
+      "icon": "public/favicon.png",
+      "category": "public.app-category.graphics-design",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
       ]
     },
     "nsis": {

@@ -1,10 +1,18 @@
 const { app, BrowserWindow, protocol, shell } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
+const fsSync = require('node:fs');
 
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 const APP_HOST = 'bundle';
 const DEV_URL = 'http://localhost:4321';
+
+// Window/taskbar icon: prefer the built asset (packaged app), fall back to
+// public/ when running from source (astro dev serves dist/ only after build).
+const WINDOW_ICON = [
+  path.join(DIST_DIR, 'favicon.png'),
+  path.join(__dirname, '..', 'public', 'favicon.png'),
+].find((candidate) => fsSync.existsSync(candidate));
 
 const isDev = !!process.env.ELECTRON_DEV;
 
@@ -117,6 +125,7 @@ function createWindow() {
     minHeight: 600,
     show: false,
     backgroundColor: '#ffffff',
+    icon: WINDOW_ICON,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

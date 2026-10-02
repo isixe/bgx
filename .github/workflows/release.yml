@@ -6,12 +6,25 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
-    name: Build Windows installers and publish release
-    runs-on: windows-latest
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            os: windows-latest
+            electron-args: --win
+          - platform: linux
+            os: ubuntu-latest
+            electron-args: --linux
+          - platform: mac
+            os: macos-latest
+            electron-args: --mac
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -46,24 +59,42 @@ jobs:
       - name: Download Electron binary
         run: pnpm exec install-electron
 
-      - name: Package Windows installers
-        run: pnpm exec electron-builder --win --publish never
+      - name: Package installers
+        run: pnpm exec electron-builder ${{ matrix.electron-args }} --publish never
+        env:
+          # No Apple signing certificate configured; skip keychain discovery.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: windows-installers
+          name: installers-${{ matrix.platform }}
           path: |
             release/*.exe
+            release/*.deb
+            release/*.AppImage
+            release/*.dmg
+            release/*.zip
             release/*.blockmap
-            release/latest.yml
+            release/latest*.yml
           if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v6
+        with:
+          pattern: installers-*
+          merge-multiple: true
+          path: release-assets
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          files: |
-            release/*.exe
-            release/*.blockmap
-            release/latest.yml
+          files: release-assets/*
           generate_release_notes: true
