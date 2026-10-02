@@ -29,7 +29,14 @@ const taskAbortControllers = new Map<string, AbortController>();
 let globalAbortController: AbortController | null = null;
 let wasmBinaryReady = false;
 
-async function ensureWasmBinary() {
+// ORT spawns its em-pthread sub-workers via `new Worker(import.meta.url)`,
+// which after bundling points at THIS entry script. In that context ORT's own
+// pthread handshake handler (`load`/`loaded`) registers first while evaluating
+// our imports; we must NOT overwrite it, otherwise the handshake never
+// completes and inference hangs forever.
+const isOrtPthreadWorker = self.name.startsWith('em-pthread');
+
+async function ensureWasmBinary(): Promise<void> {
   if (wasmBinaryReady) return;
   try {
     const resp = await fetch('/ort-wasm-simd-threaded.wasm');
@@ -42,7 +49,7 @@ async function ensureWasmBinary() {
   }
 }
 
-self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
+const messageHandler = async (event: MessageEvent<WorkerMessage>) => {
   await ensureWasmBinary();
   const { type } = event.data;
 
@@ -163,10 +170,14 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   }
 };
 
-self.onbeforeunload = () => {
-  if (globalAbortController) {
-    globalAbortController.abort();
-  }
-  taskAbortControllers.forEach((controller) => controller.abort());
-  taskAbortControllers.clear();
-};
+if (!isOrtPthreadWorker) {
+  self.onmessage = messageHandler;
+
+  self.onbeforeunload = () => {
+    if (globalAbortController) {
+      globalAbortController.abort();
+    }
+    taskAbortControllers.forEach((controller) => controller.abort());
+    taskAbortControllers.clear();
+  };
+}
