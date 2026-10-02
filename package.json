@@ -37,7 +37,6 @@
       "package.json"
     ],
     "asar": true,
-    "electronDist": "node_modules/electron/dist",
     "npmRebuild": false,
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "win": {
