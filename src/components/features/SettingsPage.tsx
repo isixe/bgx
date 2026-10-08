@@ -509,7 +509,6 @@ export function SettingsPage() {
                           src="https://bg2x.itea.dev/favicon.ico"
                           alt="bg2x"
                           className="h-5 w-5"
-                          crossOrigin="anonymous"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
