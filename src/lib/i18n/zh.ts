@@ -161,6 +161,9 @@ export const translations = {
   toolImageDashName: 'Image Dash',
   toolImageDashDesc:
     '反向图片与文本搜索 - 强大的反向图片搜索，在 Google、Yandex、Bing 等平台快速查找图片',
+  toolBg2xName: 'bg2x',
+  toolBg2xDesc:
+    'AI 图像超分辨率 - 免费、保护隐私的 AI 图像放大工具，最高支持 4 倍无损放大',
 
   aboutTitle: '关于 BGX',
   aboutDescription: '一款免费、保护隐私的 AI 背景移除工具。所有处理均在本地浏览器中完成。',

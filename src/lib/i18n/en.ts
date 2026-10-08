@@ -164,6 +164,9 @@ export const translations = {
   toolImageDashName: 'Image Dash',
   toolImageDashDesc:
     'Reverse Image & Text Search - Find any image fast with powerful reverse image search across Google, Yandex, Bing, and more',
+  toolBg2xName: 'bg2x',
+  toolBg2xDesc:
+    'AI Image Super Resolution - A free, privacy-first AI tool that upscales images up to 4x',
 
   aboutTitle: 'About BGX',
   aboutDescription:

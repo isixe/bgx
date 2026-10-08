@@ -489,6 +489,55 @@ export function SettingsPage() {
                         />
                       </svg>
                     </a>
+
+                    <a
+                      href="https://bg2x.itea.dev/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex items-center gap-4 rounded-xl border p-4 transition-all hover:shadow-md ${
+                        isDarkMode
+                          ? 'border-slate-700 bg-slate-800 hover:border-slate-600'
+                          : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-lg overflow-hidden ${
+                          isDarkMode ? 'bg-slate-700' : 'bg-slate-100'
+                        }`}
+                      >
+                        <img
+                          src="https://bg2x.itea.dev/favicon.ico"
+                          alt="bg2x"
+                          className="h-5 w-5"
+                          crossOrigin="anonymous"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                        >
+                          {t('toolBg2xName')}
+                        </p>
+                        <p
+                          className={`text-sm mt-0.5 line-clamp-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                        >
+                          {t('toolBg2xDesc')}
+                        </p>
+                      </div>
+                      <svg
+                        className={`h-4 w-4 flex-shrink-0 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                        />
+                      </svg>
+                    </a>
                   </div>
                 </div>
               </div>
