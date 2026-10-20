@@ -164,6 +164,9 @@ export const translations = {
   toolBg2xName: 'bg2x',
   toolBg2xDesc:
     'AI 图像超分辨率 - 免费、保护隐私的 AI 图像放大工具，最高支持 4 倍无损放大',
+  toolPicNookName: 'PicNook',
+  toolPicNookDesc:
+    '浏览器图片工具箱 - 免费、隐私优先，涵盖裁切、调色、缩放、水印、格式转换等常用工具，全部在本地完成',
 
   aboutTitle: '关于 BGX',
   aboutDescription: '一款免费、保护隐私的 AI 背景移除工具。所有处理均在本地浏览器中完成。',

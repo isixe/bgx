@@ -167,6 +167,9 @@ export const translations = {
   toolBg2xName: 'bg2x',
   toolBg2xDesc:
     'AI Image Super Resolution - A free, privacy-first AI tool that upscales images up to 4x',
+  toolPicNookName: 'PicNook',
+  toolPicNookDesc:
+    'Browser Image Toolbox - A free, privacy-first toolbox for cropping, color adjustment, resizing, watermarking, format conversion, and more, all running locally',
 
   aboutTitle: 'About BGX',
   aboutDescription:
