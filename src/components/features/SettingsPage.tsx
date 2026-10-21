@@ -4,6 +4,10 @@ import { ModelsPage } from './ModelsPage';
 import { checkForAppUpdate, isDesktopApp } from '../../lib/appUpdate';
 import pkg from '../../../package.json';
 
+// Keep the "checking…" indicator visible for at least this long so an instant
+// network response does not cause a distracting flash.
+const MIN_CHECKING_MS = 2500;
+
 export function SettingsPage() {
   const { t } = useTranslation();
   const {
@@ -56,31 +60,38 @@ export function SettingsPage() {
   const handleManualCheck = async () => {
     if (updateCheckState === 'checking') return;
     setUpdateCheckState('checking');
-    const result = await checkForAppUpdate();
+    const [result] = await Promise.all([
+      checkForAppUpdate(),
+      new Promise((resolve) => setTimeout(resolve, MIN_CHECKING_MS)),
+    ]);
     setUpdateCheckState(result.state);
     setLatestVersion(result.state === 'available' ? result.latestVersion : null);
   };
 
   const tabs = [
-    {
-      id: 'general' as const,
-      label: t('settingsGeneral'),
-      icon: (
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-          />
-        </svg>
-      ),
-    },
+    ...(isDesktopApp()
+      ? [
+          {
+            id: 'general' as const,
+            label: t('settingsGeneral'),
+            icon: (
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                />
+              </svg>
+            ),
+          },
+        ]
+      : []),
     {
       id: 'models' as const,
       label: t('settingsModelSettings'),
@@ -295,72 +306,38 @@ export function SettingsPage() {
                   </div>
 
                   <div className="grid gap-4">
-                    {isDesktopApp() && (
-                      <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
-                        <div className="min-w-0">
-                          <p
-                            className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
-                          >
-                            {t('settingsCheckUpdates')}
-                          </p>
-                          <p
-                            className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
-                          >
-                            {t('settingsCheckUpdatesDesc')}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={checkUpdatesOnStartup}
-                          aria-label={t('settingsCheckUpdates')}
-                          onClick={() => setCheckUpdatesOnStartup(!checkUpdatesOnStartup)}
-                          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
-                            checkUpdatesOnStartup
-                              ? 'bg-indigo-600'
-                              : isDarkMode
-                                ? 'bg-slate-600'
-                                : 'bg-slate-300'
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                              checkUpdatesOnStartup ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    )}
-
                     <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
                       <div className="min-w-0">
                         <p
                           className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
                         >
-                          {t('settingsCurrentVersion')}
+                          {t('settingsCheckUpdates')}
                         </p>
                         <p
                           className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
                         >
-                          {pkg.version}
+                          {t('settingsCheckUpdatesDesc')}
                         </p>
-                        {updateStatusText && (
-                          <p className={`text-sm mt-1 ${updateStatusColor}`}>{updateStatusText}</p>
-                        )}
                       </div>
                       <button
                         type="button"
-                        onClick={handleManualCheck}
-                        disabled={updateCheckState === 'checking'}
-                        className={`flex-shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                          isDarkMode
-                            ? 'bg-slate-700 text-slate-200 hover:bg-slate-600'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        role="switch"
+                        aria-checked={checkUpdatesOnStartup}
+                        aria-label={t('settingsCheckUpdates')}
+                        onClick={() => setCheckUpdatesOnStartup(!checkUpdatesOnStartup)}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
+                          checkUpdatesOnStartup
+                            ? 'bg-indigo-600'
+                            : isDarkMode
+                              ? 'bg-slate-600'
+                              : 'bg-slate-300'
                         }`}
                       >
-                        {updateCheckState === 'checking'
-                          ? t('updateChecking')
-                          : t('updateCheckNow')}
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                            checkUpdatesOnStartup ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
                       </button>
                     </div>
                   </div>
@@ -494,14 +471,78 @@ export function SettingsPage() {
                         </svg>
                       </a>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div
-                          className={`flex items-center gap-4 rounded-xl border p-4 ${
-                            isDarkMode
-                              ? 'border-slate-700 bg-slate-800'
-                              : 'border-slate-200 bg-white'
-                          }`}
-                        >
+                      {isDesktopApp() ? (
+                        <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
+                          <div className="flex min-w-0 items-center gap-4">
+                            <div
+                              className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${
+                                isDarkMode ? 'bg-slate-700' : 'bg-slate-100'
+                              }`}
+                            >
+                              <svg
+                                className="h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                />
+                              </svg>
+                            </div>
+                            <div className="min-w-0">
+                              <p
+                                className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                              >
+                                {t('settingsCurrentVersion')}
+                              </p>
+                              <p
+                                className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                              >
+                                {pkg.version}
+                              </p>
+                              {updateStatusText && (
+                                <p className={`text-sm mt-1 ${updateStatusColor}`}>
+                                  {updateStatusText}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleManualCheck}
+                            disabled={updateCheckState === 'checking'}
+                            className={`flex flex-shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                              isDarkMode
+                                ? 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            }`}
+                          >
+                            <svg
+                              className={`h-4 w-4 ${updateCheckState === 'checking' ? 'animate-spin' : ''}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              strokeWidth={2}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                              />
+                            </svg>
+                            <span>
+                              {updateCheckState === 'checking'
+                                ? t('updateChecking')
+                                : t('updateCheckNow')}
+                            </span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className={`flex items-center gap-4 ${cardClasses}`}>
                           <div
                             className={`flex h-10 w-10 items-center justify-center rounded-lg ${
                               isDarkMode ? 'bg-slate-700' : 'bg-slate-100'
@@ -525,7 +566,7 @@ export function SettingsPage() {
                             <p
                               className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
                             >
-                              {t('aboutVersion')}
+                              {t('settingsCurrentVersion')}
                             </p>
                             <p
                               className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
@@ -534,45 +575,39 @@ export function SettingsPage() {
                             </p>
                           </div>
                         </div>
+                      )}
 
+                      <div className={`flex items-center gap-4 ${cardClasses}`}>
                         <div
-                          className={`flex items-center gap-4 rounded-xl border p-4 ${
-                            isDarkMode
-                              ? 'border-slate-700 bg-slate-800'
-                              : 'border-slate-200 bg-white'
+                          className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                            isDarkMode ? 'bg-slate-700' : 'bg-slate-100'
                           }`}
                         >
-                          <div
-                            className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                              isDarkMode ? 'bg-slate-700' : 'bg-slate-100'
-                            }`}
+                          <svg
+                            className="h-5 w-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
                           >
-                            <svg
-                              className="h-5 w-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              strokeWidth={2}
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                              />
-                            </svg>
-                          </div>
-                          <div>
-                            <p
-                              className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
-                            >
-                              {t('aboutLicense')}
-                            </p>
-                            <p
-                              className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
-                            >
-                              MIT
-                            </p>
-                          </div>
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                            />
+                          </svg>
+                        </div>
+                        <div>
+                          <p
+                            className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                          >
+                            {t('aboutLicense')}
+                          </p>
+                          <p
+                            className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                          >
+                            MIT
+                          </p>
                         </div>
                       </div>
                     </div>

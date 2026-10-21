@@ -11,7 +11,7 @@ export type ModelConfig = {
 
 export type ModelStatus = 'not_downloaded' | 'downloading' | 'downloaded' | 'error';
 
-export type SettingsTab = 'models' | 'general' | 'about' | 'relatedTools';
+export type SettingsTab = 'general' | 'models' | 'about' | 'relatedTools';
 
 export type UpdateCheckState = 'idle' | 'checking' | 'available' | 'up-to-date' | 'error';
 
