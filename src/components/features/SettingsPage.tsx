@@ -1,13 +1,86 @@
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../lib/i18n';
 import { ModelsPage } from './ModelsPage';
+import { checkForAppUpdate, isDesktopApp } from '../../lib/appUpdate';
 import pkg from '../../../package.json';
 
 export function SettingsPage() {
   const { t } = useTranslation();
-  const { settingsTab, setSettingsTab, setCurrentPage, isDarkMode } = useAppStore();
+  const {
+    settingsTab,
+    setSettingsTab,
+    setCurrentPage,
+    isDarkMode,
+    checkUpdatesOnStartup,
+    setCheckUpdatesOnStartup,
+    updateCheckState,
+    setUpdateCheckState,
+    latestVersion,
+    setLatestVersion,
+  } = useAppStore();
+
+  const cardClasses = `rounded-xl border p-4 ${
+    isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'
+  }`;
+
+  const updateStatusText =
+    updateCheckState === 'checking'
+      ? t('updateChecking')
+      : updateCheckState === 'available'
+        ? latestVersion
+          ? `${t('updateAvailable')} v${latestVersion}`
+          : t('updateAvailable')
+        : updateCheckState === 'up-to-date'
+          ? t('updateUpToDate')
+          : updateCheckState === 'error'
+            ? t('updateCheckFailed')
+            : '';
+
+  const updateStatusColor =
+    updateCheckState === 'error'
+      ? isDarkMode
+        ? 'text-red-400'
+        : 'text-red-600'
+      : updateCheckState === 'available'
+        ? isDarkMode
+          ? 'text-indigo-400'
+          : 'text-indigo-600'
+        : updateCheckState === 'up-to-date'
+          ? isDarkMode
+            ? 'text-emerald-400'
+            : 'text-emerald-600'
+          : isDarkMode
+            ? 'text-slate-400'
+            : 'text-slate-500';
+
+  const handleManualCheck = async () => {
+    if (updateCheckState === 'checking') return;
+    setUpdateCheckState('checking');
+    const result = await checkForAppUpdate();
+    setUpdateCheckState(result.state);
+    setLatestVersion(result.state === 'available' ? result.latestVersion : null);
+  };
 
   const tabs = [
+    {
+      id: 'general' as const,
+      label: t('settingsGeneral'),
+      icon: (
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+          />
+        </svg>
+      ),
+    },
     {
       id: 'models' as const,
       label: t('settingsModelSettings'),
@@ -205,6 +278,96 @@ export function SettingsPage() {
       <div className={`flex-1 flex flex-col ${isDarkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto">
+            {settingsTab === 'general' && (
+              <div className="px-6 py-5">
+                <div className="space-y-6">
+                  <div>
+                    <h2
+                      className={`text-lg font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}
+                    >
+                      {t('settingsGeneral')}
+                    </h2>
+                    <p
+                      className={`mt-2 text-sm leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                    >
+                      {t('settingsGeneralDesc')}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4">
+                    {isDesktopApp() && (
+                      <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
+                        <div className="min-w-0">
+                          <p
+                            className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                          >
+                            {t('settingsCheckUpdates')}
+                          </p>
+                          <p
+                            className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                          >
+                            {t('settingsCheckUpdatesDesc')}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={checkUpdatesOnStartup}
+                          aria-label={t('settingsCheckUpdates')}
+                          onClick={() => setCheckUpdatesOnStartup(!checkUpdatesOnStartup)}
+                          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
+                            checkUpdatesOnStartup
+                              ? 'bg-indigo-600'
+                              : isDarkMode
+                                ? 'bg-slate-600'
+                                : 'bg-slate-300'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              checkUpdatesOnStartup ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    )}
+
+                    <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                        >
+                          {t('settingsCurrentVersion')}
+                        </p>
+                        <p
+                          className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                        >
+                          {pkg.version}
+                        </p>
+                        {updateStatusText && (
+                          <p className={`text-sm mt-1 ${updateStatusColor}`}>{updateStatusText}</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleManualCheck}
+                        disabled={updateCheckState === 'checking'}
+                        className={`flex-shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                          isDarkMode
+                            ? 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        {updateCheckState === 'checking'
+                          ? t('updateChecking')
+                          : t('updateCheckNow')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {settingsTab === 'models' && (
               <div className="px-6 py-5">
                 <ModelsPage hideHeader />

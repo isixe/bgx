@@ -5,6 +5,7 @@ import { MainLayout } from '../components/layout/MainLayout';
 import { useTranslation, i18n } from '../lib/i18n';
 import { isModelCached, getCachedModelBlobUrl } from '../utils/modelCache';
 import { getModelById } from '../utils/modelUtils';
+import { checkForAppUpdate, isDesktopApp } from '../lib/appUpdate';
 
 export function AppProvider() {
   const { language, t } = useTranslation();
@@ -26,6 +27,9 @@ export function AppProvider() {
     setProcessedModel,
     initializeModelStatuses,
     updateModelStatus,
+    checkUpdatesOnStartup,
+    setUpdateCheckState,
+    setLatestVersion,
     batchMode,
     batchQueue,
     updateBatchItemStatus,
@@ -192,6 +196,23 @@ export function AppProvider() {
     setCurrentModel,
     updateModelStatus,
   ]);
+
+  useEffect(() => {
+    if (!isDesktopApp() || !checkUpdatesOnStartup) return;
+
+    let cancelled = false;
+    setUpdateCheckState('checking');
+
+    checkForAppUpdate().then((result) => {
+      if (cancelled) return;
+      setUpdateCheckState(result.state);
+      setLatestVersion(result.state === 'available' ? result.latestVersion : null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [checkUpdatesOnStartup, setUpdateCheckState, setLatestVersion]);
 
   // Sync dark mode to html element for Tailwind dark mode
   useEffect(() => {

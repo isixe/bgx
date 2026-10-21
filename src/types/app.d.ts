@@ -11,6 +11,10 @@ export type ModelConfig = {
 
 export type ModelStatus = 'not_downloaded' | 'downloading' | 'downloaded' | 'error';
 
+export type SettingsTab = 'models' | 'general' | 'about' | 'relatedTools';
+
+export type UpdateCheckState = 'idle' | 'checking' | 'available' | 'up-to-date' | 'error';
+
 export interface DownloadProgressInfo {
   loaded: number;
   total: number;
@@ -27,8 +31,12 @@ export type AppState = {
   isReadyToProcess: boolean;
   processedModel: string | null;
   currentPage: 'main' | 'models' | 'settings';
-  settingsTab: 'models' | 'about' | 'relatedTools';
+  settingsTab: SettingsTab;
   isDarkMode: boolean;
+  checkUpdatesOnStartup: boolean;
+  updateCheckState: UpdateCheckState;
+  latestVersion: string | null;
+  dismissedUpdateVersion: string | null;
   processingTrigger: number;
   cachedModelUrl: string | null;
   isModelLoading: boolean;
@@ -42,7 +50,7 @@ export type AppState = {
 
   setCurrentModel: (model: string) => Promise<void>;
   setCurrentPage: (page: 'main' | 'models' | 'settings') => void;
-  setSettingsTab: (tab: 'models' | 'about' | 'relatedTools') => void;
+  setSettingsTab: (tab: SettingsTab) => void;
   setOriginalImage: (image: string | null) => void;
   setResultImage: (image: string | null) => void;
   setIsProcessing: (isProcessing: boolean) => void;
@@ -51,6 +59,10 @@ export type AppState = {
   setIsReadyToProcess: (isReady: boolean) => void;
   setProcessedModel: (model: string | null) => void;
   setIsDarkMode: (isDark: boolean) => void;
+  setCheckUpdatesOnStartup: (enabled: boolean) => void;
+  setUpdateCheckState: (state: UpdateCheckState) => void;
+  setLatestVersion: (version: string | null) => void;
+  dismissUpdateNotice: () => void;
   startProcessing: () => void;
   reset: () => void;
   // 全局模型状态管理

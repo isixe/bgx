@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import type { AppState, ModelStatus, BatchItem, BatchItemStatus } from '../types/app';
+import type {
+  AppState,
+  ModelStatus,
+  BatchItem,
+  BatchItemStatus,
+  SettingsTab,
+  UpdateCheckState,
+} from '../types/app';
 import {
   getCachedModelBlobUrl,
   revokeCachedUrl,
@@ -23,6 +30,23 @@ function getInitialDarkMode(): boolean {
   return false;
 }
 
+function getInitialCheckUpdates(): boolean {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('bgx-check-updates');
+    if (stored !== null) {
+      return stored === 'true';
+    }
+  }
+  return true;
+}
+
+function getInitialDismissedUpdate(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('bgx-dismissed-update');
+  }
+  return null;
+}
+
 const initialState = {
   currentModel: 'u2netp' as string,
   originalImage: null as string | null,
@@ -33,8 +57,12 @@ const initialState = {
   isReadyToProcess: false,
   processedModel: null as string | null,
   currentPage: 'main' as 'main' | 'models' | 'settings',
-  settingsTab: 'models' as 'models' | 'about' | 'relatedTools',
+  settingsTab: 'models' as SettingsTab,
   isDarkMode: getInitialDarkMode(),
+  checkUpdatesOnStartup: getInitialCheckUpdates(),
+  updateCheckState: 'idle' as UpdateCheckState,
+  latestVersion: null as string | null,
+  dismissedUpdateVersion: getInitialDismissedUpdate(),
   processingTrigger: 0,
   cachedModelUrl: null as string | null,
   isModelLoading: false,
@@ -237,6 +265,22 @@ export const useAppStore = create<AppState>((set, get) => ({
       localStorage.setItem('bgx-dark-mode', String(isDark));
     }
     set({ isDarkMode: isDark });
+  },
+  setCheckUpdatesOnStartup: (enabled) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bgx-check-updates', String(enabled));
+    }
+    set({ checkUpdatesOnStartup: enabled });
+  },
+  setUpdateCheckState: (state) => set({ updateCheckState: state }),
+  setLatestVersion: (version) => set({ latestVersion: version }),
+  dismissUpdateNotice: () => {
+    const version = get().latestVersion;
+    if (!version) return;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bgx-dismissed-update', version);
+    }
+    set({ dismissedUpdateVersion: version });
   },
   startProcessing: () =>
     set((state) => ({ isReadyToProcess: true, processingTrigger: state.processingTrigger + 1 })),

@@ -12,6 +12,7 @@ import { ExportPanel } from '../features/ExportPanel';
 import { SettingsPage } from '../features/SettingsPage';
 import { LanguageSwitcher } from '../ui/LanguageSwitcher';
 import { downloadResultImage } from '../../utils/downloadImage';
+import { RELEASES_URL, isDesktopApp } from '../../lib/appUpdate';
 
 export function MainLayout() {
   const {
@@ -27,6 +28,9 @@ export function MainLayout() {
     setIsDarkMode,
     modelStatuses,
     modelDownloadProgresses,
+    latestVersion,
+    dismissedUpdateVersion,
+    dismissUpdateNotice,
     batchMode,
     batchQueue,
     selectedBatchItemIds,
@@ -41,6 +45,9 @@ export function MainLayout() {
   const isModelDownloading = modelStatuses[currentModel] === 'downloading';
   const currentModelProgress = modelDownloadProgresses[currentModel];
   const modelDownloadProgress = currentModelProgress?.percentage ?? 0;
+
+  const showUpdateNotice =
+    isDesktopApp() && !!latestVersion && latestVersion !== dismissedUpdateVersion;
 
   const { isDragging, dragProps } = useGlobalDragDrop({
     disabled: isModelDownloading || currentPage === 'settings',
@@ -134,10 +141,55 @@ export function MainLayout() {
         </div>
       </header>
 
+      {showUpdateNotice && (
+        <div
+          className={`fixed top-16 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md rounded-xl border p-4 shadow-lg ${isDarkMode ? 'border-indigo-500/30 bg-indigo-900/90' : 'border-indigo-200 bg-indigo-50'}`}
+        >
+          <div className="flex items-start gap-3">
+            <svg
+              className={`h-5 w-5 flex-shrink-0 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4"
+              />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                {t('updateAvailable')}
+                {latestVersion ? ` v${latestVersion}` : ''}
+              </p>
+              <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                {t('updateNoticeDesc')}
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  onClick={() => window.open(RELEASES_URL, '_blank', 'noopener,noreferrer')}
+                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700"
+                >
+                  {t('updateDownload')}
+                </button>
+                <button
+                  onClick={dismissUpdateNotice}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${isDarkMode ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
+                >
+                  {t('updateDismiss')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Model Downloading Notification */}
       {isModelDownloading && (
         <div
-          className={`fixed top-16 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md rounded-xl border p-4 shadow-lg ${isDarkMode ? 'border-indigo-500/30 bg-indigo-900/90' : 'border-indigo-200 bg-indigo-50'}`}
+          className={`fixed ${showUpdateNotice ? 'top-52' : 'top-16'} left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md rounded-xl border p-4 shadow-lg ${isDarkMode ? 'border-indigo-500/30 bg-indigo-900/90' : 'border-indigo-200 bg-indigo-50'}`}
         >
           <div className="flex items-center gap-3">
             <svg

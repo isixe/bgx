@@ -154,6 +154,19 @@ export const translations = {
   darkMode: '深色模式',
   lightMode: '浅色模式',
 
+  settingsGeneral: '通用',
+  settingsGeneralDesc: '管理应用的通用偏好设置。',
+  settingsCheckUpdates: '启动时检查更新',
+  settingsCheckUpdatesDesc: '应用启动时自动检查 GitHub 上是否有新版本。',
+  settingsCurrentVersion: '当前版本',
+  updateCheckNow: '检查更新',
+  updateChecking: '检查中…',
+  updateUpToDate: '已是最新版本',
+  updateAvailable: '发现新版本',
+  updateCheckFailed: '检查更新失败，请稍后重试。',
+  updateNoticeDesc: '桌面端有新版本可用，下载以获取最新功能与修复。',
+  updateDownload: '前往下载',
+  updateDismiss: '忽略',
   settingsModelSettings: '模型设置',
   settingsAbout: '关于',
   settingsRelatedTools: '相关工具',
@@ -162,8 +175,7 @@ export const translations = {
   toolImageDashDesc:
     '反向图片与文本搜索 - 强大的反向图片搜索，在 Google、Yandex、Bing 等平台快速查找图片',
   toolBg2xName: 'bg2x',
-  toolBg2xDesc:
-    'AI 图像超分辨率 - 免费、保护隐私的 AI 图像放大工具，最高支持 4 倍无损放大',
+  toolBg2xDesc: 'AI 图像超分辨率 - 免费、保护隐私的 AI 图像放大工具，最高支持 4 倍无损放大',
   toolPicNookName: 'PicNook',
   toolPicNookDesc:
     '浏览器图片工具箱 - 免费、隐私优先，涵盖裁切、调色、缩放、水印、格式转换等常用工具，全部在本地完成',
