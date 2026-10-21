@@ -185,6 +185,9 @@ function scheduleWindowStateSave() {
 
 function createWindow() {
   const savedState = loadWindowState();
+  // First launch (no saved state) opens maximized. Maximizing keeps the native
+  // frame (title bar + window controls) visible, unlike fullscreen which hides it.
+  const startMaximized = savedState ? !!savedState.isMaximized : true;
 
   const windowOptions = {
     width: savedState ? savedState.width : 1280,
@@ -202,30 +205,26 @@ function createWindow() {
     },
   };
 
-  if (savedState) {
-    // Restore the previous session's size/position when it is still visible.
-    if (Number.isFinite(savedState.x) && Number.isFinite(savedState.y)) {
-      const restored = {
-        x: savedState.x,
-        y: savedState.y,
-        width: savedState.width,
-        height: savedState.height,
-      };
-      if (isWithinAnyDisplay(restored)) {
-        windowOptions.x = savedState.x;
-        windowOptions.y = savedState.y;
-      }
+  if (savedState && Number.isFinite(savedState.x) && Number.isFinite(savedState.y)) {
+    // Restore the previous session's position when it is still visible.
+    const restored = {
+      x: savedState.x,
+      y: savedState.y,
+      width: savedState.width,
+      height: savedState.height,
+    };
+    if (isWithinAnyDisplay(restored)) {
+      windowOptions.x = savedState.x;
+      windowOptions.y = savedState.y;
     }
-    if (savedState.isMaximized) windowOptions.maximized = true;
-  } else {
-    // First launch: open fullscreen.
-    windowOptions.fullscreen = true;
   }
 
   mainWindow = new BrowserWindow(windowOptions);
 
   mainWindow.once('ready-to-show', () => {
-    if (mainWindow) mainWindow.show();
+    if (!mainWindow) return;
+    mainWindow.show();
+    if (startMaximized) mainWindow.maximize();
   });
 
   mainWindow.on('resize', scheduleWindowStateSave);
