@@ -1,6 +1,7 @@
-onlyBuiltDependencies:
-  - esbuild
-  - protobufjs
-  - sharp
-  - electron
-  - electron-builder
+allowBuilds:
+  electron: true
+  electron-builder: true
+  electron-winstaller: true
+  esbuild: true
+  protobufjs: true
+  sharp: true
