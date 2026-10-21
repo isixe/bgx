@@ -12,7 +12,7 @@ import { ExportPanel } from '../features/ExportPanel';
 import { SettingsPage } from '../features/SettingsPage';
 import { LanguageSwitcher } from '../ui/LanguageSwitcher';
 import { downloadResultImage } from '../../utils/downloadImage';
-import { RELEASES_URL, isDesktopApp } from '../../lib/appUpdate';
+import { DOWNLOAD_URL, isDesktopApp } from '../../lib/appUpdate';
 
 export function MainLayout() {
   const {
@@ -143,7 +143,7 @@ export function MainLayout() {
 
       {showUpdateNotice && (
         <div
-          className={`fixed top-16 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md rounded-xl border p-4 shadow-lg ${isDarkMode ? 'border-indigo-500/30 bg-indigo-900/90' : 'border-indigo-200 bg-indigo-50'}`}
+          className={`fixed bottom-4 right-4 z-50 w-[calc(100%-2rem)] max-w-sm rounded-xl border p-4 shadow-lg sm:bottom-6 sm:right-6 ${isDarkMode ? 'border-indigo-500/30 bg-indigo-900/90' : 'border-indigo-200 bg-indigo-50'}`}
         >
           <div className="flex items-start gap-3">
             <svg
@@ -160,7 +160,9 @@ export function MainLayout() {
               />
             </svg>
             <div className="flex-1 min-w-0">
-              <p className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+              <p
+                className={`text-sm font-medium ${isDarkMode ? 'text-indigo-300' : 'text-indigo-700'}`}
+              >
                 {t('updateAvailable')}
                 {latestVersion ? ` v${latestVersion}` : ''}
               </p>
@@ -169,13 +171,13 @@ export function MainLayout() {
               </p>
               <div className="mt-3 flex items-center gap-2">
                 <button
-                  onClick={() => window.open(RELEASES_URL, '_blank', 'noopener,noreferrer')}
+                  onClick={() => window.open(DOWNLOAD_URL, '_blank', 'noopener,noreferrer')}
                   className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700"
                 >
                   {t('updateDownload')}
                 </button>
                 <button
-                  onClick={dismissUpdateNotice}
+                  onClick={() => dismissUpdateNotice()}
                   className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${isDarkMode ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
                 >
                   {t('updateDismiss')}
@@ -189,7 +191,7 @@ export function MainLayout() {
       {/* Model Downloading Notification */}
       {isModelDownloading && (
         <div
-          className={`fixed ${showUpdateNotice ? 'top-52' : 'top-16'} left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md rounded-xl border p-4 shadow-lg ${isDarkMode ? 'border-indigo-500/30 bg-indigo-900/90' : 'border-indigo-200 bg-indigo-50'}`}
+          className={`fixed top-16 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md rounded-xl border p-4 shadow-lg ${isDarkMode ? 'border-indigo-500/30 bg-indigo-900/90' : 'border-indigo-200 bg-indigo-50'}`}
         >
           <div className="flex items-center gap-3">
             <svg
@@ -452,6 +454,10 @@ function SidebarContent({
   reprocessBatchItem,
   setBatchMode,
 }: SidebarContentProps) {
+  const latestVersion = useAppStore((state) => state.latestVersion);
+  const dismissedUpdateVersion = useAppStore((state) => state.dismissedUpdateVersion);
+  const updateNoticeVisible =
+    isDesktopApp() && !!latestVersion && latestVersion !== dismissedUpdateVersion;
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (error) {
@@ -546,7 +552,9 @@ function SidebarContent({
   return (
     <>
       {error && (
-        <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-lg border border-red-200 bg-red-600 px-4 py-3 text-sm text-white shadow-lg">
+        <div
+          className={`fixed ${updateNoticeVisible ? 'bottom-44' : 'bottom-6'} right-6 z-50 max-w-sm rounded-lg border border-red-200 bg-red-600 px-4 py-3 text-sm text-white shadow-lg`}
+        >
           <button
             onClick={() => useAppStore.getState().setError(null)}
             className="absolute right-2 top-2 p-1 text-white/70 hover:text-white transition-colors"

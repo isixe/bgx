@@ -4,7 +4,7 @@ import type { UpdateCheckState } from '../types/app';
 
 export const APP_VERSION = pkg.version;
 
-export const RELEASES_URL = 'https://github.com/isixe/bgx/releases/latest';
+export const DOWNLOAD_URL = 'https://bgx.itea.dev/download/';
 
 export function isDesktopApp(): boolean {
   return typeof navigator !== 'undefined' && navigator.userAgent.includes('Electron');
@@ -38,7 +38,7 @@ export interface AppUpdateResult {
   state: Exclude<UpdateCheckState, 'idle' | 'checking'>;
   currentVersion: string;
   latestVersion: string;
-  releaseUrl: string;
+  downloadUrl: string;
 }
 
 export async function checkForAppUpdate(timeoutMs?: number): Promise<AppUpdateResult> {
@@ -49,21 +49,21 @@ export async function checkForAppUpdate(timeoutMs?: number): Promise<AppUpdateRe
     const latestVersion = release.tagName.replace(/^v/i, '');
 
     if (latestVersion && isNewerVersion(latestVersion, currentVersion)) {
-      return { state: 'available', currentVersion, latestVersion, releaseUrl: RELEASES_URL };
+      return { state: 'available', currentVersion, latestVersion, downloadUrl: DOWNLOAD_URL };
     }
 
     return {
       state: 'up-to-date',
       currentVersion,
       latestVersion: latestVersion || currentVersion,
-      releaseUrl: RELEASES_URL,
+      downloadUrl: DOWNLOAD_URL,
     };
   } catch {
     return {
       state: 'error',
       currentVersion,
       latestVersion: '',
-      releaseUrl: RELEASES_URL,
+      downloadUrl: DOWNLOAD_URL,
     };
   }
 }

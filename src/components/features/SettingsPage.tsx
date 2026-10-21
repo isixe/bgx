@@ -1,7 +1,7 @@
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../lib/i18n';
 import { ModelsPage } from './ModelsPage';
-import { checkForAppUpdate, isDesktopApp } from '../../lib/appUpdate';
+import { checkForAppUpdate, isDesktopApp, DOWNLOAD_URL } from '../../lib/appUpdate';
 import pkg from '../../../package.json';
 
 // Keep the "checking…" indicator visible for at least this long so an instant
@@ -504,11 +504,36 @@ export function SettingsPage() {
                               >
                                 {pkg.version}
                               </p>
-                              {updateStatusText && (
-                                <p className={`text-sm mt-1 ${updateStatusColor}`}>
-                                  {updateStatusText}
-                                </p>
-                              )}
+                              {updateStatusText &&
+                                (updateCheckState === 'available' ? (
+                                  <a
+                                    href={DOWNLOAD_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`mt-1 inline-flex items-center gap-1 text-sm transition-colors ${updateStatusColor} ${
+                                      isDarkMode ? 'hover:text-indigo-300' : 'hover:text-indigo-700'
+                                    }`}
+                                  >
+                                    <svg
+                                      className="h-3.5 w-3.5 flex-shrink-0"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                      strokeWidth={2}
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4"
+                                      />
+                                    </svg>
+                                    <span>{updateStatusText}</span>
+                                  </a>
+                                ) : (
+                                  <p className={`text-sm mt-1 ${updateStatusColor}`}>
+                                    {updateStatusText}
+                                  </p>
+                                ))}
                             </div>
                           </div>
                           <button
