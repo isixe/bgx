@@ -1,4 +1,4 @@
-const { app, BrowserWindow, protocol, shell } = require('electron');
+const { app, BrowserWindow, protocol, shell, screen } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const fsSync = require('node:fs');
@@ -117,10 +117,78 @@ async function handleAppProtocol(request) {
 
 let mainWindow = null;
 
+// Persisted window bounds live next to the app's other user data. The file is
+// absent on the very first launch, which is how we detect "first run".
+function getWindowStatePath() {
+  return path.join(app.getPath('userData'), 'window-state.json');
+}
+
+function loadWindowState() {
+  try {
+    const raw = fsSync.readFileSync(getWindowStatePath(), 'utf8');
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      Number.isFinite(parsed.width) &&
+      Number.isFinite(parsed.height) &&
+      parsed.width > 0 &&
+      parsed.height > 0
+    ) {
+      return parsed;
+    }
+  } catch {
+    // Missing file (first launch) or unreadable content — fall back to default.
+  }
+  return null;
+}
+
+function isWithinAnyDisplay(bounds) {
+  return screen.getAllDisplays().some((display) => {
+    const area = display.workArea;
+    return (
+      bounds.x < area.x + area.width &&
+      bounds.x + bounds.width > area.x &&
+      bounds.y < area.y + area.height &&
+      bounds.y + bounds.height > area.y
+    );
+  });
+}
+
+function persistWindowState() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  // getNormalBounds() ignores the fullscreen/maximized state, so we always
+  // remember the windowed size the user actually chose.
+  const bounds = mainWindow.getNormalBounds();
+  const state = {
+    width: bounds.width,
+    height: bounds.height,
+    x: bounds.x,
+    y: bounds.y,
+    isMaximized: mainWindow.isMaximized(),
+  };
+  try {
+    fsSync.writeFileSync(getWindowStatePath(), JSON.stringify(state));
+  } catch (error) {
+    console.error('[window-state] failed to persist:', error);
+  }
+}
+
+let saveWindowStateTimer = null;
+
+function scheduleWindowStateSave() {
+  if (saveWindowStateTimer) clearTimeout(saveWindowStateTimer);
+  saveWindowStateTimer = setTimeout(() => {
+    saveWindowStateTimer = null;
+    persistWindowState();
+  }, 400);
+}
+
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 860,
+  const savedState = loadWindowState();
+
+  const windowOptions = {
+    width: savedState ? savedState.width : 1280,
+    height: savedState ? savedState.height : 860,
     minWidth: 900,
     minHeight: 600,
     show: false,
@@ -132,10 +200,42 @@ function createWindow() {
       sandbox: true,
       webSecurity: true,
     },
-  });
+  };
+
+  if (savedState) {
+    // Restore the previous session's size/position when it is still visible.
+    if (Number.isFinite(savedState.x) && Number.isFinite(savedState.y)) {
+      const restored = {
+        x: savedState.x,
+        y: savedState.y,
+        width: savedState.width,
+        height: savedState.height,
+      };
+      if (isWithinAnyDisplay(restored)) {
+        windowOptions.x = savedState.x;
+        windowOptions.y = savedState.y;
+      }
+    }
+    if (savedState.isMaximized) windowOptions.maximized = true;
+  } else {
+    // First launch: open fullscreen.
+    windowOptions.fullscreen = true;
+  }
+
+  mainWindow = new BrowserWindow(windowOptions);
 
   mainWindow.once('ready-to-show', () => {
     if (mainWindow) mainWindow.show();
+  });
+
+  mainWindow.on('resize', scheduleWindowStateSave);
+  mainWindow.on('move', scheduleWindowStateSave);
+  mainWindow.on('close', () => {
+    if (saveWindowStateTimer) {
+      clearTimeout(saveWindowStateTimer);
+      saveWindowStateTimer = null;
+    }
+    persistWindowState();
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
