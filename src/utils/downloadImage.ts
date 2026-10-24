@@ -77,13 +77,18 @@ export interface BatchSaveItem {
   name: string;
 }
 
+export interface BatchSaveResult {
+  canceled: boolean;
+  saved: number;
+}
+
 export async function saveImagesBatchToDirectory(
   items: BatchSaveItem[],
   format: 'png' | 'jpg' | 'webp' = 'png',
   dialogTitle?: string,
-): Promise<void> {
+): Promise<BatchSaveResult> {
   const valid = items.filter((item) => item.resultImage);
-  if (valid.length === 0) return;
+  if (valid.length === 0) return { canceled: false, saved: 0 };
 
   const bgx = typeof window !== 'undefined' ? window.bgx : undefined;
   if (bgx?.saveImages) {
@@ -105,10 +110,11 @@ export async function saveImagesBatchToDirectory(
     if (result?.error) {
       throw new Error(result.error);
     }
-    return;
+    return { canceled: !!result?.canceled, saved: result?.saved ?? 0 };
   }
 
   for (const item of valid) {
     downloadResultImage(item.originalImage, item.resultImage!, item.name, format);
   }
+  return { canceled: false, saved: valid.length };
 }

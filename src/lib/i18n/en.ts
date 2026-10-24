@@ -207,7 +207,10 @@ export const translations = {
   batchExportSelected: 'Export Selected',
   batchExportZip: 'Export as ZIP',
   batchExportSaveDialogTitle: 'Select a folder to save images',
+  batchExportZipSaveDialogTitle: 'Select where to save the ZIP file',
   batchExportSaveFailed: 'Failed to save images. Please try again.',
+  batchExportSaveSuccess: 'Images saved successfully.',
+  batchExportZipSuccess: 'ZIP exported successfully.',
 
   desktopApp: 'Desktop App',
 

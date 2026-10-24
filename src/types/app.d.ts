@@ -28,6 +28,7 @@ export type AppState = {
   isProcessing: boolean;
   progress: number;
   error: string | null;
+  success: string | null;
   isReadyToProcess: boolean;
   processedModel: string | null;
   currentPage: 'main' | 'models' | 'settings';
@@ -56,6 +57,7 @@ export type AppState = {
   setIsProcessing: (isProcessing: boolean) => void;
   setProgress: (progress: number) => void;
   setError: (error: string | null) => void;
+  setSuccess: (success: string | null) => void;
   setIsReadyToProcess: (isReady: boolean) => void;
   setProcessedModel: (model: string | null) => void;
   setIsDarkMode: (isDark: boolean) => void;

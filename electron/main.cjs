@@ -301,6 +301,35 @@ ipcMain.handle('batch-save-images', async (event, payload) => {
   }
 });
 
+ipcMain.handle('save-file', async (event, payload) => {
+  const file = payload?.file;
+  if (!file || typeof file.filename !== 'string' || !file.bytes) {
+    return { canceled: true, saved: false };
+  }
+
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const { canceled, filePath } = await dialog.showSaveDialog(win ?? undefined, {
+    title: typeof payload?.title === 'string' && payload.title ? payload.title : 'Save file',
+    defaultPath: path.basename(file.filename),
+  });
+
+  if (canceled || !filePath) {
+    return { canceled: true, saved: false };
+  }
+
+  try {
+    await fs.writeFile(filePath, Buffer.from(file.bytes));
+    return { canceled: false, saved: true };
+  } catch (error) {
+    console.error('[save-file] failed:', error);
+    return {
+      canceled: false,
+      saved: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+});
+
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
 if (!gotSingleInstanceLock) {

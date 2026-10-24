@@ -456,9 +456,11 @@ function SidebarContent({
 }: SidebarContentProps) {
   const latestVersion = useAppStore((state) => state.latestVersion);
   const dismissedUpdateVersion = useAppStore((state) => state.dismissedUpdateVersion);
+  const success = useAppStore((state) => state.success);
   const updateNoticeVisible =
     isDesktopApp() && !!latestVersion && latestVersion !== dismissedUpdateVersion;
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (error) {
       if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
@@ -470,6 +472,17 @@ function SidebarContent({
       if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
     };
   }, [error]);
+  useEffect(() => {
+    if (success) {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      successTimerRef.current = setTimeout(() => {
+        useAppStore.getState().setSuccess(null);
+      }, 4000);
+    }
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
+  }, [success]);
   const handleStartProcessing = () => {
     startProcessing();
     onAction?.();
@@ -492,7 +505,7 @@ function SidebarContent({
         : batchQueue.filter((item) => item.status === 'completed');
 
     try {
-      await saveImagesBatchToDirectory(
+      const result = await saveImagesBatchToDirectory(
         toExport.map((item) => ({
           originalImage: item.originalImage,
           resultImage: item.resultImage,
@@ -501,6 +514,9 @@ function SidebarContent({
         'png',
         t('batchExportSaveDialogTitle'),
       );
+      if (isDesktopApp() && !result.canceled && result.saved > 0) {
+        useAppStore.getState().setSuccess(t('batchExportSaveSuccess'));
+      }
     } catch (err) {
       console.error('Batch export failed:', err);
       useAppStore.getState().setError(t('batchExportSaveFailed'));
@@ -528,10 +544,33 @@ function SidebarContent({
     }
 
     const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const zipBytes = new Uint8Array(await zipBlob.arrayBuffer());
+    const zipName = `bgx-export-${Date.now()}.zip`;
+
+    const bgx = typeof window !== 'undefined' ? window.bgx : undefined;
+    if (bgx?.saveFile) {
+      try {
+        const result = await bgx.saveFile(
+          { filename: zipName, bytes: zipBytes },
+          t('batchExportZipSaveDialogTitle'),
+        );
+        if (result?.error) {
+          useAppStore.getState().setError(t('batchExportSaveFailed'));
+        } else if (!result?.canceled && result?.saved) {
+          useAppStore.getState().setSuccess(t('batchExportZipSuccess'));
+        }
+      } catch (err) {
+        console.error('ZIP export failed:', err);
+        useAppStore.getState().setError(t('batchExportSaveFailed'));
+      }
+      onAction?.();
+      return;
+    }
+
     const url = URL.createObjectURL(zipBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `bgx-export-${Date.now()}.zip`;
+    link.download = zipName;
     link.click();
     URL.revokeObjectURL(url);
     onAction?.();
@@ -582,6 +621,28 @@ function SidebarContent({
           <div className="pr-6">
             {error === 'model_download_failed' ? t('modelDownloadFailed') : error}
           </div>
+        </div>
+      )}
+
+      {success && (
+        <div
+          className={`fixed ${error ? 'bottom-28' : updateNoticeVisible ? 'bottom-44' : 'bottom-6'} right-6 z-50 max-w-sm rounded-lg border border-green-200 bg-green-600 px-4 py-3 text-sm text-white shadow-lg`}
+        >
+          <button
+            onClick={() => useAppStore.getState().setSuccess(null)}
+            className="absolute right-2 top-2 p-1 text-white/70 hover:text-white transition-colors"
+            aria-label="Close"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+          <div className="pr-6">{success}</div>
         </div>
       )}
 
