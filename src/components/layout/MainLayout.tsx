@@ -11,7 +11,7 @@ import { ImagePreview } from '../features/ImagePreview';
 import { ExportPanel } from '../features/ExportPanel';
 import { SettingsPage } from '../features/SettingsPage';
 import { LanguageSwitcher } from '../ui/LanguageSwitcher';
-import { downloadResultImage } from '../../utils/downloadImage';
+import { saveImagesBatchToDirectory } from '../../utils/downloadImage';
 import { DOWNLOAD_URL, isDesktopApp } from '../../lib/appUpdate';
 
 export function MainLayout() {
@@ -483,17 +483,27 @@ function SidebarContent({
   const isBatchProcessing = batchQueue.some((item) => item.status === 'processing');
   const hasCompletedBatchItems = batchQueue.some((item) => item.status === 'completed');
 
-  const handleBatchExportAll = () => {
+  const handleBatchExportAll = async () => {
     const toExport =
       selectedBatchItemIds.length > 0
         ? batchQueue.filter(
             (item) => selectedBatchItemIds.includes(item.id) && item.status === 'completed',
           )
         : batchQueue.filter((item) => item.status === 'completed');
-    for (const item of toExport) {
-      if (item.resultImage) {
-        downloadResultImage(item.originalImage, item.resultImage, item.name, 'png');
-      }
+
+    try {
+      await saveImagesBatchToDirectory(
+        toExport.map((item) => ({
+          originalImage: item.originalImage,
+          resultImage: item.resultImage,
+          name: item.name,
+        })),
+        'png',
+        t('batchExportSaveDialogTitle'),
+      );
+    } catch (err) {
+      console.error('Batch export failed:', err);
+      useAppStore.getState().setError(t('batchExportSaveFailed'));
     }
     onAction?.();
   };

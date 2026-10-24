@@ -9,3 +9,12 @@ declare module 'modern-rembg' {
     },
   ): Promise<Blob>;
 }
+
+interface Window {
+  bgx?: {
+    saveImages: (
+      files: { filename: string; bytes: Uint8Array }[],
+      title?: string,
+    ) => Promise<{ canceled: boolean; saved: number; error?: string }>;
+  };
+}

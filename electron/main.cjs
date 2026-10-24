@@ -1,4 +1,4 @@
-const { app, BrowserWindow, protocol, shell, screen } = require('electron');
+const { app, BrowserWindow, protocol, shell, screen, ipcMain, dialog } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const fsSync = require('node:fs');
@@ -202,6 +202,7 @@ function createWindow() {
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
+      preload: path.join(__dirname, 'preload.cjs'),
     },
   };
 
@@ -264,6 +265,41 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+ipcMain.handle('batch-save-images', async (event, payload) => {
+  const files = Array.isArray(payload?.files) ? payload.files : [];
+  if (files.length === 0) return { canceled: false, saved: 0 };
+
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const { canceled, filePaths } = await dialog.showOpenDialog(win ?? undefined, {
+    title:
+      typeof payload?.title === 'string' && payload.title ? payload.title : 'Save images to folder',
+    properties: ['openDirectory', 'createDirectory'],
+  });
+
+  if (canceled || !filePaths || filePaths.length === 0) {
+    return { canceled: true, saved: 0 };
+  }
+
+  const dir = filePaths[0];
+  let saved = 0;
+  try {
+    for (const file of files) {
+      if (!file || typeof file.filename !== 'string' || !file.bytes) continue;
+      const safeName = path.basename(file.filename);
+      await fs.writeFile(path.join(dir, safeName), Buffer.from(file.bytes));
+      saved += 1;
+    }
+    return { canceled: false, saved };
+  } catch (error) {
+    console.error('[batch-save-images] failed:', error);
+    return {
+      canceled: false,
+      saved,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+});
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 

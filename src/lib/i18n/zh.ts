@@ -200,6 +200,8 @@ export const translations = {
   batchExportAll: '全部导出',
   batchExportSelected: '导出选中',
   batchExportZip: '导出 ZIP',
+  batchExportSaveDialogTitle: '选择保存图片的文件夹',
+  batchExportSaveFailed: '保存图片失败，请重试。',
 
   desktopApp: '桌面端',
 

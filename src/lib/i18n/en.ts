@@ -206,6 +206,8 @@ export const translations = {
   batchExportAll: 'Export All',
   batchExportSelected: 'Export Selected',
   batchExportZip: 'Export as ZIP',
+  batchExportSaveDialogTitle: 'Select a folder to save images',
+  batchExportSaveFailed: 'Failed to save images. Please try again.',
 
   desktopApp: 'Desktop App',
 
