@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../lib/i18n';
 import { downloadResultImage } from '../../utils/downloadImage';
+import { getBatchConcurrencyOptions } from '../../utils/concurrency';
 
 export function ImagePreview() {
   const {
@@ -11,6 +12,7 @@ export function ImagePreview() {
     isDarkMode,
     batchMode,
     batchQueue,
+    batchConcurrency,
     viewingBatchResult,
     activeBatchItemId,
     selectedBatchItemIds,
@@ -20,6 +22,7 @@ export function ImagePreview() {
     selectAllBatchItems,
     backToBatchQueue,
     reprocessBatchItem,
+    setBatchConcurrency,
   } = useAppStore();
   const { t } = useTranslation();
   const [sliderPosition, setSliderPosition] = useState(50);
@@ -171,9 +174,18 @@ export function ImagePreview() {
   if (!showQueueList && !displayOriginal) return null;
 
   if (showQueueList) {
-    const selectableCount = batchQueue.filter((item) => item.status !== 'processing').length;
+    const selectableCount = batchQueue.filter(
+      (item) => item.status === 'completed' || item.status === 'error',
+    ).length;
     const allSelected = selectableCount > 0 && selectableCount === selectedBatchItemIds.length;
     const someSelected = selectedBatchItemIds.length > 0 && !allSelected;
+
+    const totalCount = batchQueue.length;
+    const failedCount = batchQueue.filter((item) => item.status === 'error').length;
+    const processedCount = batchQueue.filter(
+      (item) => item.status === 'completed' || item.status === 'error',
+    ).length;
+    const progressPercent = totalCount === 0 ? 0 : Math.round((processedCount / totalCount) * 100);
 
     return (
       <div className="w-full h-full flex items-center justify-center relative">
@@ -195,6 +207,68 @@ export function ImagePreview() {
             </div>
           ) : (
             <div className="flex flex-col w-full h-full">
+              <div
+                className={`px-3 pt-2.5 pb-2 border-b ${isDarkMode ? 'border-slate-600' : 'border-gray-300'}`}
+              >
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
+                    >
+                      {t('batchProgress')}
+                    </span>
+                    <label
+                      className="flex items-center gap-1 flex-shrink-0"
+                      title={t('batchConcurrency')}
+                    >
+                      <select
+                        value={batchConcurrency}
+                        onChange={(event) => setBatchConcurrency(Number(event.target.value))}
+                        aria-label={t('batchConcurrency')}
+                        className={`text-xs rounded px-1 py-0.5 outline-none cursor-pointer focus:ring-1 focus:ring-indigo-400 ${
+                          isDarkMode
+                            ? 'bg-slate-600 text-gray-200 border border-slate-500'
+                            : 'bg-white text-gray-700 border border-gray-300'
+                        }`}
+                      >
+                        {getBatchConcurrencyOptions().map((value) => (
+                          <option key={value} value={value}>
+                            {value}
+                          </option>
+                        ))}
+                      </select>
+                      <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {t('batchConcurrency')}
+                      </span>
+                    </label>
+                  </div>
+                  <span
+                    className={`text-xs tabular-nums flex-shrink-0 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                  >
+                    {processedCount} / {totalCount}
+                    {failedCount > 0 && (
+                      <span className={isDarkMode ? 'text-red-400' : 'text-red-500'}>
+                        {' · '}
+                        {failedCount} {t('batchProgressFailed')}
+                      </span>
+                    )}
+                    <span className="ml-1.5">{progressPercent}%</span>
+                  </span>
+                </div>
+                <div
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={progressPercent}
+                  className={`h-1.5 w-full rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-600' : 'bg-gray-300'}`}
+                >
+                  <div
+                    className="h-full rounded-full bg-indigo-500 transition-[width] duration-300 ease-out"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+
               <div
                 className={`flex items-center gap-2 px-3 h-9 border-b ${isDarkMode ? 'border-slate-600' : 'border-gray-300'}`}
               >
@@ -245,6 +319,7 @@ export function ImagePreview() {
               <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1">
                 {batchQueue.map((item) => {
                   const isSelected = selectedBatchItemIds.includes(item.id);
+                  const isSelectable = item.status === 'completed' || item.status === 'error';
                   const statusLabel =
                     item.status === 'processing'
                       ? t('processingHint')
@@ -278,19 +353,21 @@ export function ImagePreview() {
                           ? `${isDarkMode ? 'bg-slate-600 border-slate-500' : 'bg-white border-indigo-300 shadow-sm'}`
                           : item.status === 'processing'
                             ? `${isDarkMode ? 'bg-slate-600/50 border-transparent' : 'bg-gray-100 border-transparent'}`
-                            : `${isDarkMode ? 'hover:bg-slate-600/50 border-transparent hover:border-slate-600' : 'hover:bg-gray-50 border-transparent hover:border-gray-300'} ${item.status === 'completed' ? 'cursor-pointer' : ''}`
+                            : isSelectable
+                              ? `${isDarkMode ? 'hover:bg-slate-600/50 border-transparent hover:border-slate-600 cursor-pointer' : 'hover:bg-gray-50 border-transparent hover:border-gray-300 cursor-pointer'}`
+                              : 'border-transparent'
                       }`}
                     >
                       <button
                         onClick={() => {
                           selectBatchQueueItem(item.id);
                         }}
-                        disabled={item.status === 'processing'}
+                        disabled={!isSelectable}
                         className={`w-[18px] h-[18px] rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
                           isSelected
                             ? 'border-indigo-500 bg-indigo-500'
-                            : item.status === 'processing'
-                              ? 'border-gray-500'
+                            : !isSelectable
+                              ? `${isDarkMode ? 'border-gray-600' : 'border-gray-300'} cursor-not-allowed`
                               : isDarkMode
                                 ? 'border-gray-400 hover:border-gray-200'
                                 : 'border-gray-400 hover:border-gray-600'

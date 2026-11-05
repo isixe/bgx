@@ -9,6 +9,7 @@ type InboundMessage =
       resolution: number;
     }
   | { type: 'CANCEL_TASK'; taskId: string }
+  | { type: 'CONFIGURE_WORKER'; numThreads: number }
   | { type: 'UNLOAD_MODEL' };
 
 type OutboundMessage =
@@ -245,6 +246,11 @@ function handleMessage(event: MessageEvent<InboundMessage>): void {
 
   if (message.type === 'CANCEL_TASK') {
     cancelledTasks.add(message.taskId);
+    return;
+  }
+
+  if (message.type === 'CONFIGURE_WORKER') {
+    env.wasm.numThreads = Math.max(1, Math.min(4, Math.floor(message.numThreads)));
     return;
   }
 

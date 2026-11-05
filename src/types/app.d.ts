@@ -80,11 +80,13 @@ export type AppState = {
   // 批量处理
   batchMode: boolean;
   batchQueue: BatchItem[];
+  batchConcurrency: number;
   activeBatchItemId: string | null;
   viewingBatchResult: boolean;
   selectedBatchItemIds: string[];
 
   setBatchMode: (mode: boolean) => void;
+  setBatchConcurrency: (value: number) => void;
   addToBatchQueue: (file: File) => Promise<void>;
   selectBatchItem: (id: string) => void;
   selectBatchQueueItem: (id: string) => void;

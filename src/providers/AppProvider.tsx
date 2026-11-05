@@ -33,6 +33,7 @@ export function AppProvider() {
     setLatestVersion,
     batchMode,
     batchQueue,
+    batchConcurrency,
     updateBatchItemStatus,
   } = useAppStore();
 
@@ -172,6 +173,12 @@ export function AppProvider() {
   }, []);
 
   useEffect(() => {
+    if (isPoolReady) {
+      poolRef.current?.setConcurrency(batchConcurrency);
+    }
+  }, [batchConcurrency, isPoolReady]);
+
+  useEffect(() => {
     if (!batchMode || !isPoolReady) {
       return;
     }
@@ -181,7 +188,7 @@ export function AppProvider() {
       return;
     }
 
-    const available = pool.poolSize - inFlightRef.current.size;
+    const available = Math.min(pool.poolSize, batchConcurrency) - inFlightRef.current.size;
     if (available <= 0) {
       return;
     }
@@ -194,7 +201,7 @@ export function AppProvider() {
       inFlightRef.current.add(item.id);
       void runItem(item);
     }
-  }, [batchMode, batchQueue, isPoolReady, runItem]);
+  }, [batchMode, batchQueue, batchConcurrency, isPoolReady, runItem]);
 
   useEffect(() => {
     if (originalImage && !isProcessing && isReadyToProcess) {

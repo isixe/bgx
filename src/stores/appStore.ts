@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { clampBatchConcurrency, DEFAULT_BATCH_CONCURRENCY } from '../utils/concurrency';
 import type {
   AppState,
   ModelStatus,
@@ -46,6 +47,16 @@ function getInitialDismissedUpdate(): string | null {
   return null;
 }
 
+function getInitialBatchConcurrency(): number {
+  if (typeof window !== 'undefined') {
+    const stored = Number(localStorage.getItem('bgx-batch-concurrency'));
+    if (Number.isInteger(stored) && stored >= 1) {
+      return clampBatchConcurrency(stored);
+    }
+  }
+  return DEFAULT_BATCH_CONCURRENCY;
+}
+
 const initialState = {
   currentModel: 'u2netp' as string,
   originalImage: null as string | null,
@@ -77,6 +88,7 @@ const initialState = {
   savingModels: [] as string[],
   batchMode: false,
   batchQueue: [] as BatchItem[],
+  batchConcurrency: getInitialBatchConcurrency(),
   activeBatchItemId: null as string | null,
   viewingBatchResult: false,
   selectedBatchItemIds: [] as string[],
@@ -275,6 +287,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({ isReadyToProcess: true, processingTrigger: state.processingTrigger + 1 })),
 
   setBatchMode: (mode) => set({ batchMode: mode }),
+  setBatchConcurrency: (value) => {
+    const next = clampBatchConcurrency(value);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bgx-batch-concurrency', String(next));
+    }
+    set({ batchConcurrency: next });
+  },
 
   addToBatchQueue: async (file: File) => {
     const id =
@@ -315,17 +334,26 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   selectBatchQueueItem: (id: string) => {
-    set((state) => ({
-      selectedBatchItemIds: state.selectedBatchItemIds.includes(id)
-        ? state.selectedBatchItemIds.filter((i) => i !== id)
-        : [...state.selectedBatchItemIds, id],
-    }));
+    set((state) => {
+      const item = state.batchQueue.find((candidate) => candidate.id === id);
+      if (!item || (item.status !== 'completed' && item.status !== 'error')) {
+        return state;
+      }
+
+      return {
+        selectedBatchItemIds: state.selectedBatchItemIds.includes(id)
+          ? state.selectedBatchItemIds.filter((i) => i !== id)
+          : [...state.selectedBatchItemIds, id],
+      };
+    });
   },
 
   selectAllBatchItems: (selectAll: boolean) => {
     set((state) => ({
       selectedBatchItemIds: selectAll
-        ? state.batchQueue.filter((item) => item.status !== 'processing').map((item) => item.id)
+        ? state.batchQueue
+            .filter((item) => item.status === 'completed' || item.status === 'error')
+            .map((item) => item.id)
         : [],
     }));
   },
@@ -374,6 +402,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             }
           : item,
       ),
+      selectedBatchItemIds: state.selectedBatchItemIds.filter((selectedId) => selectedId !== id),
     }));
   },
 
@@ -399,6 +428,10 @@ export const useAppStore = create<AppState>((set, get) => ({
             }
           : item,
       ),
+      selectedBatchItemIds:
+        status === 'completed' || status === 'error'
+          ? state.selectedBatchItemIds
+          : state.selectedBatchItemIds.filter((selectedId) => selectedId !== id),
     }));
   },
 

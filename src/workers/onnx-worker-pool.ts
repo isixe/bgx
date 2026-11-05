@@ -1,3 +1,9 @@
+import {
+  clampBatchConcurrency,
+  DEFAULT_BATCH_CONCURRENCY,
+  getSessionThreads,
+} from '../utils/concurrency';
+
 export interface PoolImageResult {
   type: 'success' | 'error' | 'cancelled';
   blob?: Blob;
@@ -37,20 +43,30 @@ export class OnnxWorkerPool {
   private readonly pendingTasks: PendingTask[] = [];
   private readonly activeTasks = new Map<string, PendingTask>();
   private disposed = false;
+  private concurrencyLimit = DEFAULT_BATCH_CONCURRENCY;
 
   constructor() {
-    const cores =
-      typeof navigator !== 'undefined' && navigator.hardwareConcurrency
-        ? navigator.hardwareConcurrency
-        : 2;
-    const size = Math.min(Math.max(1, cores - 1), 2);
-    for (let index = 0; index < size; index += 1) {
-      this.slots.push(this.createSlot(index));
-    }
+    this.resizeSlots();
   }
 
   get poolSize(): number {
     return this.slots.length;
+  }
+
+  get concurrency(): number {
+    return this.concurrencyLimit;
+  }
+
+  setConcurrency(limit: number): void {
+    const next = clampBatchConcurrency(limit);
+    if (next === this.concurrencyLimit) {
+      return;
+    }
+
+    this.concurrencyLimit = next;
+    this.resizeSlots();
+    this.applyThreadConfig();
+    this.drainQueue();
   }
 
   get activeCount(): number {
@@ -136,6 +152,11 @@ export class OnnxWorkerPool {
     const worker = new Worker(new URL('./onnx-worker.ts', import.meta.url), { type: 'module' });
     const slot: WorkerSlot = { worker, busy: false, currentTaskId: null, index };
 
+    worker.postMessage({
+      type: 'CONFIGURE_WORKER',
+      numThreads: getSessionThreads(this.concurrencyLimit),
+    });
+
     worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
       this.handleMessage(slot, event.data);
     };
@@ -199,6 +220,7 @@ export class OnnxWorkerPool {
     }
 
     task?.resolve(result);
+    this.trimSlots();
     this.drainQueue();
   }
 
@@ -219,12 +241,48 @@ export class OnnxWorkerPool {
       }
     }
 
+    this.trimSlots();
     this.drainQueue();
   }
 
   private restartSlot(slot: WorkerSlot): void {
     slot.worker.terminate();
     this.slots[slot.index] = this.createSlot(slot.index);
+  }
+
+  private applyThreadConfig(): void {
+    const numThreads = getSessionThreads(this.concurrencyLimit);
+    for (const slot of this.slots) {
+      slot.worker.postMessage({ type: 'CONFIGURE_WORKER', numThreads });
+    }
+  }
+
+  private resizeSlots(): void {
+    if (this.disposed) {
+      return;
+    }
+
+    while (this.slots.length < this.concurrencyLimit) {
+      this.slots.push(this.createSlot(this.slots.length));
+    }
+
+    this.trimSlots();
+  }
+
+  private trimSlots(): void {
+    for (let index = this.slots.length - 1; index >= this.concurrencyLimit; index -= 1) {
+      const slot = this.slots[index];
+      if (!slot || slot.busy) {
+        continue;
+      }
+
+      slot.worker.terminate();
+      this.slots.splice(index, 1);
+    }
+
+    this.slots.forEach((slot, index) => {
+      slot.index = index;
+    });
   }
 
   private drainQueue(): void {
