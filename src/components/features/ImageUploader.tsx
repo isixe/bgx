@@ -72,18 +72,8 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
       if (validFiles.length === 1) {
         clearBatchQueue();
         setBatchMode(false);
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const result = e.target?.result as string;
-          if (result) {
-            setOriginalImage(result);
-            setError(null);
-          }
-        };
-        reader.onerror = () => {
-          setError(t('errorReadFailed'));
-        };
-        reader.readAsDataURL(validFiles[0]);
+        setOriginalImage(URL.createObjectURL(validFiles[0]));
+        setError(null);
       } else {
         clearBatchQueue();
         setBatchMode(true);

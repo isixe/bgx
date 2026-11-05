@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../stores/appStore';
-import { useRemoveBackground } from '../hooks/useRemoveBackground';
+import { useRemoveBackground, MODEL_NOT_CACHED } from '../hooks/useRemoveBackground';
 import { MainLayout } from '../components/layout/MainLayout';
 import { useTranslation, i18n } from '../lib/i18n';
 import { isModelCached, getCachedModelBlobUrl } from '../utils/modelCache';
 import { getModelById } from '../utils/modelUtils';
 import { checkForAppUpdate, isDesktopApp } from '../lib/appUpdate';
+import type { OnnxWorkerPool } from '../workers/onnx-worker-pool';
+import type { BatchItem } from '../types/app';
 
 export function AppProvider() {
   const { language, t } = useTranslation();
@@ -16,7 +18,6 @@ export function AppProvider() {
     isReadyToProcess,
     isDarkMode,
     processingTrigger,
-    cachedModelUrl,
     isModelStatusesLoaded,
     setCurrentModel,
     setResultImage,
@@ -55,10 +56,17 @@ export function AppProvider() {
 
   const handleError = useCallback(
     (error: Error) => {
+      if (error.message === MODEL_NOT_CACHED) {
+        setError(t('modelDeletedReDownload'));
+        setIsProcessing(false);
+        updateModelStatus(currentModel, 'not_downloaded');
+        setCurrentModel(currentModel);
+        return;
+      }
       setError(error.message);
       setIsProcessing(false);
     },
-    [setError, setIsProcessing],
+    [setError, setIsProcessing, t, updateModelStatus, setCurrentModel, currentModel],
   );
 
   const handleSuccess = useCallback(
@@ -77,109 +85,125 @@ export function AppProvider() {
     onSuccess: handleSuccess,
   });
 
-  const poolRef = useRef<ReturnType<
-    (typeof import('../workers/onnx-worker-pool'))['getOnnxWorkerPool']
-  > | null>(null);
-  const submittedIdsRef = useRef(new Set<string>());
+  const poolRef = useRef<OnnxWorkerPool | null>(null);
+  const inFlightRef = useRef(new Set<string>());
+  const modelUrlCacheRef = useRef(new Map<string, string>());
+  const [isPoolReady, setIsPoolReady] = useState(false);
+
+  const resolveModelUrl = useCallback(async (modelId: string): Promise<string | null> => {
+    const cached = modelUrlCacheRef.current.get(modelId);
+    if (cached) {
+      return cached;
+    }
+
+    if (!(await isModelCached(modelId))) {
+      return null;
+    }
+
+    const url = await getCachedModelBlobUrl(modelId);
+    if (!url) {
+      return null;
+    }
+
+    modelUrlCacheRef.current.set(modelId, url);
+    return url;
+  }, []);
+
+  const runItem = useCallback(
+    async (item: BatchItem) => {
+      try {
+        const modelUrl = await resolveModelUrl(item.modelId);
+        if (!modelUrl) {
+          updateBatchItemStatus(item.id, 'error', null, 'Model not available');
+          return;
+        }
+
+        const pool = poolRef.current;
+        if (!pool) {
+          updateBatchItemStatus(item.id, 'error', null, 'Worker pool unavailable');
+          return;
+        }
+
+        const model = getModelById(item.modelId);
+        updateBatchItemStatus(item.id, 'processing');
+
+        const imageBlob = await fetch(item.originalImage).then((response) => response.blob());
+        const result = await pool.processImage(
+          item.id,
+          imageBlob,
+          modelUrl,
+          model.resolution,
+        );
+
+        if (result.type === 'success' && result.blob) {
+          updateBatchItemStatus(item.id, 'completed', URL.createObjectURL(result.blob));
+        } else if (result.type === 'error') {
+          updateBatchItemStatus(item.id, 'error', null, result.error);
+        } else {
+          updateBatchItemStatus(item.id, 'pending');
+        }
+      } catch (error) {
+        updateBatchItemStatus(
+          item.id,
+          'error',
+          null,
+          error instanceof Error ? error.message : 'Unknown error',
+        );
+      } finally {
+        inFlightRef.current.delete(item.id);
+      }
+    },
+    [resolveModelUrl, updateBatchItemStatus],
+  );
 
   useEffect(() => {
+    let cancelled = false;
     import('../workers/onnx-worker-pool').then((mod) => {
+      if (cancelled) {
+        return;
+      }
       poolRef.current = mod.getOnnxWorkerPool();
+      setIsPoolReady(true);
     });
     return () => {
+      cancelled = true;
       poolRef.current?.cancelAll();
     };
   }, []);
 
   useEffect(() => {
-    if (!batchMode) return;
-
-    const pendingItems = batchQueue.filter(
-      (item) => item.status === 'pending' && !submittedIdsRef.current.has(item.id),
-    );
-    if (pendingItems.length === 0) return;
-
-    for (const item of pendingItems) {
-      submittedIdsRef.current.add(item.id);
-
-      const processItem = async () => {
-        const isStillCached = await isModelCached(item.modelId);
-        if (!isStillCached) {
-          submittedIdsRef.current.delete(item.id);
-          updateBatchItemStatus(item.id, 'error', null, 'Model not available');
-          return;
-        }
-
-        const freshCachedUrl = await getCachedModelBlobUrl(item.modelId);
-        if (!freshCachedUrl) {
-          submittedIdsRef.current.delete(item.id);
-          updateBatchItemStatus(item.id, 'error', null, 'Model URL unavailable');
-          return;
-        }
-
-        updateBatchItemStatus(item.id, 'processing');
-
-        const model = getModelById(item.modelId);
-
-        poolRef
-          .current!.processImage(
-            item.id,
-            item.originalImage,
-            freshCachedUrl,
-            model.resolution,
-            () => {},
-          )
-          .then((result) => {
-            submittedIdsRef.current.delete(item.id);
-            if (result.type === 'success' && result.result) {
-              updateBatchItemStatus(item.id, 'completed', result.result);
-            } else if (result.type === 'error') {
-              updateBatchItemStatus(item.id, 'error', null, result.error);
-            } else {
-              updateBatchItemStatus(item.id, 'pending');
-            }
-          })
-          .catch(() => {
-            submittedIdsRef.current.delete(item.id);
-            updateBatchItemStatus(item.id, 'error', null, 'Unknown error');
-          });
-      };
-
-      processItem();
+    if (!batchMode || !isPoolReady) {
+      return;
     }
-  }, [batchMode, batchQueue, updateBatchItemStatus]);
+
+    const pool = poolRef.current;
+    if (!pool) {
+      return;
+    }
+
+    const available = pool.poolSize - inFlightRef.current.size;
+    if (available <= 0) {
+      return;
+    }
+
+    const pending = batchQueue.filter(
+      (item) => item.status === 'pending' && !inFlightRef.current.has(item.id),
+    );
+
+    for (const item of pending.slice(0, available)) {
+      inFlightRef.current.add(item.id);
+      void runItem(item);
+    }
+  }, [batchMode, batchQueue, isPoolReady, runItem]);
 
   useEffect(() => {
-    const checkAndProcess = async () => {
-      if (originalImage && !isProcessing && isReadyToProcess) {
-        setIsProcessing(true);
-        setIsReadyToProcess(false);
-        setError(null);
-        setProgress(0);
-
-        // 预检模型是否仍然缓存可用
-        const isStillCached = await isModelCached(currentModel);
-
-        if (!isStillCached) {
-          // 模型已被删除，需要重新下载
-          setError(t('modelDeletedReDownload'));
-          setIsProcessing(false);
-          // 更新全局状态
-          updateModelStatus(currentModel, 'not_downloaded');
-          // 重新触发模型加载（会自动下载）
-          setCurrentModel(currentModel);
-          return;
-        }
-
-        // 模型可用，获取最新的 blob URL
-        const freshCachedUrl = await getCachedModelBlobUrl(currentModel);
-
-        // 传入最新的模型 URL
-        processImage(originalImage, currentModel, freshCachedUrl);
-      }
-    };
-
-    checkAndProcess();
+    if (originalImage && !isProcessing && isReadyToProcess) {
+      setIsProcessing(true);
+      setIsReadyToProcess(false);
+      setError(null);
+      setProgress(0);
+      processImage(originalImage, currentModel);
+    }
   }, [
     originalImage,
     currentModel,
@@ -191,10 +215,6 @@ export function AppProvider() {
     setIsReadyToProcess,
     setError,
     setProgress,
-    cachedModelUrl,
-    t,
-    setCurrentModel,
-    updateModelStatus,
   ]);
 
   useEffect(() => {

@@ -120,9 +120,5 @@ export type UseRemoveBackgroundOptions = {
 };
 
 export type UseRemoveBackgroundReturn = {
-  processImage: (
-    imageDataUrl: string,
-    modelId: string,
-    preloadedModelUrl?: string | null,
-  ) => Promise<void>;
+  processImage: (imageUrl: string, modelId: string) => Promise<void>;
 };

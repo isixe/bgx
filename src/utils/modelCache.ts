@@ -8,6 +8,9 @@ const STORE_NAME = 'models';
 // 防止用户在模型写入 IndexedDB 期间点击模型导致重新下载
 const inMemoryModelData = new Map<string, ArrayBuffer>();
 
+// 同一模型在整个会话内复用同一个 URL，避免每张图都复制一份模型内存
+const sharedModelBlobUrls = new Map<string, string>();
+
 export type ModelCacheStatus = 'not_downloaded' | 'downloading' | 'downloaded' | 'error';
 
 export interface DownloadProgress {
@@ -99,6 +102,20 @@ export function clearModelDataFromMemory(modelId: string): void {
   inMemoryModelData.delete(modelId);
 }
 
+function createSharedModelUrl(modelId: string, blob: Blob): string {
+  const url = URL.createObjectURL(blob);
+  sharedModelBlobUrls.set(modelId, url);
+  return url;
+}
+
+function releaseSharedModelUrl(modelId: string): void {
+  const url = sharedModelBlobUrls.get(modelId);
+  if (url) {
+    URL.revokeObjectURL(url);
+    sharedModelBlobUrls.delete(modelId);
+  }
+}
+
 // 存儲正在進行的下載請求的 AbortController
 const downloadControllers = new Map<string, AbortController>();
 
@@ -187,8 +204,10 @@ export async function downloadModel(
 
     onProgress?.({ loaded, total: loaded, percentage: 100 });
 
+    releaseSharedModelUrl(modelId);
+
     const blob = new Blob([allChunks], { type: 'application/octet-stream' });
-    const blobUrl = URL.createObjectURL(blob);
+    const blobUrl = createSharedModelUrl(modelId, blob);
 
     cacheModelDataInMemory(modelId, allChunks.buffer);
     const savePromise = persistModelToDB(modelId, allChunks.buffer, loaded);
@@ -213,28 +232,47 @@ export async function deleteModel(modelId: string): Promise<void> {
   });
 
   db.close();
+
+  inMemoryModelData.delete(modelId);
+  releaseSharedModelUrl(modelId);
 }
 
+// 只读 key，避免把完整模型数据克隆到内存
 export async function isModelCached(modelId: string): Promise<boolean> {
+  if (inMemoryModelData.has(modelId) || sharedModelBlobUrls.has(modelId)) {
+    return true;
+  }
+
   try {
     const db = await openDB();
     const transaction = db.transaction([STORE_NAME], 'readonly');
     const store = transaction.objectStore(STORE_NAME);
 
-    const record = await new Promise<ModelRecord | undefined>((resolve, reject) => {
-      const request = store.get(modelId);
+    const key = await new Promise<IDBValidKey | undefined>((resolve, reject) => {
+      const request = store.getKey(modelId);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
 
     db.close();
-    return record !== undefined;
+    return key !== undefined;
   } catch {
     return false;
   }
 }
 
+// 返回共享 URL：同一个模型可同时喂给多个 worker，不产生额外内存副本
 export async function getCachedModelBlobUrl(modelId: string): Promise<string | null> {
+  const existing = sharedModelBlobUrls.get(modelId);
+  if (existing) {
+    return existing;
+  }
+
+  const memoryData = inMemoryModelData.get(modelId);
+  if (memoryData) {
+    return createSharedModelUrl(modelId, new Blob([memoryData], { type: 'application/octet-stream' }));
+  }
+
   try {
     const db = await openDB();
     const transaction = db.transaction([STORE_NAME], 'readonly');
@@ -252,8 +290,10 @@ export async function getCachedModelBlobUrl(modelId: string): Promise<string | n
       return null;
     }
 
-    const blob = new Blob([record.data], { type: 'application/octet-stream' });
-    return URL.createObjectURL(blob);
+    return createSharedModelUrl(
+      modelId,
+      new Blob([record.data], { type: 'application/octet-stream' }),
+    );
   } catch (error) {
     console.error(`Failed to get cached model ${modelId}:`, error);
     return null;
@@ -281,20 +321,21 @@ export async function getCachedModelData(modelId: string): Promise<ArrayBuffer |
   }
 }
 
+// 只读 key 列表，避免 getAll() 加载全部模型数据
 export async function getAllCachedModels(): Promise<string[]> {
   try {
     const db = await openDB();
     const transaction = db.transaction([STORE_NAME], 'readonly');
     const store = transaction.objectStore(STORE_NAME);
 
-    const records = await new Promise<ModelRecord[]>((resolve, reject) => {
-      const request = store.getAll();
+    const keys = await new Promise<IDBValidKey[]>((resolve, reject) => {
+      const request = store.getAllKeys();
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
 
     db.close();
-    return records.map((r) => r.modelId);
+    return keys.map((key) => String(key));
   } catch {
     return [];
   }
@@ -314,10 +355,22 @@ export async function clearAllModels(): Promise<void> {
   });
 
   db.close();
+
+  for (const modelId of [...sharedModelBlobUrls.keys()]) {
+    releaseSharedModelUrl(modelId);
+  }
+  inMemoryModelData.clear();
+}
+
+// 模型共享 URL 永不在这里释放：worker 可能正在使用它
+export function revokeObjectUrl(url: string | null | undefined): void {
+  if (!url || !url.startsWith('blob:')) return;
+  for (const shared of sharedModelBlobUrls.values()) {
+    if (shared === url) return;
+  }
+  URL.revokeObjectURL(url);
 }
 
 export function revokeCachedUrl(url: string): void {
-  if (url.startsWith('blob:')) {
-    URL.revokeObjectURL(url);
-  }
+  revokeObjectUrl(url);
 }

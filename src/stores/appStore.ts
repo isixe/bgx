@@ -9,12 +9,11 @@ import type {
 } from '../types/app';
 import {
   getCachedModelBlobUrl,
-  revokeCachedUrl,
+  revokeObjectUrl,
   downloadModel,
   cancelDownload,
   isModelCached,
   getAllCachedModels,
-  getModelDataFromMemory,
   clearModelDataFromMemory,
 } from '../utils/modelCache';
 import { MODELS } from '../config/models';
@@ -193,13 +192,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setCurrentModel: async (model) => {
-    const state = get();
-
-    // 清理之前的缓存 URL
-    if (state.cachedModelUrl) {
-      revokeCachedUrl(state.cachedModelUrl);
-    }
-
     set({
       currentModel: model,
       isModelLoading: true,
@@ -207,30 +199,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
 
     try {
-      // 先检查内存缓存（模型刚下载完，正在保存到 IndexedDB）
-      const memoryData = getModelDataFromMemory(model);
-      if (memoryData) {
-        const blob = new Blob([memoryData], { type: 'application/octet-stream' });
-        const blobUrl = URL.createObjectURL(blob);
-        set({
-          cachedModelUrl: blobUrl,
-          isModelLoading: false,
-        });
-        get().updateModelStatus(model, 'downloaded');
-        return;
-      }
-
-      // 再检查 IndexedDB
       const isCached = await isModelCached(model);
 
       if (isCached) {
-        // 已缓存，直接加载
         const cachedUrl = await getCachedModelBlobUrl(model);
         set({
           cachedModelUrl: cachedUrl,
           isModelLoading: false,
         });
-        // 更新全局状态
         get().updateModelStatus(model, 'downloaded');
       } else {
         set({ isModelLoading: false });
@@ -251,9 +227,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  setOriginalImage: (image) =>
-    set({ originalImage: image, isReadyToProcess: !!image, error: null }),
-  setResultImage: (image) => set({ resultImage: image }),
+  setOriginalImage: (image) => {
+    const previous = get().originalImage;
+    if (previous && previous !== image) {
+      revokeObjectUrl(previous);
+    }
+    set({ originalImage: image, isReadyToProcess: !!image, error: null });
+  },
+  setResultImage: (image) => {
+    const previous = get().resultImage;
+    if (previous && previous !== image) {
+      revokeObjectUrl(previous);
+    }
+    set({ resultImage: image });
+  },
   setIsProcessing: (isProcessing) => set({ isProcessing }),
   setProgress: (progress) => set({ progress }),
   setError: (error) => set({ error }),
@@ -290,20 +277,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   setBatchMode: (mode) => set({ batchMode: mode }),
 
   addToBatchQueue: async (file: File) => {
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsDataURL(file);
-    });
-
     const id =
       typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     const item: BatchItem = {
       id,
-      originalImage: dataUrl,
+      originalImage: URL.createObjectURL(file),
       resultImage: null,
       status: 'pending',
       modelId: get().currentModel,
@@ -351,12 +331,23 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   removeBatchItem: (id: string) => {
+    const item = get().batchQueue.find((candidate) => candidate.id === id);
+    if (item) {
+      revokeObjectUrl(item.originalImage);
+      revokeObjectUrl(item.resultImage);
+    }
+
     set((state) => ({
-      batchQueue: state.batchQueue.filter((item) => item.id !== id),
+      batchQueue: state.batchQueue.filter((candidate) => candidate.id !== id),
     }));
   },
 
   clearBatchQueue: () => {
+    for (const item of get().batchQueue) {
+      revokeObjectUrl(item.originalImage);
+      revokeObjectUrl(item.resultImage);
+    }
+
     set({
       batchQueue: [],
       activeBatchItemId: null,
@@ -366,6 +357,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   reprocessBatchItem: (id: string, modelId: string) => {
+    const previous = get().batchQueue.find((item) => item.id === id);
+    if (previous?.resultImage) {
+      revokeObjectUrl(previous.resultImage);
+    }
+
     set((state) => ({
       batchQueue: state.batchQueue.map((item) =>
         item.id === id
@@ -387,6 +383,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     resultImage?: string | null,
     error?: string | null,
   ) => {
+    const previous = get().batchQueue.find((item) => item.id === id);
+    if (resultImage !== undefined && previous?.resultImage && previous.resultImage !== resultImage) {
+      revokeObjectUrl(previous.resultImage);
+    }
+
     set((state) => ({
       batchQueue: state.batchQueue.map((item) =>
         item.id === id
@@ -403,9 +404,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   reset: () => {
     const state = get();
-    if (state.cachedModelUrl) {
-      revokeCachedUrl(state.cachedModelUrl);
-    }
+    revokeObjectUrl(state.originalImage);
+    revokeObjectUrl(state.resultImage);
     // 保留当前选中的模型和模型状态，只重置图片相关状态
     set({
       originalImage: null,
