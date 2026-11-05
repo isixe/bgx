@@ -92,6 +92,7 @@ const initialState = {
   activeBatchItemId: null as string | null,
   viewingBatchResult: false,
   selectedBatchItemIds: [] as string[],
+  selectionAnchorId: null as string | null,
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -307,6 +308,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       status: 'pending',
       modelId: get().currentModel,
       name: file.name,
+      progress: 0,
+      startedAt: null,
+      finishedAt: null,
     };
 
     set((state) => ({
@@ -322,6 +326,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       activeBatchItemId: id,
       viewingBatchResult: true,
       selectedBatchItemIds: [],
+      selectionAnchorId: null,
     });
   },
 
@@ -330,31 +335,73 @@ export const useAppStore = create<AppState>((set, get) => ({
       activeBatchItemId: null,
       viewingBatchResult: false,
       selectedBatchItemIds: [],
+      selectionAnchorId: null,
     });
   },
 
-  selectBatchQueueItem: (id: string) => {
+  selectBatchQueueItem: (id: string, shiftKey = false) => {
     set((state) => {
-      const item = state.batchQueue.find((candidate) => candidate.id === id);
-      if (!item || (item.status !== 'completed' && item.status !== 'error')) {
+      const selectableIds = state.batchQueue
+        .filter((item) => item.status === 'completed' || item.status === 'error')
+        .map((item) => item.id);
+
+      const targetIndex = selectableIds.indexOf(id);
+      if (targetIndex < 0) {
         return state;
+      }
+
+      if (shiftKey) {
+        const anchorIndex = state.selectionAnchorId
+          ? selectableIds.indexOf(state.selectionAnchorId)
+          : -1;
+        const hasAnchor = anchorIndex >= 0;
+        const startIndex = hasAnchor ? Math.min(anchorIndex, targetIndex) : 0;
+        const endIndex = hasAnchor ? Math.max(anchorIndex, targetIndex) : targetIndex;
+        const rangeIds = selectableIds.slice(startIndex, endIndex + 1);
+
+        return {
+          selectedBatchItemIds: Array.from(new Set([...state.selectedBatchItemIds, ...rangeIds])),
+          selectionAnchorId: id,
+        };
       }
 
       return {
         selectedBatchItemIds: state.selectedBatchItemIds.includes(id)
-          ? state.selectedBatchItemIds.filter((i) => i !== id)
+          ? state.selectedBatchItemIds.filter((selectedId) => selectedId !== id)
           : [...state.selectedBatchItemIds, id],
+        selectionAnchorId: id,
       };
     });
   },
 
   selectAllBatchItems: (selectAll: boolean) => {
+    set((state) => {
+      if (!selectAll) {
+        return { selectedBatchItemIds: [], selectionAnchorId: null };
+      }
+
+      const selectableIds = state.batchQueue
+        .filter((item) => item.status === 'completed' || item.status === 'error')
+        .map((item) => item.id);
+
+      return {
+        selectedBatchItemIds: selectableIds,
+        selectionAnchorId: selectableIds.length > 0 ? selectableIds[selectableIds.length - 1] : null,
+      };
+    });
+  },
+
+  setBatchItemProgress: (id: string, progress: number) => {
+    const next = Math.max(0, Math.min(100, Math.round(progress)));
+    const item = get().batchQueue.find((candidate) => candidate.id === id);
+    if (!item || item.status !== 'processing' || item.progress === next) {
+      return;
+    }
+
     set((state) => ({
-      selectedBatchItemIds: selectAll
-        ? state.batchQueue
-            .filter((item) => item.status === 'completed' || item.status === 'error')
-            .map((item) => item.id)
-        : [],
+      batchQueue: state.batchQueue.map((candidate) =>
+        candidate.id === id ? { ...candidate, progress: next } : candidate,
+      ),
     }));
   },
 
@@ -367,6 +414,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     set((state) => ({
       batchQueue: state.batchQueue.filter((candidate) => candidate.id !== id),
+      selectionAnchorId: state.selectionAnchorId === id ? null : state.selectionAnchorId,
     }));
   },
 
@@ -381,6 +429,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       activeBatchItemId: null,
       viewingBatchResult: false,
       selectedBatchItemIds: [],
+      selectionAnchorId: null,
     });
   },
 
@@ -399,10 +448,14 @@ export const useAppStore = create<AppState>((set, get) => ({
               modelId,
               resultImage: null,
               error: null,
+              progress: 0,
+              startedAt: null,
+              finishedAt: null,
             }
           : item,
       ),
       selectedBatchItemIds: state.selectedBatchItemIds.filter((selectedId) => selectedId !== id),
+      selectionAnchorId: state.selectionAnchorId === id ? null : state.selectionAnchorId,
     }));
   },
 
@@ -417,21 +470,40 @@ export const useAppStore = create<AppState>((set, get) => ({
       revokeObjectUrl(previous.resultImage);
     }
 
+    const now = Date.now();
+    const isFinished = status === 'completed' || status === 'error';
+
     set((state) => ({
-      batchQueue: state.batchQueue.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              status,
-              ...(resultImage !== undefined ? { resultImage } : {}),
-              ...(error !== undefined ? { error } : {}),
-            }
-          : item,
-      ),
-      selectedBatchItemIds:
-        status === 'completed' || status === 'error'
-          ? state.selectedBatchItemIds
-          : state.selectedBatchItemIds.filter((selectedId) => selectedId !== id),
+      batchQueue: state.batchQueue.map((item) => {
+        if (item.id !== id) {
+          return item;
+        }
+
+        const next: BatchItem = {
+          ...item,
+          status,
+          ...(resultImage !== undefined ? { resultImage } : {}),
+          ...(error !== undefined ? { error } : {}),
+        };
+
+        if (status === 'processing') {
+          next.startedAt = now;
+          next.finishedAt = null;
+        } else if (isFinished) {
+          next.finishedAt = now;
+          next.progress = 100;
+        } else {
+          next.startedAt = null;
+          next.finishedAt = null;
+          next.progress = 0;
+        }
+
+        return next;
+      }),
+      selectedBatchItemIds: isFinished
+        ? state.selectedBatchItemIds
+        : state.selectedBatchItemIds.filter((selectedId) => selectedId !== id),
+      selectionAnchorId: !isFinished && state.selectionAnchorId === id ? null : state.selectionAnchorId,
     }));
   },
 

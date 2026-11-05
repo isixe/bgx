@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import JSZip from 'jszip';
 import { Monitor } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
@@ -485,6 +485,9 @@ function SidebarContent({
       if (successTimerRef.current) clearTimeout(successTimerRef.current);
     };
   }, [success]);
+  const [pendingExport, setPendingExport] = useState<null | 'images' | 'zip'>(null);
+  const [isZipping, setIsZipping] = useState(false);
+  const [zipProgress, setZipProgress] = useState(0);
   const handleStartProcessing = () => {
     startProcessing();
     onAction?.();
@@ -498,13 +501,19 @@ function SidebarContent({
   const isBatchProcessing = batchQueue.some((item) => item.status === 'processing');
   const hasCompletedBatchItems = batchQueue.some((item) => item.status === 'completed');
 
+  const getExportItems = () =>
+    selectedBatchItemIds.length > 0
+      ? batchQueue.filter(
+          (item) => selectedBatchItemIds.includes(item.id) && item.status === 'completed',
+        )
+      : batchQueue.filter((item) => item.status === 'completed');
+
+  const completedCount = batchQueue.filter((item) => item.status === 'completed').length;
+  const unprocessedCount = batchQueue.length - completedCount;
+
   const handleBatchExportAll = async () => {
-    const toExport =
-      selectedBatchItemIds.length > 0
-        ? batchQueue.filter(
-            (item) => selectedBatchItemIds.includes(item.id) && item.status === 'completed',
-          )
-        : batchQueue.filter((item) => item.status === 'completed');
+    const toExport = getExportItems();
+    if (toExport.length === 0) return;
 
     try {
       const result = await saveImagesBatchToDirectory(
@@ -527,55 +536,78 @@ function SidebarContent({
   };
 
   const handleBatchExportZip = async () => {
-    const toExport =
-      selectedBatchItemIds.length > 0
-        ? batchQueue.filter(
-            (item) => selectedBatchItemIds.includes(item.id) && item.status === 'completed',
-          )
-        : batchQueue.filter((item) => item.status === 'completed');
-
+    const toExport = getExportItems();
     if (toExport.length === 0) return;
 
-    const zip = new JSZip();
-    for (const item of toExport) {
-      if (!item.resultImage) continue;
-      const response = await fetch(item.resultImage);
-      const blob = await response.blob();
-      const baseName = item.name.replace(/\.[^.]+$/, '');
-      zip.file(`${baseName}-removed.png`, blob);
-    }
-
-    const zipBlob = await zip.generateAsync({ type: 'blob' });
-    const zipBytes = new Uint8Array(await zipBlob.arrayBuffer());
-    const zipName = `bgx-export-${Date.now()}.zip`;
-
-    const bgx = typeof window !== 'undefined' ? window.bgx : undefined;
-    if (bgx?.saveFile) {
-      try {
-        const result = await bgx.saveFile(
-          { filename: zipName, bytes: zipBytes },
-          t('batchExportZipSaveDialogTitle'),
-        );
-        if (result?.error) {
-          useAppStore.getState().setError(t('batchExportSaveFailed'));
-        } else if (!result?.canceled && result?.saved) {
-          useAppStore.getState().setSuccess(t('batchExportZipSuccess'));
+    setIsZipping(true);
+    setZipProgress(0);
+    try {
+      const zip = new JSZip();
+      for (let i = 0; i < toExport.length; i += 1) {
+        const item = toExport[i];
+        if (item.resultImage) {
+          const response = await fetch(item.resultImage);
+          const blob = await response.blob();
+          const baseName = item.name.replace(/\.[^.]+$/, '');
+          zip.file(`${baseName}-removed.png`, blob);
         }
-      } catch (err) {
-        console.error('ZIP export failed:', err);
-        useAppStore.getState().setError(t('batchExportSaveFailed'));
+        setZipProgress(Math.round(((i + 1) / toExport.length) * 80));
       }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' }, (metadata) => {
+        setZipProgress(80 + Math.round(metadata.percent * 0.2));
+      });
+      setZipProgress(100);
+      const zipBytes = new Uint8Array(await zipBlob.arrayBuffer());
+      const zipName = `bgx-export-${Date.now()}.zip`;
+
+      const bgx = typeof window !== 'undefined' ? window.bgx : undefined;
+      if (bgx?.saveFile) {
+        try {
+          const result = await bgx.saveFile(
+            { filename: zipName, bytes: zipBytes },
+            t('batchExportZipSaveDialogTitle'),
+          );
+          if (result?.error) {
+            useAppStore.getState().setError(t('batchExportSaveFailed'));
+          } else if (!result?.canceled && result?.saved) {
+            useAppStore.getState().setSuccess(t('batchExportZipSuccess'));
+          }
+        } catch (err) {
+          console.error('ZIP export failed:', err);
+          useAppStore.getState().setError(t('batchExportSaveFailed'));
+        }
+        onAction?.();
+        return;
+      }
+
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = zipName;
+      link.click();
+      URL.revokeObjectURL(url);
       onAction?.();
+    } finally {
+      setIsZipping(false);
+      setZipProgress(0);
+    }
+  };
+
+  const runBatchExport = (kind: 'images' | 'zip') => {
+    if (kind === 'images') {
+      void handleBatchExportAll();
+    } else {
+      void handleBatchExportZip();
+    }
+  };
+
+  const requestBatchExport = (kind: 'images' | 'zip') => {
+    if (selectedBatchItemIds.length === 0 && unprocessedCount > 0) {
+      setPendingExport(kind);
       return;
     }
-
-    const url = URL.createObjectURL(zipBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = zipName;
-    link.click();
-    URL.revokeObjectURL(url);
-    onAction?.();
+    runBatchExport(kind);
   };
 
   const handleBatchReprocess = () => {
@@ -648,6 +680,43 @@ function SidebarContent({
         </div>
       )}
 
+      {pendingExport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setPendingExport(null)}
+          />
+          <div
+            className={`relative w-full max-w-sm rounded-xl border p-5 shadow-xl ${isDarkMode ? 'border-slate-700 bg-slate-800 text-slate-100' : 'border-slate-200 bg-white text-slate-800'}`}
+          >
+            <h3 className="text-base font-semibold">{t('batchExportConfirmTitle')}</h3>
+            <p className={`mt-2 text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+              {t('batchExportConfirmMessage')
+                .replace('{remaining}', String(unprocessedCount))
+                .replace('{completed}', String(completedCount))}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setPendingExport(null)}
+                className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+              >
+                {t('batchExportConfirmCancel')}
+              </button>
+              <button
+                onClick={() => {
+                  const kind = pendingExport;
+                  setPendingExport(null);
+                  runBatchExport(kind);
+                }}
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-indigo-700"
+              >
+                {t('batchExportConfirmOk')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`space-y-4 ${isBatchProcessing ? 'pointer-events-none opacity-70' : ''}`}>
         {originalImage && !resultImage && !isProcessing && !batchMode && (
           <button
@@ -703,27 +772,60 @@ function SidebarContent({
 
         <ModelSelector />
 
-        {batchMode && (
-          <div className="mt-4 space-y-2">
-            <button
-              onClick={handleBatchExportAll}
-              disabled={!hasCompletedBatchItems}
-              className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {selectedBatchItemIds.length > 0 ? t('batchExportSelected') : t('batchExportAll')}
-            </button>
-            <button
-              onClick={handleBatchExportZip}
-              disabled={!hasCompletedBatchItems}
-              className={`w-full rounded-lg px-4 py-3 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 ${isDarkMode ? 'border border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
-            >
-              {t('batchExportZip')}
-            </button>
-          </div>
-        )}
-
         {originalImage && !batchMode && <ExportPanel disabled={isProcessing} />}
       </div>
+
+      {batchMode && (
+        <div className="mt-4 space-y-2">
+          <button
+            onClick={() => requestBatchExport('images')}
+            disabled={!hasCompletedBatchItems || isZipping}
+            className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {selectedBatchItemIds.length > 0 ? t('batchExportSelected') : t('batchExportAll')}
+          </button>
+          <button
+            onClick={() => requestBatchExport('zip')}
+            disabled={!hasCompletedBatchItems || isZipping}
+            className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 ${isDarkMode ? 'border border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+          >
+            {isZipping ? (
+              <>
+                <svg className="h-4 w-4 -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeOpacity={0.25}
+                    strokeWidth={4}
+                  />
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={4}
+                    strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 15}
+                    strokeDashoffset={2 * Math.PI * 15 * (1 - zipProgress / 100)}
+                    style={{ transition: 'stroke-dashoffset 0.2s ease' }}
+                  />
+                </svg>
+                <span>
+                  {t('batchExportZipping')} {zipProgress}%
+                </span>
+              </>
+            ) : selectedBatchItemIds.length > 0 ? (
+              t('batchExportSelectedZip')
+            ) : (
+              t('batchExportAllZip')
+            )}
+          </button>
+        </div>
+      )}
     </>
   );
 }

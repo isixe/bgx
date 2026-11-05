@@ -208,6 +208,14 @@ export const translations = {
   batchExportSaveFailed: '保存图片失败，请重试。',
   batchExportSaveSuccess: '图片保存成功。',
   batchExportZipSuccess: 'ZIP 导出成功。',
+  batchExportSelectedZip: '导出选中为 ZIP',
+  batchExportAllZip: '导出所有为 ZIP',
+  batchExportZipping: '正在打包',
+  batchExportConfirmTitle: '导出确认',
+  batchExportConfirmMessage:
+    '列表还有 {remaining} 张未处理完成的图片，是否只导出 {completed} 张处理完成的图片？',
+  batchExportConfirmOk: '确认导出',
+  batchExportConfirmCancel: '取消',
 
   desktopApp: '桌面端',
 

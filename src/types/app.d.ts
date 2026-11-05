@@ -84,13 +84,15 @@ export type AppState = {
   activeBatchItemId: string | null;
   viewingBatchResult: boolean;
   selectedBatchItemIds: string[];
+  selectionAnchorId: string | null;
 
   setBatchMode: (mode: boolean) => void;
   setBatchConcurrency: (value: number) => void;
   addToBatchQueue: (file: File) => Promise<void>;
   selectBatchItem: (id: string) => void;
-  selectBatchQueueItem: (id: string) => void;
+  selectBatchQueueItem: (id: string, shiftKey?: boolean) => void;
   selectAllBatchItems: (selectAll: boolean) => void;
+  setBatchItemProgress: (id: string, progress: number) => void;
   backToBatchQueue: () => void;
   removeBatchItem: (id: string) => void;
   clearBatchQueue: () => void;
@@ -113,6 +115,9 @@ export interface BatchItem {
   modelId: string;
   name: string;
   error?: string | null;
+  progress: number;
+  startedAt: number | null;
+  finishedAt: number | null;
 }
 
 export type UseRemoveBackgroundOptions = {

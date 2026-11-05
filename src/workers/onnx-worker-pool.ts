@@ -17,6 +17,8 @@ interface PendingTask {
   resolution: number;
   onProgress?: (progress: number) => void;
   attempts: number;
+  inferenceStartedAt: number | null;
+  progressTimer: ReturnType<typeof setInterval> | null;
   resolve: (result: PoolImageResult) => void;
 }
 
@@ -37,6 +39,29 @@ const FATAL_PATTERN =
   /memory access out of bounds|cannot enlarge memory|out of memory|allocation failed|RangeError|Aborted|RuntimeError|Assertion failed|OOM/i;
 
 const MAX_ATTEMPTS = 2;
+
+const PROGRESS_TICK_MS = 250;
+const INFERENCE_PROGRESS_START = 40;
+const INFERENCE_PROGRESS_END = 75;
+const INFERENCE_EWMA_ALPHA = 0.3;
+const ESTIMATE_BASE_MS = 1200;
+const ESTIMATE_BASE_PIXELS = 320 * 320;
+
+let estimatedInferenceMs: number | null = null;
+
+function estimateInferenceMs(resolution: number): number {
+  if (estimatedInferenceMs !== null) {
+    return estimatedInferenceMs;
+  }
+  return (resolution * resolution * ESTIMATE_BASE_MS) / ESTIMATE_BASE_PIXELS;
+}
+
+function recordInferenceMs(durationMs: number): void {
+  estimatedInferenceMs =
+    estimatedInferenceMs === null
+      ? durationMs
+      : estimatedInferenceMs * (1 - INFERENCE_EWMA_ALPHA) + durationMs * INFERENCE_EWMA_ALPHA;
+}
 
 export class OnnxWorkerPool {
   private readonly slots: WorkerSlot[] = [];
@@ -96,6 +121,8 @@ export class OnnxWorkerPool {
         resolution,
         onProgress,
         attempts: 0,
+        inferenceStartedAt: null,
+        progressTimer: null,
         resolve,
       });
       this.drainQueue();
@@ -138,6 +165,7 @@ export class OnnxWorkerPool {
     }
 
     for (const task of this.activeTasks.values()) {
+      this.clearProgressTimer(task);
       task.resolve({ type: 'cancelled' });
     }
     this.activeTasks.clear();
@@ -176,7 +204,10 @@ export class OnnxWorkerPool {
     }
 
     if (message.type === 'PROGRESS_TASK') {
-      this.activeTasks.get(message.taskId)?.onProgress?.(message.progress);
+      const task = this.activeTasks.get(message.taskId);
+      if (task) {
+        this.handleProgress(task, message.progress);
+      }
       return;
     }
 
@@ -199,6 +230,54 @@ export class OnnxWorkerPool {
     }
   }
 
+  private handleProgress(task: PendingTask, progress: number): void {
+    if (
+      progress >= INFERENCE_PROGRESS_START &&
+      progress < INFERENCE_PROGRESS_END &&
+      task.progressTimer === null
+    ) {
+      this.startInferenceEstimate(task);
+    }
+
+    if (progress >= INFERENCE_PROGRESS_END) {
+      this.stopInferenceEstimate(task);
+    }
+
+    task.onProgress?.(progress);
+  }
+
+  private startInferenceEstimate(task: PendingTask): void {
+    const estimate = Math.max(200, estimateInferenceMs(task.resolution));
+    const startedAt = Date.now();
+    const span = INFERENCE_PROGRESS_END - INFERENCE_PROGRESS_START - 1;
+
+    task.inferenceStartedAt = startedAt;
+    task.progressTimer = setInterval(() => {
+      const ratio = Math.min(0.97, (Date.now() - startedAt) / estimate);
+      task.onProgress?.(INFERENCE_PROGRESS_START + ratio * span);
+    }, PROGRESS_TICK_MS);
+  }
+
+  private stopInferenceEstimate(task: PendingTask): void {
+    if (task.progressTimer !== null) {
+      clearInterval(task.progressTimer);
+      task.progressTimer = null;
+    }
+
+    if (task.inferenceStartedAt !== null) {
+      recordInferenceMs(Date.now() - task.inferenceStartedAt);
+      task.inferenceStartedAt = null;
+    }
+  }
+
+  private clearProgressTimer(task: PendingTask): void {
+    if (task.progressTimer !== null) {
+      clearInterval(task.progressTimer);
+      task.progressTimer = null;
+    }
+    task.inferenceStartedAt = null;
+  }
+
   private handleWorkerError(slot: WorkerSlot, message: string): void {
     const taskId = slot.currentTaskId;
     if (taskId) {
@@ -214,6 +293,10 @@ export class OnnxWorkerPool {
     const task = this.activeTasks.get(taskId);
     this.activeTasks.delete(taskId);
 
+    if (task) {
+      this.clearProgressTimer(task);
+    }
+
     if (slot.currentTaskId === taskId) {
       slot.currentTaskId = null;
       slot.busy = false;
@@ -227,6 +310,10 @@ export class OnnxWorkerPool {
   private retryOrFail(slot: WorkerSlot, taskId: string, error: string): void {
     const task = this.activeTasks.get(taskId);
     this.activeTasks.delete(taskId);
+
+    if (task) {
+      this.clearProgressTimer(task);
+    }
 
     slot.currentTaskId = null;
     slot.busy = false;

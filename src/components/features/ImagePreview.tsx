@@ -1,8 +1,24 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../lib/i18n';
 import { downloadResultImage } from '../../utils/downloadImage';
 import { getBatchConcurrencyOptions } from '../../utils/concurrency';
+import { Select } from '../ui/Select';
+
+function formatDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) {
+    return '0.0s';
+  }
+  if (ms < 1000) {
+    return `${Math.round(ms)}ms`;
+  }
+  const seconds = ms / 1000;
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}m ${Math.round(seconds % 60)}s`;
+}
 
 export function ImagePreview() {
   const {
@@ -34,6 +50,16 @@ export function ImagePreview() {
   const containerRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const hasProcessingItem = batchQueue.some((item) => item.status === 'processing');
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!hasProcessingItem) {
+      return;
+    }
+    const timer = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(timer);
+  }, [hasProcessingItem]);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -186,6 +212,10 @@ export function ImagePreview() {
       (item) => item.status === 'completed' || item.status === 'error',
     ).length;
     const progressPercent = totalCount === 0 ? 0 : Math.round((processedCount / totalCount) * 100);
+    const concurrencyOptions = getBatchConcurrencyOptions().map((value) => ({
+      value,
+      label: String(value),
+    }));
 
     return (
       <div className="w-full h-full flex items-center justify-center relative">
@@ -217,30 +247,19 @@ export function ImagePreview() {
                     >
                       {t('batchProgress')}
                     </span>
-                    <label
-                      className="flex items-center gap-1 flex-shrink-0"
-                      title={t('batchConcurrency')}
-                    >
-                      <select
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Select
                         value={batchConcurrency}
-                        onChange={(event) => setBatchConcurrency(Number(event.target.value))}
-                        aria-label={t('batchConcurrency')}
-                        className={`text-xs rounded px-1 py-0.5 outline-none cursor-pointer focus:ring-1 focus:ring-indigo-400 ${
-                          isDarkMode
-                            ? 'bg-slate-600 text-gray-200 border border-slate-500'
-                            : 'bg-white text-gray-700 border border-gray-300'
-                        }`}
-                      >
-                        {getBatchConcurrencyOptions().map((value) => (
-                          <option key={value} value={value}>
-                            {value}
-                          </option>
-                        ))}
-                      </select>
+                        options={concurrencyOptions}
+                        onChange={setBatchConcurrency}
+                        isDarkMode={isDarkMode}
+                        ariaLabel={t('batchConcurrency')}
+                        title={t('batchConcurrency')}
+                      />
                       <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         {t('batchConcurrency')}
                       </span>
-                    </label>
+                    </div>
                   </div>
                   <span
                     className={`text-xs tabular-nums flex-shrink-0 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
@@ -348,7 +367,7 @@ export function ImagePreview() {
                   return (
                     <div
                       key={item.id}
-                      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-colors ${
+                      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-colors select-none ${
                         isSelected
                           ? `${isDarkMode ? 'bg-slate-600 border-slate-500' : 'bg-white border-indigo-300 shadow-sm'}`
                           : item.status === 'processing'
@@ -359,8 +378,8 @@ export function ImagePreview() {
                       }`}
                     >
                       <button
-                        onClick={() => {
-                          selectBatchQueueItem(item.id);
+                        onClick={(event) => {
+                          selectBatchQueueItem(item.id, event.shiftKey);
                         }}
                         disabled={!isSelectable}
                         className={`w-[18px] h-[18px] rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
@@ -392,18 +411,44 @@ export function ImagePreview() {
                             selectBatchItem(item.id);
                           }
                         }}
-                        className="flex items-center gap-3 flex-1 min-w-0"
+                        className="flex-1 min-w-0"
                       >
-                        <img
-                          src={item.originalImage}
-                          alt={item.name}
-                          className="w-8 h-8 rounded object-cover flex-shrink-0"
-                        />
-                        <span
-                          className={`flex-1 text-sm truncate ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}
-                        >
-                          {item.name}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={item.originalImage}
+                            alt={item.name}
+                            className="w-8 h-8 rounded object-cover flex-shrink-0"
+                          />
+                          <span
+                            className={`flex-1 text-sm truncate ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}
+                          >
+                            {item.name}
+                          </span>
+                        </div>
+                        {item.status !== 'pending' && (
+                          <div className="flex items-center gap-2 mt-1">
+                            {item.status === 'processing' && (
+                              <div
+                                className={`h-1 flex-1 min-w-0 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-500' : 'bg-gray-300'}`}
+                              >
+                                <div
+                                  className="h-full rounded-full bg-indigo-500 transition-[width] duration-200 ease-out"
+                                  style={{ width: `${item.progress}%` }}
+                                />
+                              </div>
+                            )}
+                            <span
+                              className={`text-[10px] tabular-nums flex-shrink-0 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                            >
+                              {item.status === 'processing' && `${Math.round(item.progress)}% · `}
+                              {formatDuration(
+                                item.startedAt === null
+                                  ? 0
+                                  : (item.finishedAt ?? now) - item.startedAt,
+                              )}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       {item.status === 'completed' && (

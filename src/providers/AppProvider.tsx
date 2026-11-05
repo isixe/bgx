@@ -35,6 +35,7 @@ export function AppProvider() {
     batchQueue,
     batchConcurrency,
     updateBatchItemStatus,
+    setBatchItemProgress,
   } = useAppStore();
 
   useEffect(() => {
@@ -134,6 +135,7 @@ export function AppProvider() {
           imageBlob,
           modelUrl,
           model.resolution,
+          (progress) => setBatchItemProgress(item.id, progress),
         );
 
         if (result.type === 'success' && result.blob) {
@@ -154,7 +156,7 @@ export function AppProvider() {
         inFlightRef.current.delete(item.id);
       }
     },
-    [resolveModelUrl, updateBatchItemStatus],
+    [resolveModelUrl, updateBatchItemStatus, setBatchItemProgress],
   );
 
   useEffect(() => {

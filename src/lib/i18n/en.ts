@@ -214,6 +214,14 @@ export const translations = {
   batchExportSaveFailed: 'Failed to save images. Please try again.',
   batchExportSaveSuccess: 'Images saved successfully.',
   batchExportZipSuccess: 'ZIP exported successfully.',
+  batchExportSelectedZip: 'Export Selected as ZIP',
+  batchExportAllZip: 'Export All as ZIP',
+  batchExportZipping: 'Zipping',
+  batchExportConfirmTitle: 'Confirm Export',
+  batchExportConfirmMessage:
+    'There are {remaining} unfinished image(s) in the list. Export only the {completed} finished image(s)?',
+  batchExportConfirmOk: 'Export',
+  batchExportConfirmCancel: 'Cancel',
 
   desktopApp: 'Desktop App',
 
