@@ -7,8 +7,8 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // onnxruntime-web 的 webgpu bundle 内部用 `new URL('*.wasm', import.meta.url)`
-// 引用多种 wasm 变体，Vite 会把这些资源额外产出到 _astro/ 下（例如 ~27MB 的
-// asyncify 变体）。运行时我们统一从 public/ 根目录按 env.wasm.wasmBinary 加载，
+// 引用 WASM，Vite 会把这些资源额外产出到 _astro/ 下。运行时我们统一从 public/ 根目录
+// 按 env.wasm.wasmBinary 加载 asyncify 版 WASM（该 bundle 内置的正是 asyncify 胶水），
 // 这些 _astro 副本不会被请求，构建后直接移除以免污染产物。
 function stripRedundantOrtWasm() {
   return {
@@ -43,7 +43,7 @@ export default defineConfig({
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
-        // 使用 webgpu bundle：内置 WebGPU(JSEP) + WASM 执行后端，GPU 不可用时回退到 WASM
+        // 使用 webgpu bundle：内置 WebGPU + asyncify WASM 执行后端，GPU 不可用时回退到 WASM
         'onnxruntime-web': 'onnxruntime-web/webgpu',
       },
     },

@@ -40,8 +40,9 @@ const isOrtPthreadWorker = ctx.name.startsWith('em-pthread');
 const FATAL_PATTERN =
   /memory access out of bounds|cannot enlarge memory|out of memory|allocation failed|RangeError|Aborted|RuntimeError|Assertion failed|OOM/i;
 
-// webgpu bundle 使用 JSEP 版 WASM 后端，需加载对应的 wasm 文件（由 postinstall 复制到 public/）
-const JSEP_WASM_URL = '/ort-wasm-simd-threaded.jsep.wasm';
+// onnxruntime-web/webgpu 内置的是 asyncify 版 WASM 胶水，必须加载与之 ABI 匹配的
+// ort-wasm-simd-threaded.asyncify.wasm（由 postinstall 复制到 public/），否则后端初始化会失败。
+const WASM_URL = '/ort-wasm-simd-threaded.asyncify.wasm';
 
 let wasmBinaryPromise: Promise<void> | null = null;
 let sessionModelUrl: string | null = null;
@@ -116,7 +117,7 @@ function setWasmBinary(buffer: ArrayBuffer): void {
 
 function ensureWasmBinary(): Promise<void> {
   if (!wasmBinaryPromise) {
-    wasmBinaryPromise = fetch(JSEP_WASM_URL)
+    wasmBinaryPromise = fetch(WASM_URL)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Failed to load WASM binary: HTTP ${response.status}`);

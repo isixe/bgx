@@ -21,7 +21,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit",
-    "postinstall": "node -e \"const fs=require('fs'),p=require('path');const files=['ort-wasm-simd-threaded.jsep.wasm'];const dir='node_modules/onnxruntime-web/dist';for(const f of files){const s=p.join(dir,f),d=p.join('public',f);if(fs.existsSync(s)){fs.copyFileSync(s,d);console.log('WASM copied to public/: '+f)}else{console.log('WASM not found, skipping: '+f)}}\""
+    "postinstall": "node -e \"const fs=require('fs'),p=require('path');const files=['ort-wasm-simd-threaded.asyncify.wasm'];const dir='node_modules/onnxruntime-web/dist';for(const f of files){const s=p.join(dir,f),d=p.join('public',f);if(fs.existsSync(s)){fs.copyFileSync(s,d);console.log('WASM copied to public/: '+f)}else{console.log('WASM not found, skipping: '+f)}}\""
   },
   "build": {
     "appId": "dev.itea.bgx",
