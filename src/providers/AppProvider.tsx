@@ -41,7 +41,12 @@ export function AppProvider() {
     setGpuFallbackActive,
     applyGpuFallback,
     preloadEnabled,
+    hydrateFromStorage,
   } = useAppStore();
+
+  useEffect(() => {
+    hydrateFromStorage();
+  }, [hydrateFromStorage]);
 
   useEffect(() => {
     initializeModelStatuses();
@@ -49,7 +54,7 @@ export function AppProvider() {
 
   useEffect(() => {
     if (isModelStatusesLoaded) {
-      setCurrentModel(currentModel);
+      setCurrentModel(useAppStore.getState().defaultModel);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModelStatusesLoaded]);
@@ -207,15 +212,14 @@ export function AppProvider() {
         return;
       }
       if (useAppStore.getState().gpuAcceleration) {
-        setGpuFallbackActive(true);
-        setGpuAcceleration(false);
+        applyGpuFallback();
       }
     };
 
     return () => {
       pool.onGpuStatus = null;
     };
-  }, [isPoolReady, setGpuAcceleration, setGpuFallbackActive]);
+  }, [isPoolReady, setGpuFallbackActive, applyGpuFallback]);
 
   const preloadedUrlRef = useRef<string | null>(null);
   useEffect(() => {

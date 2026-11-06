@@ -57,6 +57,9 @@ export type AppState = {
   // 批处理数量超过并发数时，提前把模型加载进空闲 worker（懒预热）
   preloadEnabled: boolean;
 
+  // 客户端挂载后应用持久化偏好，确保 SSR 与客户端首帧一致
+  hydrateFromStorage: () => void;
+
   setGpuAcceleration: (enabled: boolean) => void;
   setGpuFallbackActive: (active: boolean) => void;
   // GPU 自动回退到 CPU：仅影响当前会话，不写入用户偏好（下次启动仍默认启用 GPU）

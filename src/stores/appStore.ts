@@ -19,79 +19,58 @@ import {
 } from '../utils/modelCache';
 import { MODELS } from '../config/models';
 
-function getInitialDarkMode(): boolean {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('bgx-dark-mode');
-    if (stored !== null) {
-      return stored === 'true';
-    }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+// 读取持久化的用户偏好。仅在客户端挂载后调用，不能在模块初始化阶段读取，
+// 否则 SSR（无 localStorage）与客户端首帧会不一致，导致 React 水合不匹配。
+function readPersistedPreferences(): Partial<AppState> {
+  if (typeof window === 'undefined') {
+    return {};
   }
-  return false;
+
+  const prefs: Partial<AppState> = {};
+
+  const storedDark = localStorage.getItem('bgx-dark-mode');
+  prefs.isDarkMode =
+    storedDark !== null
+      ? storedDark === 'true'
+      : window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  const storedCheck = localStorage.getItem('bgx-check-updates');
+  if (storedCheck !== null) {
+    prefs.checkUpdatesOnStartup = storedCheck === 'true';
+  }
+
+  prefs.dismissedUpdateVersion = localStorage.getItem('bgx-dismissed-update');
+
+  const storedConcurrency = Number(localStorage.getItem('bgx-batch-concurrency'));
+  if (Number.isInteger(storedConcurrency) && storedConcurrency >= 1) {
+    prefs.batchConcurrency = clampBatchConcurrency(storedConcurrency);
+  }
+
+  const storedGpu = localStorage.getItem('bgx-gpu-acceleration');
+  if (storedGpu !== null) {
+    prefs.gpuAcceleration = storedGpu === 'true';
+  }
+
+  const storedPreload = localStorage.getItem('bgx-preload-enabled');
+  if (storedPreload !== null) {
+    prefs.preloadEnabled = storedPreload === 'true';
+  }
+
+  const storedDefaultModel = localStorage.getItem('bgx-default-model');
+  if (storedDefaultModel && MODELS.some((model) => model.id === storedDefaultModel)) {
+    prefs.defaultModel = storedDefaultModel;
+    prefs.currentModel = storedDefaultModel;
+  }
+
+  return prefs;
 }
 
-function getInitialCheckUpdates(): boolean {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('bgx-check-updates');
-    if (stored !== null) {
-      return stored === 'true';
-    }
-  }
-  return true;
-}
-
-function getInitialDismissedUpdate(): string | null {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('bgx-dismissed-update');
-  }
-  return null;
-}
-
-function getInitialBatchConcurrency(): number {
-  if (typeof window !== 'undefined') {
-    const stored = Number(localStorage.getItem('bgx-batch-concurrency'));
-    if (Number.isInteger(stored) && stored >= 1) {
-      return clampBatchConcurrency(stored);
-    }
-  }
-  return DEFAULT_BATCH_CONCURRENCY;
-}
-
-function getInitialGpuAcceleration(): boolean {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('bgx-gpu-acceleration');
-    if (stored !== null) {
-      return stored === 'true';
-    }
-  }
-  return true;
-}
-
-function getInitialPreloadEnabled(): boolean {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('bgx-preload-enabled');
-    if (stored !== null) {
-      return stored === 'true';
-    }
-  }
-  return true;
-}
-
-function getInitialDefaultModel(): string {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('bgx-default-model');
-    if (stored && MODELS.some((model) => model.id === stored)) {
-      return stored;
-    }
-  }
-  return MODELS[0].id;
-}
-
-const initialDefaultModel = getInitialDefaultModel();
+// SSR 与客户端首帧统一使用确定性的默认值，持久化偏好在挂载后由 hydrateFromStorage 应用。
+const DEFAULT_MODEL_ID = MODELS[0].id;
 
 const initialState = {
-  currentModel: initialDefaultModel,
-  defaultModel: initialDefaultModel,
+  currentModel: DEFAULT_MODEL_ID,
+  defaultModel: DEFAULT_MODEL_ID,
   originalImage: null as string | null,
   resultImage: null as string | null,
   isProcessing: false,
@@ -102,11 +81,11 @@ const initialState = {
   processedModel: null as string | null,
   currentPage: 'main' as 'main' | 'models' | 'settings',
   settingsTab: 'models' as SettingsTab,
-  isDarkMode: getInitialDarkMode(),
-  checkUpdatesOnStartup: getInitialCheckUpdates(),
+  isDarkMode: false,
+  checkUpdatesOnStartup: true,
   updateCheckState: 'idle' as UpdateCheckState,
   latestVersion: null as string | null,
-  dismissedUpdateVersion: getInitialDismissedUpdate(),
+  dismissedUpdateVersion: null as string | null,
   processingTrigger: 0,
   cachedModelUrl: null as string | null,
   isModelLoading: false,
@@ -121,18 +100,23 @@ const initialState = {
   savingModels: [] as string[],
   batchMode: false,
   batchQueue: [] as BatchItem[],
-  batchConcurrency: getInitialBatchConcurrency(),
+  batchConcurrency: DEFAULT_BATCH_CONCURRENCY,
   activeBatchItemId: null as string | null,
   viewingBatchResult: false,
   selectedBatchItemIds: [] as string[],
   selectionAnchorId: null as string | null,
-  gpuAcceleration: getInitialGpuAcceleration(),
+  gpuAcceleration: true,
   gpuFallbackActive: false,
-  preloadEnabled: getInitialPreloadEnabled(),
+  preloadEnabled: true,
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
   ...initialState,
+
+  // 客户端挂载后应用持久化偏好（水合阶段调用一次）
+  hydrateFromStorage: () => {
+    set(readPersistedPreferences());
+  },
 
   // 初始化所有模型状态（应用启动时调用）
   initializeModelStatuses: async () => {
