@@ -42,7 +42,7 @@ const MAX_ATTEMPTS = 2;
 
 const PROGRESS_TICK_MS = 250;
 const INFERENCE_PROGRESS_START = 40;
-const INFERENCE_PROGRESS_END = 75;
+const INFERENCE_PROGRESS_END = 90;
 const INFERENCE_EWMA_ALPHA = 0.3;
 const ESTIMATE_BASE_MS = 1200;
 const ESTIMATE_BASE_PIXELS = 320 * 320;
@@ -61,6 +61,10 @@ function recordInferenceMs(durationMs: number): void {
     estimatedInferenceMs === null
       ? durationMs
       : estimatedInferenceMs * (1 - INFERENCE_EWMA_ALPHA) + durationMs * INFERENCE_EWMA_ALPHA;
+}
+
+function asymptoticEase(elapsed: number, timeConstant: number): number {
+  return 1 - Math.exp(-elapsed / timeConstant);
 }
 
 export class OnnxWorkerPool {
@@ -249,11 +253,13 @@ export class OnnxWorkerPool {
   private startInferenceEstimate(task: PendingTask): void {
     const estimate = Math.max(200, estimateInferenceMs(task.resolution));
     const startedAt = Date.now();
-    const span = INFERENCE_PROGRESS_END - INFERENCE_PROGRESS_START - 1;
+    const span = INFERENCE_PROGRESS_END - INFERENCE_PROGRESS_START;
+    const timeConstant = Math.max(150, estimate * 0.6);
 
     task.inferenceStartedAt = startedAt;
     task.progressTimer = setInterval(() => {
-      const ratio = Math.min(0.97, (Date.now() - startedAt) / estimate);
+      const elapsed = Date.now() - startedAt;
+      const ratio = asymptoticEase(elapsed, timeConstant);
       task.onProgress?.(INFERENCE_PROGRESS_START + ratio * span);
     }, PROGRESS_TICK_MS);
   }

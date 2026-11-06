@@ -170,6 +170,10 @@ export const translations = {
   settingsModelSettings: '模型设置',
   settingsAbout: '关于',
   settingsRelatedTools: '相关工具',
+  settingsPerformance: '性能',
+  settingsPerformanceDesc: '控制同时处理的图片数量。',
+  settingsConcurrencyDesc:
+    '数值越高批量处理越快，但每个并行任务都会各自持有一份模型，内存占用随之增加。',
   relatedToolsSubtitle: '以下我的一些其他项目，如果你对图片处理工具感兴趣，欢迎使用它们',
   toolImageDashName: 'Image Dash',
   toolImageDashDesc:

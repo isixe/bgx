@@ -140,11 +140,12 @@ async function runInference(
     const output = outputs[outputName];
 
     const rawMask = output.data;
-    const mask = rawMask instanceof Float32Array ? rawMask : Float32Array.from(rawMask as ArrayLike<number>);
+    const mask =
+      rawMask instanceof Float32Array ? rawMask : Float32Array.from(rawMask as ArrayLike<number>);
     const dims = output.dims;
     const maskWidth = dims[dims.length - 1];
     const maskHeight = dims[dims.length - 2];
-    report(75);
+    report(90);
 
     const maskCanvas = new OffscreenCanvas(maskWidth, maskHeight);
     const maskCtx = maskCanvas.getContext('2d');
@@ -175,7 +176,7 @@ async function runInference(
     outputCtx.imageSmoothingEnabled = true;
     outputCtx.imageSmoothingQuality = 'high';
     outputCtx.drawImage(maskCanvas, 0, 0, bitmap.width, bitmap.height);
-    report(90);
+    report(95);
 
     const resultBlob = await outputCanvas.convertToBlob({ type: 'image/png' });
     report(100);

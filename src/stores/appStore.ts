@@ -386,7 +386,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       return {
         selectedBatchItemIds: selectableIds,
-        selectionAnchorId: selectableIds.length > 0 ? selectableIds[selectableIds.length - 1] : null,
+        selectionAnchorId:
+          selectableIds.length > 0 ? selectableIds[selectableIds.length - 1] : null,
       };
     });
   },
@@ -439,24 +440,37 @@ export const useAppStore = create<AppState>((set, get) => ({
       revokeObjectUrl(previous.resultImage);
     }
 
-    set((state) => ({
-      batchQueue: state.batchQueue.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              status: 'pending' as BatchItemStatus,
-              modelId,
-              resultImage: null,
-              error: null,
-              progress: 0,
-              startedAt: null,
-              finishedAt: null,
-            }
-          : item,
-      ),
-      selectedBatchItemIds: state.selectedBatchItemIds.filter((selectedId) => selectedId !== id),
-      selectionAnchorId: state.selectionAnchorId === id ? null : state.selectionAnchorId,
-    }));
+    set((state) => {
+      const target = state.batchQueue.find((item) => item.id === id);
+      if (!target) {
+        return state;
+      }
+
+      const requeued: BatchItem = {
+        ...target,
+        status: 'pending' as BatchItemStatus,
+        modelId,
+        resultImage: null,
+        error: null,
+        progress: 0,
+        startedAt: null,
+        finishedAt: null,
+      };
+
+      const remaining = state.batchQueue.filter((item) => item.id !== id);
+      let insertAt = 0;
+      remaining.forEach((item, index) => {
+        if (item.status === 'processing') {
+          insertAt = index + 1;
+        }
+      });
+
+      return {
+        batchQueue: [...remaining.slice(0, insertAt), requeued, ...remaining.slice(insertAt)],
+        selectedBatchItemIds: state.selectedBatchItemIds.filter((selectedId) => selectedId !== id),
+        selectionAnchorId: state.selectionAnchorId === id ? null : state.selectionAnchorId,
+      };
+    });
   },
 
   updateBatchItemStatus: (
@@ -466,7 +480,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     error?: string | null,
   ) => {
     const previous = get().batchQueue.find((item) => item.id === id);
-    if (resultImage !== undefined && previous?.resultImage && previous.resultImage !== resultImage) {
+    if (
+      resultImage !== undefined &&
+      previous?.resultImage &&
+      previous.resultImage !== resultImage
+    ) {
       revokeObjectUrl(previous.resultImage);
     }
 
@@ -503,7 +521,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       selectedBatchItemIds: isFinished
         ? state.selectedBatchItemIds
         : state.selectedBatchItemIds.filter((selectedId) => selectedId !== id),
-      selectionAnchorId: !isFinished && state.selectionAnchorId === id ? null : state.selectionAnchorId,
+      selectionAnchorId:
+        !isFinished && state.selectionAnchorId === id ? null : state.selectionAnchorId,
     }));
   },
 

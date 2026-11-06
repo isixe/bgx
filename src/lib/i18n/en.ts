@@ -173,6 +173,10 @@ export const translations = {
   settingsModelSettings: 'Model Settings',
   settingsAbout: 'About',
   settingsRelatedTools: 'Related Tools',
+  settingsPerformance: 'Performance',
+  settingsPerformanceDesc: 'Control how many images are processed at the same time.',
+  settingsConcurrencyDesc:
+    'Higher values finish batches faster, but use more memory because each parallel job keeps its own copy of the model.',
   relatedToolsSubtitle:
     "Here are some of my other projects. If you're interested in image processing tools, feel free to check them out.",
   toolImageDashName: 'Image Dash',

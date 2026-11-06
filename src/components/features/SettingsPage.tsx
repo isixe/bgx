@@ -3,6 +3,8 @@ import { useTranslation } from '../../lib/i18n';
 import { ModelsPage } from './ModelsPage';
 import { checkForAppUpdate, isDesktopApp, DOWNLOAD_URL } from '../../lib/appUpdate';
 import pkg from '../../../package.json';
+import { Select } from '../ui/Select';
+import { getBatchConcurrencyOptions } from '../../utils/concurrency';
 
 // Keep the "checking…" indicator visible for at least this long so an instant
 // network response does not cause a distracting flash.
@@ -21,11 +23,18 @@ export function SettingsPage() {
     setUpdateCheckState,
     latestVersion,
     setLatestVersion,
+    batchConcurrency,
+    setBatchConcurrency,
   } = useAppStore();
 
   const cardClasses = `rounded-xl border p-4 ${
     isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'
   }`;
+
+  const concurrencyOptions = getBatchConcurrencyOptions().map((value) => ({
+    value,
+    label: String(value),
+  }));
 
   const updateStatusText =
     updateCheckState === 'checking'
@@ -92,6 +101,21 @@ export function SettingsPage() {
           },
         ]
       : []),
+    {
+      id: 'performance' as const,
+      label: t('settingsPerformance'),
+      icon: (
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      ),
+    },
     {
       id: 'models' as const,
       label: t('settingsModelSettings'),
@@ -339,6 +363,50 @@ export function SettingsPage() {
                           }`}
                         />
                       </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {settingsTab === 'performance' && (
+              <div className="px-6 py-5">
+                <div className="space-y-6">
+                  <div>
+                    <h2
+                      className={`text-lg font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}
+                    >
+                      {t('settingsPerformance')}
+                    </h2>
+                    <p
+                      className={`mt-2 text-sm leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                    >
+                      {t('settingsPerformanceDesc')}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4">
+                    <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                        >
+                          {t('batchConcurrency')}
+                        </p>
+                        <p
+                          className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                        >
+                          {t('settingsConcurrencyDesc')}
+                        </p>
+                      </div>
+                      <Select
+                        value={batchConcurrency}
+                        options={concurrencyOptions}
+                        onChange={setBatchConcurrency}
+                        isDarkMode={isDarkMode}
+                        ariaLabel={t('batchConcurrency')}
+                        title={t('batchConcurrency')}
+                      />
                     </div>
                   </div>
                 </div>

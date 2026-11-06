@@ -270,7 +270,10 @@ export async function getCachedModelBlobUrl(modelId: string): Promise<string | n
 
   const memoryData = inMemoryModelData.get(modelId);
   if (memoryData) {
-    return createSharedModelUrl(modelId, new Blob([memoryData], { type: 'application/octet-stream' }));
+    return createSharedModelUrl(
+      modelId,
+      new Blob([memoryData], { type: 'application/octet-stream' }),
+    );
   }
 
   try {

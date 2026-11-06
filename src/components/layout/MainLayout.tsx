@@ -682,10 +682,7 @@ function SidebarContent({
 
       {pendingExport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setPendingExport(null)}
-          />
+          <div className="absolute inset-0 bg-black/50" onClick={() => setPendingExport(null)} />
           <div
             className={`relative w-full max-w-sm rounded-xl border p-5 shadow-xl ${isDarkMode ? 'border-slate-700 bg-slate-800 text-slate-100' : 'border-slate-200 bg-white text-slate-800'}`}
           >

@@ -1,3 +1,6 @@
 # local tool / agent session state (not project source)
 .omo/
 .sisyphus/
+
+# generated lockfile
+pnpm-lock.yaml

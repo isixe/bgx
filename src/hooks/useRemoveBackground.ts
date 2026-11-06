@@ -7,7 +7,9 @@ export const MODEL_NOT_CACHED = 'model_not_cached';
 
 let singleTaskCounter = 0;
 
-export function useRemoveBackground(options: UseRemoveBackgroundOptions): UseRemoveBackgroundReturn {
+export function useRemoveBackground(
+  options: UseRemoveBackgroundOptions,
+): UseRemoveBackgroundReturn {
   const optionsRef = useRef(options);
 
   useEffect(() => {

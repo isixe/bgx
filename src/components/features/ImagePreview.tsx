@@ -20,6 +20,51 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${Math.round(seconds % 60)}s`;
 }
 
+function ProgressRing({ progress, isDarkMode }: { progress: number; isDarkMode: boolean }) {
+  const size = 32;
+  const stroke = 3;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const clamped = Math.max(0, Math.min(100, progress));
+
+  return (
+    <div
+      className="relative flex-shrink-0"
+      style={{ width: size, height: size }}
+      title={`${Math.round(clamped)}%`}
+    >
+      <svg width={size} height={size} className="-rotate-90 absolute inset-0">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          strokeWidth={stroke}
+          className={isDarkMode ? 'stroke-slate-500' : 'stroke-gray-300'}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - clamped / 100)}
+          className="stroke-indigo-500 transition-[stroke-dashoffset] duration-200 ease-out"
+        />
+      </svg>
+      <span
+        className={`absolute inset-0 z-10 flex items-center justify-center text-[9px] leading-none font-semibold tabular-nums ${
+          isDarkMode ? 'text-gray-100' : 'text-gray-700'
+        }`}
+      >
+        {Math.round(clamped)}%
+      </span>
+    </div>
+  );
+}
+
 export function ImagePreview() {
   const {
     originalImage,
@@ -426,28 +471,15 @@ export function ImagePreview() {
                           </span>
                         </div>
                         {item.status !== 'pending' && (
-                          <div className="flex items-center gap-2 mt-1">
-                            {item.status === 'processing' && (
-                              <div
-                                className={`h-1 flex-1 min-w-0 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-500' : 'bg-gray-300'}`}
-                              >
-                                <div
-                                  className="h-full rounded-full bg-indigo-500 transition-[width] duration-200 ease-out"
-                                  style={{ width: `${item.progress}%` }}
-                                />
-                              </div>
+                          <span
+                            className={`block mt-0.5 text-[10px] tabular-nums ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                          >
+                            {formatDuration(
+                              item.startedAt === null
+                                ? 0
+                                : (item.finishedAt ?? now) - item.startedAt,
                             )}
-                            <span
-                              className={`text-[10px] tabular-nums flex-shrink-0 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
-                            >
-                              {item.status === 'processing' && `${Math.round(item.progress)}% · `}
-                              {formatDuration(
-                                item.startedAt === null
-                                  ? 0
-                                  : (item.finishedAt ?? now) - item.startedAt,
-                              )}
-                            </span>
-                          </div>
+                          </span>
                         )}
                       </div>
 
@@ -500,7 +532,9 @@ export function ImagePreview() {
                           </button>
                         </>
                       )}
-                      {isSelected && item.status === 'completed' ? (
+                      {item.status === 'processing' ? (
+                        <ProgressRing progress={item.progress} isDarkMode={isDarkMode} />
+                      ) : isSelected && item.status === 'completed' ? (
                         <button
                           onClick={() => {
                             reprocessBatchItem(item.id, currentModel);
