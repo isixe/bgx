@@ -23,12 +23,21 @@ export function downloadResultImage(
       ctx.drawImage(resultImg, 0, 0, canvas.width, canvas.height);
 
       const quality = format === 'webp' ? 0.9 : undefined;
-      const dataUrl = canvas.toDataURL(`image/${format}`, quality);
-      const link = document.createElement('a');
       const baseName = filename.replace(/\.[^.]+$/, '');
-      link.download = `${baseName}-removed.${format}`;
-      link.href = dataUrl;
-      link.click();
+      const downloadName = `${baseName}-removed.${format}`;
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.download = downloadName;
+          link.href = url;
+          link.click();
+          URL.revokeObjectURL(url);
+        },
+        `image/${format}`,
+        quality,
+      );
     };
     resultImg.src = resultImage;
   };
@@ -49,6 +58,13 @@ async function renderResultBlob(
   resultImage: string,
   format: 'png' | 'jpg' | 'webp',
 ): Promise<Blob> {
+  if (format === 'png') {
+    // 结果已是全分辨率 PNG，直接复用其字节，省去解码与重编码。
+    const response = await fetch(resultImage);
+    if (response.ok) {
+      return await response.blob();
+    }
+  }
   const originalImg = await loadImage(originalImage);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');

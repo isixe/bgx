@@ -146,6 +146,8 @@ export const translations = {
   modelDownloadFailedTitle: '下载失败',
   cancelDownload: '取消下载',
   saving: '缓存中...',
+  defaultModel: '默认',
+  setAsDefault: '设为默认模型',
 
   language: '语言',
   languageZh: '中文',
@@ -174,6 +176,12 @@ export const translations = {
   settingsPerformanceDesc: '控制同时处理的图片数量。',
   settingsConcurrencyDesc:
     '数值越高批量处理越快，但每个并行任务都会各自持有一份模型，内存占用随之增加。',
+  gpuAcceleration: 'GPU 加速',
+  gpuAccelerationDesc: '使用 GPU（WebGPU）加速处理，不可用时自动回退到 CPU。',
+  gpuFallbackNotice: '当前环境不支持 GPU 加速，已切换到 CPU。',
+  preloadModels: '预热模型',
+  settingsPreloadDesc:
+    '队列中的图片超过并发数时，提前在空闲 worker 中加载模型以加快起步，会占用更多内存。',
   relatedToolsSubtitle: '以下我的一些其他项目，如果你对图片处理工具感兴趣，欢迎使用它们',
   toolImageDashName: 'Image Dash',
   toolImageDashDesc:

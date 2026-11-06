@@ -1,5 +1,7 @@
 import { env, InferenceSession, Tensor } from 'onnxruntime-web';
 
+type ExecutionMode = 'gpu' | 'wasm';
+
 type InboundMessage =
   | {
       type: 'PROCESS_IMAGE_TASK';
@@ -9,14 +11,19 @@ type InboundMessage =
       resolution: number;
     }
   | { type: 'CANCEL_TASK'; taskId: string }
-  | { type: 'CONFIGURE_WORKER'; numThreads: number }
-  | { type: 'UNLOAD_MODEL' };
+  | { type: 'CONFIGURE_WORKER'; numThreads: number; useGpu?: boolean }
+  | { type: 'PRELOAD_MODEL'; modelUrl: string; resolution: number }
+  | { type: 'UNLOAD_MODEL' }
+  | { type: 'PROVIDE_MODEL'; modelUrl: string; buffer: SharedArrayBuffer };
 
 type OutboundMessage =
   | { type: 'PROGRESS_TASK'; taskId: string; progress: number }
   | { type: 'SUCCESS_TASK'; taskId: string; resultBlob: Blob }
   | { type: 'ERROR_TASK'; taskId: string; error: string; fatal: boolean }
-  | { type: 'CANCELLED_TASK'; taskId: string };
+  | { type: 'CANCELLED_TASK'; taskId: string }
+  | { type: 'PRELOAD_DONE'; modelUrl: string; mode: ExecutionMode }
+  | { type: 'GPU_STATUS'; active: boolean; reason?: string }
+  | { type: 'TIMING_TASK'; taskId: string; timings: Record<string, number> };
 
 interface WorkerScope {
   name: string;
@@ -33,10 +40,75 @@ const isOrtPthreadWorker = ctx.name.startsWith('em-pthread');
 const FATAL_PATTERN =
   /memory access out of bounds|cannot enlarge memory|out of memory|allocation failed|RangeError|Aborted|RuntimeError|Assertion failed|OOM/i;
 
+// webgpu bundle 使用 JSEP 版 WASM 后端，需加载对应的 wasm 文件（由 postinstall 复制到 public/）
+const JSEP_WASM_URL = '/ort-wasm-simd-threaded.jsep.wasm';
+
 let wasmBinaryPromise: Promise<void> | null = null;
 let sessionModelUrl: string | null = null;
+let sessionMode: ExecutionMode | null = null;
 let session: InferenceSession | null = null;
+let wantsGpu = false;
+let gpuFailed = false;
 const cancelledTasks = new Set<string>();
+
+// 共享模型字节（由 worker-pool 一次性读入并广播），避免每个 worker 各自重复读取模型。
+const providedModelBuffers = new Map<string, Uint8Array>();
+
+// 复用 OffscreenCanvas，避免每个任务重复分配三个画布。
+let cachedPreprocessCanvas: OffscreenCanvas | null = null;
+let cachedPreprocessCtx: OffscreenCanvasRenderingContext2D | null = null;
+let cachedMaskCanvas: OffscreenCanvas | null = null;
+let cachedMaskCtx: OffscreenCanvasRenderingContext2D | null = null;
+let cachedOutputCanvas: OffscreenCanvas | null = null;
+let cachedOutputCtx: OffscreenCanvasRenderingContext2D | null = null;
+
+function getPreprocessContext(size: number): OffscreenCanvasRenderingContext2D {
+  if (!cachedPreprocessCanvas) {
+    cachedPreprocessCanvas = new OffscreenCanvas(size, size);
+    cachedPreprocessCtx = cachedPreprocessCanvas.getContext('2d', { willReadFrequently: true });
+  } else if (cachedPreprocessCanvas.width !== size || cachedPreprocessCanvas.height !== size) {
+    cachedPreprocessCanvas.width = size;
+    cachedPreprocessCanvas.height = size;
+  }
+  if (!cachedPreprocessCtx) {
+    throw new Error('Failed to create 2D context for preprocessing');
+  }
+  return cachedPreprocessCtx;
+}
+
+function getMaskCanvas(
+  width: number,
+  height: number,
+): { canvas: OffscreenCanvas; ctx: OffscreenCanvasRenderingContext2D } {
+  if (!cachedMaskCanvas) {
+    cachedMaskCanvas = new OffscreenCanvas(width, height);
+    cachedMaskCtx = cachedMaskCanvas.getContext('2d');
+  } else if (cachedMaskCanvas.width !== width || cachedMaskCanvas.height !== height) {
+    cachedMaskCanvas.width = width;
+    cachedMaskCanvas.height = height;
+  }
+  if (!cachedMaskCtx) {
+    throw new Error('Failed to create 2D context for mask');
+  }
+  return { canvas: cachedMaskCanvas, ctx: cachedMaskCtx };
+}
+
+function getOutputCanvas(
+  width: number,
+  height: number,
+): { canvas: OffscreenCanvas; ctx: OffscreenCanvasRenderingContext2D } {
+  if (!cachedOutputCanvas) {
+    cachedOutputCanvas = new OffscreenCanvas(width, height);
+    cachedOutputCtx = cachedOutputCanvas.getContext('2d');
+  } else if (cachedOutputCanvas.width !== width || cachedOutputCanvas.height !== height) {
+    cachedOutputCanvas.width = width;
+    cachedOutputCanvas.height = height;
+  }
+  if (!cachedOutputCtx) {
+    throw new Error('Failed to create 2D context for output');
+  }
+  return { canvas: cachedOutputCanvas, ctx: cachedOutputCtx };
+}
 
 function setWasmBinary(buffer: ArrayBuffer): void {
   (env.wasm as unknown as { wasmBinary?: ArrayBuffer }).wasmBinary = buffer;
@@ -44,7 +116,7 @@ function setWasmBinary(buffer: ArrayBuffer): void {
 
 function ensureWasmBinary(): Promise<void> {
   if (!wasmBinaryPromise) {
-    wasmBinaryPromise = fetch('/ort-wasm-simd-threaded.wasm')
+    wasmBinaryPromise = fetch(JSEP_WASM_URL)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Failed to load WASM binary: HTTP ${response.status}`);
@@ -62,10 +134,23 @@ function ensureWasmBinary(): Promise<void> {
   return wasmBinaryPromise;
 }
 
+function hasWebGpu(): boolean {
+  try {
+    return typeof navigator !== 'undefined' && Boolean((navigator as { gpu?: unknown }).gpu);
+  } catch {
+    return false;
+  }
+}
+
+function postGpuStatus(active: boolean, reason?: string): void {
+  ctx.postMessage({ type: 'GPU_STATUS', active, reason });
+}
+
 async function releaseSession(): Promise<void> {
   const current = session;
   session = null;
   sessionModelUrl = null;
+  sessionMode = null;
   if (current) {
     try {
       await current.release();
@@ -75,30 +160,82 @@ async function releaseSession(): Promise<void> {
   }
 }
 
-async function getSession(modelUrl: string): Promise<InferenceSession> {
-  if (session && sessionModelUrl === modelUrl) {
-    return session;
-  }
+function buildSession(data: Uint8Array, mode: ExecutionMode): Promise<InferenceSession> {
+  return InferenceSession.create(data, {
+    executionProviders: mode === 'gpu' ? ['webgpu', 'wasm'] : ['wasm'],
+    graphOptimizationLevel: 'all',
+    executionMode: 'sequential',
+    enableCpuMemArena: true,
+    enableMemPattern: true,
+  });
+}
 
-  await releaseSession();
+async function createSession(
+  modelUrl: string,
+  mode: ExecutionMode,
+  providedBuffer?: Uint8Array,
+): Promise<InferenceSession> {
+  if (providedBuffer) {
+    try {
+      return await buildSession(providedBuffer, mode);
+    } catch (error) {
+      console.warn('Shared model buffer rejected, falling back to fetch:', error);
+    }
+  }
 
   const response = await fetch(modelUrl);
   if (!response.ok) {
     throw new Error(`Failed to load model: HTTP ${response.status}`);
   }
-  const buffer = await response.arrayBuffer();
+  return buildSession(new Uint8Array(await response.arrayBuffer()), mode);
+}
 
-  const created = await InferenceSession.create(buffer, {
-    executionProviders: ['wasm'],
-    graphOptimizationLevel: 'all',
-    executionMode: 'sequential',
-    enableCpuMemArena: false,
-    enableMemPattern: false,
-  });
+async function getSession(modelUrl: string): Promise<InferenceSession> {
+  const desiredMode: ExecutionMode = wantsGpu && !gpuFailed && hasWebGpu() ? 'gpu' : 'wasm';
 
-  session = created;
+  if (session && sessionModelUrl === modelUrl && sessionMode === desiredMode) {
+    return session;
+  }
+
+  await releaseSession();
+  await ensureWasmBinary();
+
+  const providedBuffer = providedModelBuffers.get(modelUrl);
+
+  if (desiredMode === 'gpu') {
+    try {
+      session = await createSession(modelUrl, 'gpu', providedBuffer);
+      sessionMode = 'gpu';
+      sessionModelUrl = modelUrl;
+      postGpuStatus(true);
+      return session;
+    } catch (error) {
+      gpuFailed = true;
+      postGpuStatus(false, error instanceof Error ? error.message : String(error));
+    }
+  } else if (wantsGpu && !gpuFailed && !hasWebGpu()) {
+    postGpuStatus(false, 'WebGPU not available');
+  }
+
+  session = await createSession(modelUrl, 'wasm', providedBuffer);
+  sessionMode = 'wasm';
   sessionModelUrl = modelUrl;
-  return created;
+  return session;
+}
+
+async function warmupSession(target: InferenceSession, resolution: number): Promise<void> {
+  if (!Number.isFinite(resolution) || resolution <= 0) {
+    return;
+  }
+  const area = resolution * resolution;
+  const inputName = target.inputNames[0];
+  const tensor = new Tensor('float32', new Float32Array(area * 3), [1, 3, resolution, resolution]);
+  try {
+    await target.run({ [inputName]: tensor });
+  } finally {
+    const disposable = tensor as unknown as { dispose?: () => void };
+    disposable.dispose?.();
+  }
 }
 
 async function runInference(
@@ -106,21 +243,34 @@ async function runInference(
   modelUrl: string,
   resolution: number,
   report: (progress: number) => void,
+  timings: Record<string, number>,
 ): Promise<Blob> {
+  let last = Date.now();
+  const lap = (key: string) => {
+    const now = Date.now();
+    timings[key] = now - last;
+    last = now;
+  };
+
   const inferenceSession = await getSession(modelUrl);
+  lap('session');
   report(25);
 
   const bitmap = await createImageBitmap(imageBlob);
+  lap('decode');
 
   try {
-    const work = new OffscreenCanvas(resolution, resolution);
-    const workCtx = work.getContext('2d', { willReadFrequently: true });
-    if (!workCtx) {
-      throw new Error('Failed to create 2D context for preprocessing');
-    }
+    const workCtx = getPreprocessContext(resolution);
     workCtx.imageSmoothingEnabled = true;
     workCtx.imageSmoothingQuality = 'high';
-    workCtx.drawImage(bitmap, 0, 0, resolution, resolution);
+    // 用 bitmap 自带的缩放器生成小图，避免在 willReadFrequently 软件画布上做大图高质量缩放。
+    const resized = await createImageBitmap(bitmap, {
+      resizeWidth: resolution,
+      resizeHeight: resolution,
+      resizeQuality: 'high',
+    });
+    workCtx.drawImage(resized, 0, 0, resolution, resolution);
+    resized.close();
 
     const pixels = workCtx.getImageData(0, 0, resolution, resolution).data;
     const area = resolution * resolution;
@@ -131,12 +281,14 @@ async function runInference(
       input[area + i] = (pixels[pixel + 1] - 128) / 256;
       input[area * 2 + i] = (pixels[pixel + 2] - 128) / 256;
     }
+    lap('preprocess');
     report(40);
 
     const inputName = inferenceSession.inputNames[0];
     const outputName = inferenceSession.outputNames[0];
     const tensor = new Tensor('float32', input, [1, 3, resolution, resolution]);
     const outputs = await inferenceSession.run({ [inputName]: tensor });
+    lap('inference');
     const output = outputs[outputName];
 
     const rawMask = output.data;
@@ -147,38 +299,31 @@ async function runInference(
     const maskHeight = dims[dims.length - 2];
     report(90);
 
-    const maskCanvas = new OffscreenCanvas(maskWidth, maskHeight);
-    const maskCtx = maskCanvas.getContext('2d');
-    if (!maskCtx) {
-      throw new Error('Failed to create 2D context for mask');
-    }
+    const { canvas: maskCanvas, ctx: maskCtx } = getMaskCanvas(maskWidth, maskHeight);
     const maskImage = maskCtx.createImageData(maskWidth, maskHeight);
-    const maskPixels = maskImage.data;
+    // RGBA 内存为小端序，一次 32 位写入即可同时设置常量白色 RGB 与变化的 Alpha。
+    const maskU32 = new Uint32Array(maskImage.data.buffer);
     const maskArea = maskWidth * maskHeight;
     for (let i = 0; i < maskArea; i += 1) {
       const value = mask[i];
-      const alpha = Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0)) * 255;
-      const pixel = i * 4;
-      maskPixels[pixel] = 255;
-      maskPixels[pixel + 1] = 255;
-      maskPixels[pixel + 2] = 255;
-      maskPixels[pixel + 3] = alpha;
+      const normalized = Number.isFinite(value) ? value : 0;
+      const alpha = Math.min(255, Math.max(0, Math.round(normalized * 255)));
+      maskU32[i] = (alpha << 24) | 0x00ffffff;
     }
     maskCtx.putImageData(maskImage, 0, 0);
+    lap('postprocess');
 
-    const outputCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const outputCtx = outputCanvas.getContext('2d');
-    if (!outputCtx) {
-      throw new Error('Failed to create 2D context for output');
-    }
+    const { canvas: outputCanvas, ctx: outputCtx } = getOutputCanvas(bitmap.width, bitmap.height);
     outputCtx.drawImage(bitmap, 0, 0);
     outputCtx.globalCompositeOperation = 'destination-in';
     outputCtx.imageSmoothingEnabled = true;
     outputCtx.imageSmoothingQuality = 'high';
     outputCtx.drawImage(maskCanvas, 0, 0, bitmap.width, bitmap.height);
+    lap('composite');
     report(95);
 
     const resultBlob = await outputCanvas.convertToBlob({ type: 'image/png' });
+    lap('encode');
     report(100);
     return resultBlob;
   } finally {
@@ -198,6 +343,8 @@ async function handleTask(
     }
   };
 
+  const timings: Record<string, number> = {};
+
   try {
     await ensureWasmBinary();
     report(10);
@@ -212,6 +359,7 @@ async function handleTask(
       message.modelUrl,
       message.resolution,
       report,
+      timings,
     );
 
     if (cancelledTasks.has(taskId)) {
@@ -235,7 +383,25 @@ async function handleTask(
 
     ctx.postMessage({ type: 'ERROR_TASK', taskId, error: errorMessage, fatal });
   } finally {
+    ctx.postMessage({ type: 'TIMING_TASK', taskId, timings });
     cancelledTasks.delete(taskId);
+  }
+}
+
+async function handlePreload(
+  message: Extract<InboundMessage, { type: 'PRELOAD_MODEL' }>,
+): Promise<void> {
+  try {
+    const target = await getSession(message.modelUrl);
+    await warmupSession(target, message.resolution);
+  } catch (error) {
+    console.warn('Model preload/warmup failed:', error);
+  } finally {
+    ctx.postMessage({
+      type: 'PRELOAD_DONE',
+      modelUrl: message.modelUrl,
+      mode: sessionMode ?? 'wasm',
+    });
   }
 }
 
@@ -252,11 +418,27 @@ function handleMessage(event: MessageEvent<InboundMessage>): void {
 
   if (message.type === 'CONFIGURE_WORKER') {
     env.wasm.numThreads = Math.max(1, Math.min(4, Math.floor(message.numThreads)));
+    if (typeof message.useGpu === 'boolean') {
+      if (message.useGpu && !wantsGpu) {
+        gpuFailed = false;
+      }
+      wantsGpu = message.useGpu;
+    }
+    return;
+  }
+
+  if (message.type === 'PRELOAD_MODEL') {
+    void handlePreload(message);
     return;
   }
 
   if (message.type === 'UNLOAD_MODEL') {
     void releaseSession();
+    return;
+  }
+
+  if (message.type === 'PROVIDE_MODEL') {
+    providedModelBuffers.set(message.modelUrl, new Uint8Array(message.buffer));
     return;
   }
 

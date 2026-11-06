@@ -148,6 +148,8 @@ export const translations = {
   modelDownloadFailedTitle: 'Download Failed',
   cancelDownload: 'Cancel',
   saving: 'Caching...',
+  defaultModel: 'Default',
+  setAsDefault: 'Set as default model',
 
   language: 'Language',
   languageZh: '中文',
@@ -177,6 +179,13 @@ export const translations = {
   settingsPerformanceDesc: 'Control how many images are processed at the same time.',
   settingsConcurrencyDesc:
     'Higher values finish batches faster, but use more memory because each parallel job keeps its own copy of the model.',
+  gpuAcceleration: 'GPU acceleration',
+  gpuAccelerationDesc:
+    'Use the GPU (WebGPU) to speed up processing. Falls back to CPU automatically when unavailable.',
+  gpuFallbackNotice: 'GPU acceleration is unavailable here, switched to CPU.',
+  preloadModels: 'Preload models',
+  settingsPreloadDesc:
+    'Warm up idle workers when a batch is queued, so processing starts faster. Uses more memory.',
   relatedToolsSubtitle:
     "Here are some of my other projects. If you're interested in image processing tools, feel free to check them out.",
   toolImageDashName: 'Image Dash',

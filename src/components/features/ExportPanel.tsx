@@ -65,11 +65,20 @@ export function ExportPanel({ disabled = false }: ExportPanelProps) {
         ctx.drawImage(resultImg, 0, 0, canvas.width, canvas.height);
 
         const quality = selectedFormat === 'webp' ? 0.9 : undefined;
-        const dataUrl = canvas.toDataURL(`image/${selectedFormat}`, quality);
-        const link = document.createElement('a');
-        link.download = `bgx-removed-${Date.now()}.${selectedFormat}`;
-        link.href = dataUrl;
-        link.click();
+        const downloadName = `bgx-removed-${Date.now()}.${selectedFormat}`;
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) return;
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = downloadName;
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+          },
+          `image/${selectedFormat}`,
+          quality,
+        );
       };
       resultImg.src = resultImage;
     };

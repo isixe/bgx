@@ -25,6 +25,7 @@ interface PendingTask {
 interface WorkerSlot {
   worker: Worker;
   busy: boolean;
+  preloading: boolean;
   currentTaskId: string | null;
   index: number;
 }
@@ -33,7 +34,10 @@ type WorkerMessage =
   | { type: 'PROGRESS_TASK'; taskId: string; progress: number }
   | { type: 'SUCCESS_TASK'; taskId: string; resultBlob: Blob }
   | { type: 'ERROR_TASK'; taskId: string; error: string; fatal: boolean }
-  | { type: 'CANCELLED_TASK'; taskId: string };
+  | { type: 'CANCELLED_TASK'; taskId: string }
+  | { type: 'PRELOAD_DONE'; modelUrl: string; mode: 'gpu' | 'wasm' }
+  | { type: 'GPU_STATUS'; active: boolean; reason?: string }
+  | { type: 'TIMING_TASK'; taskId: string; timings: Record<string, number> };
 
 const FATAL_PATTERN =
   /memory access out of bounds|cannot enlarge memory|out of memory|allocation failed|RangeError|Aborted|RuntimeError|Assertion failed|OOM/i;
@@ -71,8 +75,14 @@ export class OnnxWorkerPool {
   private readonly slots: WorkerSlot[] = [];
   private readonly pendingTasks: PendingTask[] = [];
   private readonly activeTasks = new Map<string, PendingTask>();
+  private readonly modelBuffers = new Map<string, SharedArrayBuffer>();
+  private readonly modelBufferRequests = new Map<string, Promise<void>>();
   private disposed = false;
   private concurrencyLimit = DEFAULT_BATCH_CONCURRENCY;
+  private useGpu = true;
+  private gpuActive: boolean | null = null;
+
+  onGpuStatus: ((status: { active: boolean; reason?: string }) => void) | null = null;
 
   constructor() {
     this.resizeSlots();
@@ -96,6 +106,34 @@ export class OnnxWorkerPool {
     this.resizeSlots();
     this.applyThreadConfig();
     this.drainQueue();
+  }
+
+  setUseGpu(useGpu: boolean): void {
+    if (this.disposed || useGpu === this.useGpu) {
+      return;
+    }
+
+    this.useGpu = useGpu;
+    const numThreads = getSessionThreads(this.concurrencyLimit);
+    for (const slot of this.slots) {
+      slot.worker.postMessage({ type: 'CONFIGURE_WORKER', numThreads, useGpu });
+    }
+  }
+
+  preload(modelUrl: string, resolution: number): void {
+    if (this.disposed || !modelUrl) {
+      return;
+    }
+
+    this.ensureModelBuffer(modelUrl);
+
+    for (const slot of this.slots) {
+      if (slot.busy || slot.preloading) {
+        continue;
+      }
+      slot.preloading = true;
+      slot.worker.postMessage({ type: 'PRELOAD_MODEL', modelUrl, resolution });
+    }
   }
 
   get activeCount(): number {
@@ -129,6 +167,7 @@ export class OnnxWorkerPool {
         progressTimer: null,
         resolve,
       });
+      this.ensureModelBuffer(modelUrl);
       this.drainQueue();
     });
   }
@@ -178,16 +217,65 @@ export class OnnxWorkerPool {
       slot.worker.terminate();
     }
     this.slots.length = 0;
+    this.modelBuffers.clear();
+    this.modelBufferRequests.clear();
+  }
+
+  private ensureModelBuffer(modelUrl: string): void {
+    if (
+      this.disposed ||
+      !modelUrl ||
+      typeof SharedArrayBuffer === 'undefined' ||
+      this.modelBuffers.has(modelUrl) ||
+      this.modelBufferRequests.has(modelUrl)
+    ) {
+      return;
+    }
+
+    // 只抓取一次模型字節，透過 SharedArrayBuffer 共享給所有 worker，
+    // 避免每個 worker 各自 fetch 同一模型造成併發時的內存峰值。
+    const request = (async () => {
+      try {
+        const response = await fetch(modelUrl);
+        if (!response.ok) {
+          return;
+        }
+        const bytes = await response.arrayBuffer();
+        if (this.disposed) {
+          return;
+        }
+        const shared = new SharedArrayBuffer(bytes.byteLength);
+        new Uint8Array(shared).set(new Uint8Array(bytes));
+        this.modelBuffers.set(modelUrl, shared);
+        this.broadcastModelBuffer(modelUrl, shared);
+      } catch (error) {
+        // 共享緩衝不可用時靜默回退到 worker 內的獨立 fetch。
+        console.warn('[onnx-pool] shared model buffer unavailable, falling back:', error);
+      }
+    })();
+
+    this.modelBufferRequests.set(modelUrl, request);
+  }
+
+  private broadcastModelBuffer(modelUrl: string, buffer: SharedArrayBuffer): void {
+    for (const slot of this.slots) {
+      slot.worker.postMessage({ type: 'PROVIDE_MODEL', modelUrl, buffer });
+    }
   }
 
   private createSlot(index: number): WorkerSlot {
     const worker = new Worker(new URL('./onnx-worker.ts', import.meta.url), { type: 'module' });
-    const slot: WorkerSlot = { worker, busy: false, currentTaskId: null, index };
+    const slot: WorkerSlot = { worker, busy: false, preloading: false, currentTaskId: null, index };
 
     worker.postMessage({
       type: 'CONFIGURE_WORKER',
       numThreads: getSessionThreads(this.concurrencyLimit),
+      useGpu: this.useGpu,
     });
+
+    for (const [modelUrl, buffer] of this.modelBuffers) {
+      worker.postMessage({ type: 'PROVIDE_MODEL', modelUrl, buffer });
+    }
 
     worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
       this.handleMessage(slot, event.data);
@@ -212,6 +300,27 @@ export class OnnxWorkerPool {
       if (task) {
         this.handleProgress(task, message.progress);
       }
+      return;
+    }
+
+    if (message.type === 'TIMING_TASK') {
+      if ((import.meta as { env?: { DEV?: boolean } }).env?.DEV) {
+        console.debug('[onnx-pool] timings', message.taskId, message.timings);
+      }
+      return;
+    }
+
+    if (message.type === 'GPU_STATUS') {
+      if (this.gpuActive !== message.active) {
+        this.gpuActive = message.active;
+        this.onGpuStatus?.({ active: message.active, reason: message.reason });
+      }
+      return;
+    }
+
+    if (message.type === 'PRELOAD_DONE') {
+      slot.preloading = false;
+      this.drainQueue();
       return;
     }
 
@@ -346,7 +455,7 @@ export class OnnxWorkerPool {
   private applyThreadConfig(): void {
     const numThreads = getSessionThreads(this.concurrencyLimit);
     for (const slot of this.slots) {
-      slot.worker.postMessage({ type: 'CONFIGURE_WORKER', numThreads });
+      slot.worker.postMessage({ type: 'CONFIGURE_WORKER', numThreads, useGpu: this.useGpu });
     }
   }
 
@@ -384,7 +493,7 @@ export class OnnxWorkerPool {
     }
 
     while (this.pendingTasks.length > 0) {
-      const slot = this.slots.find((candidate) => !candidate.busy);
+      const slot = this.slots.find((candidate) => !candidate.busy && !candidate.preloading);
       if (!slot) {
         return;
       }

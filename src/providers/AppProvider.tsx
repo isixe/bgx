@@ -36,6 +36,11 @@ export function AppProvider() {
     batchConcurrency,
     updateBatchItemStatus,
     setBatchItemProgress,
+    cachedModelUrl,
+    gpuAcceleration,
+    setGpuFallbackActive,
+    applyGpuFallback,
+    preloadEnabled,
   } = useAppStore();
 
   useEffect(() => {
@@ -179,6 +184,60 @@ export function AppProvider() {
       poolRef.current?.setConcurrency(batchConcurrency);
     }
   }, [batchConcurrency, isPoolReady]);
+
+  useEffect(() => {
+    if (isPoolReady) {
+      poolRef.current?.setUseGpu(gpuAcceleration);
+    }
+  }, [gpuAcceleration, isPoolReady]);
+
+  useEffect(() => {
+    if (!isPoolReady) {
+      return;
+    }
+
+    const pool = poolRef.current;
+    if (!pool) {
+      return;
+    }
+
+    pool.onGpuStatus = (status) => {
+      if (status.active) {
+        setGpuFallbackActive(false);
+        return;
+      }
+      if (useAppStore.getState().gpuAcceleration) {
+        setGpuFallbackActive(true);
+        setGpuAcceleration(false);
+      }
+    };
+
+    return () => {
+      pool.onGpuStatus = null;
+    };
+  }, [isPoolReady, setGpuAcceleration, setGpuFallbackActive]);
+
+  const preloadedUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isPoolReady || !cachedModelUrl || !preloadEnabled) {
+      return;
+    }
+    // 懒预热：仅当待处理队列超过并发数（确实会占用多个 worker）时才预热所有空闲 slot
+    if (batchQueue.length <= batchConcurrency) {
+      return;
+    }
+    if (preloadedUrlRef.current === cachedModelUrl) {
+      return;
+    }
+
+    const model = getModelById(currentModel);
+    if (!model) {
+      return;
+    }
+
+    preloadedUrlRef.current = cachedModelUrl;
+    poolRef.current?.preload(cachedModelUrl, model.resolution);
+  }, [cachedModelUrl, currentModel, isPoolReady, preloadEnabled, batchQueue, batchConcurrency]);
 
   useEffect(() => {
     if (!batchMode || !isPoolReady) {

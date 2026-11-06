@@ -37,6 +37,9 @@ export function MainLayout() {
     selectAllBatchItems,
     reprocessBatchItem,
     setBatchMode,
+    gpuAcceleration,
+    setGpuAcceleration,
+    gpuFallbackActive,
   } = useAppStore();
   const { t } = useTranslation();
 
@@ -285,10 +288,13 @@ export function MainLayout() {
                   batchQueue={batchQueue}
                   selectedBatchItemIds={selectedBatchItemIds}
                   currentModel={currentModel}
-                  selectAllBatchItems={selectAllBatchItems}
-                  reprocessBatchItem={reprocessBatchItem}
-                  setBatchMode={setBatchMode}
-                />
+              selectAllBatchItems={selectAllBatchItems}
+              reprocessBatchItem={reprocessBatchItem}
+              setBatchMode={setBatchMode}
+              gpuAcceleration={gpuAcceleration}
+              setGpuAcceleration={setGpuAcceleration}
+              gpuFallbackActive={gpuFallbackActive}
+            />
               </div>
             </div>
           )}
@@ -408,9 +414,12 @@ export function MainLayout() {
               selectedBatchItemIds={selectedBatchItemIds}
               currentModel={currentModel}
               selectAllBatchItems={selectAllBatchItems}
-              reprocessBatchItem={reprocessBatchItem}
-              setBatchMode={setBatchMode}
-            />
+                  reprocessBatchItem={reprocessBatchItem}
+                  setBatchMode={setBatchMode}
+                  gpuAcceleration={gpuAcceleration}
+                  setGpuAcceleration={setGpuAcceleration}
+                  gpuFallbackActive={gpuFallbackActive}
+                />
           </aside>
         )}
       </div>
@@ -436,6 +445,9 @@ interface SidebarContentProps {
   selectAllBatchItems: (selectAll: boolean) => void;
   reprocessBatchItem: (id: string, modelId: string) => void;
   setBatchMode: (mode: boolean) => void;
+  gpuAcceleration: boolean;
+  setGpuAcceleration: (enabled: boolean) => void;
+  gpuFallbackActive: boolean;
 }
 
 function SidebarContent({
@@ -455,6 +467,9 @@ function SidebarContent({
   selectAllBatchItems,
   reprocessBatchItem,
   setBatchMode,
+  gpuAcceleration,
+  setGpuAcceleration,
+  gpuFallbackActive,
 }: SidebarContentProps) {
   const latestVersion = useAppStore((state) => state.latestVersion);
   const dismissedUpdateVersion = useAppStore((state) => state.dismissedUpdateVersion);
@@ -554,9 +569,13 @@ function SidebarContent({
         setZipProgress(Math.round(((i + 1) / toExport.length) * 80));
       }
 
-      const zipBlob = await zip.generateAsync({ type: 'blob' }, (metadata) => {
-        setZipProgress(80 + Math.round(metadata.percent * 0.2));
-      });
+      // PNG 已压缩，ZIP 用 STORE 直接存储，避免二次压缩耗时并防止体积膨胀。
+      const zipBlob = await zip.generateAsync(
+        { type: 'blob', compression: 'STORE' },
+        (metadata) => {
+          setZipProgress(80 + Math.round(metadata.percent * 0.2));
+        },
+      );
       setZipProgress(100);
       const zipBytes = new Uint8Array(await zipBlob.arrayBuffer());
       const zipName = `bgx-export-${Date.now()}.zip`;
@@ -768,6 +787,28 @@ function SidebarContent({
         )}
 
         <ModelSelector />
+
+        <div className="space-y-1 px-1">
+          <div className="flex items-center justify-between">
+            <span
+              className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}
+            >
+              {t('gpuAcceleration')}
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={gpuAcceleration}
+              onClick={() => setGpuAcceleration(!gpuAcceleration)}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${gpuAcceleration ? 'bg-indigo-600' : isDarkMode ? 'bg-slate-600' : 'bg-slate-300'}`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${gpuAcceleration ? 'translate-x-6' : 'translate-x-1'}`}
+              />
+            </button>
+          </div>
+          {gpuFallbackActive && <p className="text-xs">{t('gpuFallbackNotice')}</p>}
+        </div>
 
         {originalImage && !batchMode && <ExportPanel disabled={isProcessing} />}
       </div>

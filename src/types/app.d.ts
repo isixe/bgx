@@ -23,6 +23,8 @@ export interface DownloadProgressInfo {
 
 export type AppState = {
   currentModel: string;
+  // 持久化的默认模型（应用启动时使用）
+  defaultModel: string;
   originalImage: string | null;
   resultImage: string | null;
   isProcessing: boolean;
@@ -48,8 +50,21 @@ export type AppState = {
   modelDownloadProgresses: Record<string, DownloadProgressInfo | null>;
   // 正在静默写入 IndexedDB 的模型
   savingModels: string[];
+  // GPU (WebGPU) 加速：用户偏好，失败时自动回退到 CPU
+  gpuAcceleration: boolean;
+  // 运行期状态：GPU 已启用但实际回退到 CPU
+  gpuFallbackActive: boolean;
+  // 批处理数量超过并发数时，提前把模型加载进空闲 worker（懒预热）
+  preloadEnabled: boolean;
+
+  setGpuAcceleration: (enabled: boolean) => void;
+  setGpuFallbackActive: (active: boolean) => void;
+  // GPU 自动回退到 CPU：仅影响当前会话，不写入用户偏好（下次启动仍默认启用 GPU）
+  applyGpuFallback: () => void;
+  setPreloadEnabled: (enabled: boolean) => void;
 
   setCurrentModel: (model: string) => Promise<void>;
+  setDefaultModel: (modelId: string) => void;
   setCurrentPage: (page: 'main' | 'models' | 'settings') => void;
   setSettingsTab: (tab: SettingsTab) => void;
   setOriginalImage: (image: string | null) => void;

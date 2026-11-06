@@ -25,6 +25,8 @@ export function SettingsPage() {
     setLatestVersion,
     batchConcurrency,
     setBatchConcurrency,
+    preloadEnabled,
+    setPreloadEnabled,
   } = useAppStore();
 
   const cardClasses = `rounded-xl border p-4 ${
@@ -407,6 +409,40 @@ export function SettingsPage() {
                         ariaLabel={t('batchConcurrency')}
                         title={t('batchConcurrency')}
                       />
+                    </div>
+                    <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                        >
+                          {t('preloadModels')}
+                        </p>
+                        <p
+                          className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                        >
+                          {t('settingsPreloadDesc')}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={preloadEnabled}
+                        aria-label={t('preloadModels')}
+                        onClick={() => setPreloadEnabled(!preloadEnabled)}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
+                          preloadEnabled
+                            ? 'bg-indigo-600'
+                            : isDarkMode
+                              ? 'bg-slate-600'
+                              : 'bg-slate-300'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                            preloadEnabled ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
                     </div>
                   </div>
                 </div>

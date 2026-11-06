@@ -57,8 +57,41 @@ function getInitialBatchConcurrency(): number {
   return DEFAULT_BATCH_CONCURRENCY;
 }
 
+function getInitialGpuAcceleration(): boolean {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('bgx-gpu-acceleration');
+    if (stored !== null) {
+      return stored === 'true';
+    }
+  }
+  return true;
+}
+
+function getInitialPreloadEnabled(): boolean {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('bgx-preload-enabled');
+    if (stored !== null) {
+      return stored === 'true';
+    }
+  }
+  return true;
+}
+
+function getInitialDefaultModel(): string {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('bgx-default-model');
+    if (stored && MODELS.some((model) => model.id === stored)) {
+      return stored;
+    }
+  }
+  return MODELS[0].id;
+}
+
+const initialDefaultModel = getInitialDefaultModel();
+
 const initialState = {
-  currentModel: 'u2netp' as string,
+  currentModel: initialDefaultModel,
+  defaultModel: initialDefaultModel,
   originalImage: null as string | null,
   resultImage: null as string | null,
   isProcessing: false,
@@ -93,6 +126,9 @@ const initialState = {
   viewingBatchResult: false,
   selectedBatchItemIds: [] as string[],
   selectionAnchorId: null as string | null,
+  gpuAcceleration: getInitialGpuAcceleration(),
+  gpuFallbackActive: false,
+  preloadEnabled: getInitialPreloadEnabled(),
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -204,6 +240,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().setModelDownloadProgress(modelId, null);
   },
 
+  setDefaultModel: (modelId) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bgx-default-model', modelId);
+    }
+    set({ defaultModel: modelId });
+  },
+
   setCurrentModel: async (model) => {
     set({
       currentModel: model,
@@ -273,6 +316,20 @@ export const useAppStore = create<AppState>((set, get) => ({
       localStorage.setItem('bgx-check-updates', String(enabled));
     }
     set({ checkUpdatesOnStartup: enabled });
+  },
+  setGpuAcceleration: (enabled) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bgx-gpu-acceleration', String(enabled));
+    }
+    set({ gpuAcceleration: enabled, gpuFallbackActive: enabled ? false : get().gpuFallbackActive });
+  },
+  setGpuFallbackActive: (active) => set({ gpuFallbackActive: active }),
+  applyGpuFallback: () => set({ gpuAcceleration: false, gpuFallbackActive: true }),
+  setPreloadEnabled: (enabled) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bgx-preload-enabled', String(enabled));
+    }
+    set({ preloadEnabled: enabled });
   },
   setUpdateCheckState: (state) => set({ updateCheckState: state }),
   setLatestVersion: (version) => set({ latestVersion: version }),
