@@ -15,7 +15,7 @@ export type ModelConfig = {
   filename: string;
   descKey: string;
   downloadUrl: string;
-  feedbackUrl: string;
+  feedbackUrl: string[];
 };
 
 export type ModelStatus = 'not_downloaded' | 'downloading' | 'downloaded' | 'error';

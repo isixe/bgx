@@ -43,7 +43,7 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 async function fetchWithFallback(
-  model: { downloadUrl: string; feedbackUrl: string },
+  model: { downloadUrl: string; feedbackUrl: string[] },
   signal?: AbortSignal,
 ): Promise<Response> {
   const errors: string[] = [];
@@ -67,24 +67,25 @@ async function fetchWithFallback(
     errors.push('downloadUrl: empty');
   }
 
-  // 回退到 feedbackUrl
-  if (!model.feedbackUrl) {
+  const mirrors = model.feedbackUrl ?? [];
+  if (mirrors.length === 0) {
     errors.push('feedbackUrl: empty');
-    throw new Error(`Failed to download model from all URLs: ${errors.join('; ')}`);
   }
 
-  try {
-    const response = await fetch(model.feedbackUrl, {
-      headers: { Accept: '*/*' },
-      signal,
-    });
-    if (response.ok) return response;
-    errors.push(`feedbackUrl: HTTP ${response.status}`);
-  } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw err;
+  for (let index = 0; index < mirrors.length; index += 1) {
+    try {
+      const response = await fetch(mirrors[index], {
+        headers: { Accept: '*/*' },
+        signal,
+      });
+      if (response.ok) return response;
+      errors.push(`feedbackUrl[${index}]: HTTP ${response.status}`);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw err;
+      }
+      errors.push(`feedbackUrl[${index}]: ${err instanceof Error ? err.message : String(err)}`);
     }
-    errors.push(`feedbackUrl: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   throw new Error(`Failed to download model from all URLs: ${errors.join('; ')}`);

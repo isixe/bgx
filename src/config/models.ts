@@ -17,7 +17,10 @@ export const MODELS: ModelConfig[] = [
     descKey: 'model.u2netp.desc',
     downloadUrl:
       'https://huggingface.co/tomjackson2023/rembg/resolve/main/u2netp.onnx?download=true',
-    feedbackUrl: 'https://unpkg.com/@rmbg/model-u2netp@0.0.1/u2netp.onnx',
+    feedbackUrl: [
+      'https://www.modelscope.cn/models/shiertier/rembg/resolve/master/u2netp.onnx',
+      'https://unpkg.com/@rmbg/model-u2netp@0.0.1/u2netp.onnx',
+    ],
   },
   {
     id: 'u2net',
@@ -28,7 +31,7 @@ export const MODELS: ModelConfig[] = [
     filename: 'u2net.onnx',
     descKey: 'model.u2net.desc',
     downloadUrl: 'https://huggingface.co/tomjackson2023/rembg/resolve/main/u2net.onnx?download=true',
-    feedbackUrl: 'https://www.modelscope.cn/models/shiertier/rembg/resolve/master/u2net.onnx',
+    feedbackUrl: ['https://www.modelscope.cn/models/shiertier/rembg/resolve/master/u2net.onnx'],
   },
   {
     id: 'u2net_human_seg',
@@ -40,8 +43,9 @@ export const MODELS: ModelConfig[] = [
     descKey: 'model.u2net_human_seg.desc',
     downloadUrl:
       'https://huggingface.co/tomjackson2023/rembg/resolve/main/u2net_human_seg.onnx?download=true',
-    feedbackUrl:
+    feedbackUrl: [
       'https://www.modelscope.cn/models/shiertier/rembg/resolve/master/u2net_human_seg.onnx',
+    ],
   },
   {
     id: 'silueta',
@@ -53,7 +57,7 @@ export const MODELS: ModelConfig[] = [
     descKey: 'model.silueta.desc',
     downloadUrl:
       'https://huggingface.co/tomjackson2023/rembg/resolve/main/silueta.onnx?download=true',
-    feedbackUrl: 'https://www.modelscope.cn/models/shiertier/rembg/resolve/master/silueta.onnx',
+    feedbackUrl: ['https://www.modelscope.cn/models/shiertier/rembg/resolve/master/silueta.onnx'],
   },
   {
     id: 'isnet-general-use',
@@ -65,8 +69,9 @@ export const MODELS: ModelConfig[] = [
     descKey: 'model.isnet-general-use.desc',
     downloadUrl:
       'https://huggingface.co/tomjackson2023/rembg/resolve/main/isnet-general-use.onnx?download=true',
-    feedbackUrl:
+    feedbackUrl: [
       'https://www.modelscope.cn/models/shiertier/rembg/resolve/master/isnet-general-use.onnx',
+    ],
   },
   {
     id: 'isnet-anime',
@@ -78,7 +83,9 @@ export const MODELS: ModelConfig[] = [
     descKey: 'model.isnet-anime.desc',
     downloadUrl:
       'https://huggingface.co/tomjackson2023/rembg/resolve/main/isnet-anime.onnx?download=true',
-    feedbackUrl: 'https://www.modelscope.cn/models/shiertier/rembg/resolve/master/isnet-anime.onnx',
+    feedbackUrl: [
+      'https://www.modelscope.cn/models/shiertier/rembg/resolve/master/isnet-anime.onnx',
+    ],
   },
   {
     id: 'bria-rmbg-quantized',
@@ -90,8 +97,9 @@ export const MODELS: ModelConfig[] = [
     descKey: 'model.bria-rmbg-quantized.desc',
     downloadUrl:
       'https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model_quantized.onnx?download=true',
-    feedbackUrl:
+    feedbackUrl: [
       'https://www.modelscope.cn/models/AI-ModelScope/RMBG-1.4/resolve/master/onnx/model_quantized.onnx',
+    ],
   },
   {
     id: 'bria-rmbg-fp16',
@@ -103,8 +111,9 @@ export const MODELS: ModelConfig[] = [
     descKey: 'model.bria-rmbg-fp16.desc',
     downloadUrl:
       'https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model_fp16.onnx?download=true',
-    feedbackUrl:
+    feedbackUrl: [
       'https://www.modelscope.cn/models/AI-ModelScope/RMBG-1.4/resolve/master/onnx/model_fp16.onnx',
+    ],
   },
   {
     id: 'bria-rmbg',
@@ -116,7 +125,8 @@ export const MODELS: ModelConfig[] = [
     descKey: 'model.bria-rmbg.desc',
     downloadUrl:
       'https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx?download=true',
-    feedbackUrl:
+    feedbackUrl: [
       'https://www.modelscope.cn/models/AI-ModelScope/RMBG-1.4/resolve/master/onnx/model.onnx',
+    ],
   },
 ];
