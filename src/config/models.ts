@@ -30,7 +30,8 @@ export const MODELS: ModelConfig[] = [
     size: '~168MB',
     filename: 'u2net.onnx',
     descKey: 'model.u2net.desc',
-    downloadUrl: 'https://huggingface.co/tomjackson2023/rembg/resolve/main/u2net.onnx?download=true',
+    downloadUrl:
+      'https://huggingface.co/tomjackson2023/rembg/resolve/main/u2net.onnx?download=true',
     feedbackUrl: ['https://www.modelscope.cn/models/shiertier/rembg/resolve/master/u2net.onnx'],
   },
   {

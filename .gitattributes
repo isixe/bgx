@@ -1,0 +1,13 @@
+# 统一使用 LF，避免 Windows(core.autocrlf) 与 CI 之间换行符不一致导致 prettier --check 失败
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.wasm binary
+*.onnx binary
+*.woff binary
+*.woff2 binary

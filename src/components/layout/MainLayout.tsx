@@ -288,13 +288,13 @@ export function MainLayout() {
                   batchQueue={batchQueue}
                   selectedBatchItemIds={selectedBatchItemIds}
                   currentModel={currentModel}
-              selectAllBatchItems={selectAllBatchItems}
-              reprocessBatchItem={reprocessBatchItem}
-              setBatchMode={setBatchMode}
-              gpuAcceleration={gpuAcceleration}
-              setGpuAcceleration={setGpuAcceleration}
-              gpuFallbackActive={gpuFallbackActive}
-            />
+                  selectAllBatchItems={selectAllBatchItems}
+                  reprocessBatchItem={reprocessBatchItem}
+                  setBatchMode={setBatchMode}
+                  gpuAcceleration={gpuAcceleration}
+                  setGpuAcceleration={setGpuAcceleration}
+                  gpuFallbackActive={gpuFallbackActive}
+                />
               </div>
             </div>
           )}
@@ -414,12 +414,12 @@ export function MainLayout() {
               selectedBatchItemIds={selectedBatchItemIds}
               currentModel={currentModel}
               selectAllBatchItems={selectAllBatchItems}
-                  reprocessBatchItem={reprocessBatchItem}
-                  setBatchMode={setBatchMode}
-                  gpuAcceleration={gpuAcceleration}
-                  setGpuAcceleration={setGpuAcceleration}
-                  gpuFallbackActive={gpuFallbackActive}
-                />
+              reprocessBatchItem={reprocessBatchItem}
+              setBatchMode={setBatchMode}
+              gpuAcceleration={gpuAcceleration}
+              setGpuAcceleration={setGpuAcceleration}
+              gpuFallbackActive={gpuFallbackActive}
+            />
           </aside>
         )}
       </div>
