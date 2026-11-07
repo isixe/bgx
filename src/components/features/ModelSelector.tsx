@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../lib/i18n';
-import { getModelById, getLocalizedModel } from '../../utils/modelUtils';
-import { MODELS } from '../../config/models';
+import { getModelById, getLocalizedModel, getModelGroups } from '../../utils/modelUtils';
 
 export function ModelSelector() {
   const {
@@ -17,9 +16,15 @@ export function ModelSelector() {
   } = useAppStore();
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
   const currentModelInfo = getModelById(currentModel);
   const localizedCurrentModel = getLocalizedModel(currentModel, t);
+  const modelGroups = getModelGroups();
+
+  const toggleGroup = (groupId: string) => {
+    setCollapsedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
 
   const handleSelect = (modelId: typeof currentModel) => {
     if (isProcessing) return;
@@ -110,7 +115,30 @@ export function ModelSelector() {
             className={`absolute z-10 mt-2 w-full rounded-lg border shadow-lg ${isDarkMode ? 'border-slate-600 bg-slate-800' : 'border-slate-200 bg-white'}`}
           >
             <div className="max-h-80 overflow-auto py-1">
-              {MODELS.map((model) => {
+              {modelGroups.map(({ group, models }) => (
+                <div key={group.id}>
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.id)}
+                    className="flex w-full items-center gap-1 px-4 py-1.5 text-left text-[11px] font-bold uppercase tracking-wide text-black"
+                  >
+                    <svg
+                      className={`h-3 w-3 shrink-0 transition-transform ${collapsedGroups[group.id] ? '-rotate-90' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                    {t(group.nameKey)}
+                  </button>
+                  {!collapsedGroups[group.id] &&
+                    models.map((model) => {
                 const modelId = model.id;
                 const localized = getLocalizedModel(modelId, t);
                 const status = modelStatuses[modelId] || 'not_downloaded';
@@ -201,7 +229,9 @@ export function ModelSelector() {
                     </button>
                   </div>
                 );
-              })}
+                  })}
+                </div>
+              ))}
             </div>
           </div>
         )}

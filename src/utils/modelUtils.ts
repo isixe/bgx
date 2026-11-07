@@ -1,5 +1,17 @@
-import type { ModelConfig } from '../types/app';
-import { MODELS } from '../config/models';
+import type { ModelConfig, ModelGroup } from '../types/app';
+import { MODELS, MODEL_GROUPS } from '../config/models';
+
+export interface ModelGroupWithModels {
+  group: ModelGroup;
+  models: ModelConfig[];
+}
+
+export function getModelGroups(): ModelGroupWithModels[] {
+  return MODEL_GROUPS.map((group) => ({
+    group,
+    models: MODELS.filter((model) => model.group === group.id),
+  })).filter((entry) => entry.models.length > 0);
+}
 
 export function getModelById(modelId: string): ModelConfig {
   const model = MODELS.find((m) => m.id === modelId);

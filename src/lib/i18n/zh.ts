@@ -48,6 +48,15 @@ export const translations = {
   modelSwitchHint: '切换后将自动重新处理',
   modelResolution: 'px',
 
+  modelGroup: {
+    u2net: 'U2Net 系列',
+    u2netDesc: '经典分割网络，速度快，适合日常场景',
+    isnet: 'ISNet 系列',
+    isnetDesc: '高分辨率模型，细节更精细',
+    bria: 'BRIA RMBG 系列',
+    briaDesc: '专业级背景移除，效果最佳',
+  },
+
   model: {
     u2netp: {
       desc: '轻量级模型，速度快，适合大多数场景',
@@ -57,9 +66,6 @@ export const translations = {
     },
     u2net_human_seg: {
       desc: '专门用于人像分割',
-    },
-    u2net_cloth_seg: {
-      desc: '专门用于服装分割',
     },
     silueta: {
       desc: '轻量级剪影模型',

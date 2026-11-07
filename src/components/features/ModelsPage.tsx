@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../lib/i18n';
-import { MODELS } from '../../config/models';
+import { getModelGroups } from '../../utils/modelUtils';
 import { deleteModel } from '../../utils/modelCache';
 
 interface ModelsPageProps {
@@ -24,6 +25,13 @@ export function ModelsPage({ hideHeader = false }: ModelsPageProps) {
     updateModelStatus,
     cancelModelDownload,
   } = useAppStore();
+
+  const modelGroups = getModelGroups();
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+
+  const toggleGroup = (groupId: string) => {
+    setCollapsedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
 
   const handleDownload = async (modelId: string) => {
     try {
@@ -87,8 +95,37 @@ export function ModelsPage({ hideHeader = false }: ModelsPageProps) {
         </div>
       )}
 
-      <div className="space-y-3 overflow-y-auto flex-1 [@media(max-width:900px)]:mx-0 mx-5 pb-5">
-        {MODELS.map((model) => {
+      <div className="space-y-6 overflow-y-auto flex-1 [@media(max-width:900px)]:mx-0 mx-5 pb-5">
+        {modelGroups.map(({ group, models }) => (
+          <section key={group.id} className="space-y-3">
+            <button
+              type="button"
+              onClick={() => toggleGroup(group.id)}
+              className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1 pb-2 text-left"
+            >
+              <h3 className="flex items-center gap-1 text-sm font-bold text-black">
+                <svg
+                  className={`h-4 w-4 shrink-0 transition-transform ${collapsedGroups[group.id] ? '-rotate-90' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+                {t(group.nameKey)}
+              </h3>
+              <p className={`text-xs ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                {t(group.descKey)}
+              </p>
+            </button>
+            <div className="space-y-3">
+              {!collapsedGroups[group.id] &&
+                models.map((model) => {
           const status = modelStatuses[model.id] || 'not_downloaded';
           const isSelected = currentModel === model.id;
           const isDefault = defaultModel === model.id;
@@ -323,7 +360,10 @@ export function ModelsPage({ hideHeader = false }: ModelsPageProps) {
               )}
             </div>
           );
-        })}
+              })}
+            </div>
+          </section>
+        ))}
       </div>
     </div>
   );

@@ -1,6 +1,15 @@
+export type ModelGroupId = 'u2net' | 'isnet' | 'bria';
+
+export interface ModelGroup {
+  id: ModelGroupId;
+  nameKey: string;
+  descKey: string;
+}
+
 export type ModelConfig = {
   id: string;
   name: string;
+  group: ModelGroupId;
   resolution: number;
   size: string;
   filename: string;

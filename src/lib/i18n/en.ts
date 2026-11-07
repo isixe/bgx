@@ -49,6 +49,15 @@ export const translations = {
   modelSwitchHint: 'Will automatically reprocess after switching',
   modelResolution: 'px',
 
+  modelGroup: {
+    u2net: 'U2Net Series',
+    u2netDesc: 'Classic segmentation networks, fast and ideal for everyday use',
+    isnet: 'ISNet Series',
+    isnetDesc: 'High-resolution models with finer detail',
+    bria: 'BRIA RMBG Series',
+    briaDesc: 'Professional-grade background removal with the best quality',
+  },
+
   model: {
     u2netp: {
       desc: 'Lightweight model, fast speed, suitable for most scenarios',
@@ -58,9 +67,6 @@ export const translations = {
     },
     u2net_human_seg: {
       desc: 'Specialized for human segmentation',
-    },
-    u2net_cloth_seg: {
-      desc: 'Specialized for clothing segmentation',
     },
     silueta: {
       desc: 'Lightweight silhouette model',
