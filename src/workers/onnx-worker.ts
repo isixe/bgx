@@ -1,6 +1,9 @@
 import { env, InferenceSession, Tensor } from 'onnxruntime-web';
+import type { PreprocessMode } from '../types/app';
 
 type ExecutionMode = 'gpu' | 'wasm';
+
+const DEFAULT_PREPROCESS: PreprocessMode = 'u2net';
 
 type InboundMessage =
   | {
@@ -9,6 +12,7 @@ type InboundMessage =
       imageBlob: Blob;
       modelUrl: string;
       resolution: number;
+      preprocess?: PreprocessMode;
     }
   | { type: 'CANCEL_TASK'; taskId: string }
   | { type: 'CONFIGURE_WORKER'; numThreads: number; useGpu?: boolean }
@@ -239,12 +243,27 @@ async function warmupSession(target: InferenceSession, resolution: number): Prom
   }
 }
 
+// 各模型的归一化本质是对每个通道做仿射变换 out = x*scale + offset（x 为 0-255）。
+// 预计算为常量，避免在逐像素循环里做分支判断。
+function getPreprocessAffine(mode: PreprocessMode): { scale: number[]; offset: number[] } {
+  switch (mode) {
+    case 'benn':
+      return { scale: [1 / 255, 1 / 255, 1 / 255], offset: [0, 0, 0] };
+    case 'modnet':
+      return { scale: [2 / 255, 2 / 255, 2 / 255], offset: [-1, -1, -1] };
+    case 'u2net':
+    default:
+      return { scale: [1 / 256, 1 / 256, 1 / 256], offset: [-0.5, -0.5, -0.5] };
+  }
+}
+
 async function runInference(
   imageBlob: Blob,
   modelUrl: string,
   resolution: number,
   report: (progress: number) => void,
   timings: Record<string, number>,
+  preprocess: PreprocessMode,
 ): Promise<Blob> {
   let last = Date.now();
   const lap = (key: string) => {
@@ -276,11 +295,18 @@ async function runInference(
     const pixels = workCtx.getImageData(0, 0, resolution, resolution).data;
     const area = resolution * resolution;
     const input = new Float32Array(area * 3);
+    const affine = getPreprocessAffine(preprocess);
+    const scaleR = affine.scale[0];
+    const scaleG = affine.scale[1];
+    const scaleB = affine.scale[2];
+    const offsetR = affine.offset[0];
+    const offsetG = affine.offset[1];
+    const offsetB = affine.offset[2];
     for (let i = 0; i < area; i += 1) {
       const pixel = i * 4;
-      input[i] = (pixels[pixel] - 128) / 256;
-      input[area + i] = (pixels[pixel + 1] - 128) / 256;
-      input[area * 2 + i] = (pixels[pixel + 2] - 128) / 256;
+      input[i] = pixels[pixel] * scaleR + offsetR;
+      input[area + i] = pixels[pixel + 1] * scaleG + offsetG;
+      input[area * 2 + i] = pixels[pixel + 2] * scaleB + offsetB;
     }
     lap('preprocess');
     report(40);
@@ -361,6 +387,7 @@ async function handleTask(
       message.resolution,
       report,
       timings,
+      message.preprocess ?? DEFAULT_PREPROCESS,
     );
 
     if (cancelledTasks.has(taskId)) {

@@ -6,6 +6,9 @@ export interface ModelGroup {
   descKey: string;
 }
 
+// 输入预处理方式（各模型归一化差异较大，不能统一按 u2net 处理）
+export type PreprocessMode = 'u2net' | 'benn' | 'modnet';
+
 export type ModelConfig = {
   id: string;
   name: string;
@@ -16,6 +19,8 @@ export type ModelConfig = {
   descKey: string;
   downloadUrl: string;
   feedbackUrl: string[];
+  // 缺省视为 'u2net'，保持已有模型行为不变
+  preprocess?: PreprocessMode;
 };
 
 export type ModelStatus = 'not_downloaded' | 'downloading' | 'downloaded' | 'error';

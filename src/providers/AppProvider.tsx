@@ -145,6 +145,7 @@ export function AppProvider() {
           imageBlob,
           modelUrl,
           model.resolution,
+          model.preprocess ?? 'u2net',
           (progress) => setBatchItemProgress(item.id, progress),
         );
 
