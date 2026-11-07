@@ -46,7 +46,7 @@ export function useRemoveBackground(
         imageBlob,
         modelUrl,
         model.resolution,
-        model.preprocess ?? 'u2net',
+        model.preprocess ?? 'isnet',
         (progress) => onProgress?.(progress),
       );
 

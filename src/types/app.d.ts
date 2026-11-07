@@ -6,8 +6,10 @@ export interface ModelGroup {
   descKey: string;
 }
 
-// 输入预处理方式（各模型归一化差异较大，不能统一按 u2net 处理）
-export type PreprocessMode = 'u2net' | 'benn' | 'modnet';
+// 输入预处理方式（各模型归一化差异较大，不能统一处理）
+// imagenet: U2Net 系列，按 ImageNet 均值/方差逐通道归一化
+// isnet:    ISNet / BRIA RMBG，按 x/255 - 0.5 归一化
+export type PreprocessMode = 'imagenet' | 'isnet';
 
 export type ModelConfig = {
   id: string;
@@ -19,7 +21,7 @@ export type ModelConfig = {
   descKey: string;
   downloadUrl: string;
   feedbackUrl: string[];
-  // 缺省视为 'u2net'，保持已有模型行为不变
+  // 缺省视为 'isnet'
   preprocess?: PreprocessMode;
 };
 

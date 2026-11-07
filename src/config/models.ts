@@ -27,6 +27,7 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
           'https://www.modelscope.cn/models/shiertier/rembg/resolve/master/u2netp.onnx',
           'https://unpkg.com/@rmbg/model-u2netp@0.0.1/u2netp.onnx',
         ],
+        preprocess: 'imagenet',
       },
       {
         id: 'u2net',
@@ -38,6 +39,7 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
         downloadUrl:
           'https://huggingface.co/tomjackson2023/rembg/resolve/main/u2net.onnx?download=true',
         feedbackUrl: ['https://www.modelscope.cn/models/shiertier/rembg/resolve/master/u2net.onnx'],
+        preprocess: 'imagenet',
       },
       {
         id: 'u2net_human_seg',
@@ -51,6 +53,7 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
         feedbackUrl: [
           'https://www.modelscope.cn/models/shiertier/rembg/resolve/master/u2net_human_seg.onnx',
         ],
+        preprocess: 'imagenet',
       },
       {
         id: 'silueta',
@@ -64,6 +67,7 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
         feedbackUrl: [
           'https://www.modelscope.cn/models/shiertier/rembg/resolve/master/silueta.onnx',
         ],
+        preprocess: 'imagenet',
       },
     ],
   },
@@ -83,6 +87,7 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
         feedbackUrl: [
           'https://www.modelscope.cn/models/shiertier/rembg/resolve/master/isnet-general-use.onnx',
         ],
+        preprocess: 'isnet',
       },
       {
         id: 'isnet-anime',
@@ -96,6 +101,7 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
         feedbackUrl: [
           'https://www.modelscope.cn/models/shiertier/rembg/resolve/master/isnet-anime.onnx',
         ],
+        preprocess: 'isnet',
       },
     ],
   },
@@ -115,6 +121,7 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
         feedbackUrl: [
           'https://www.modelscope.cn/models/AI-ModelScope/RMBG-1.4/resolve/master/onnx/model_quantized.onnx',
         ],
+        preprocess: 'isnet',
       },
       {
         id: 'bria-rmbg-fp16',
@@ -128,6 +135,7 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
         feedbackUrl: [
           'https://www.modelscope.cn/models/AI-ModelScope/RMBG-1.4/resolve/master/onnx/model_fp16.onnx',
         ],
+        preprocess: 'isnet',
       },
       {
         id: 'bria-rmbg',
@@ -141,6 +149,7 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
         feedbackUrl: [
           'https://www.modelscope.cn/models/AI-ModelScope/RMBG-1.4/resolve/master/onnx/model.onnx',
         ],
+        preprocess: 'isnet',
       },
     ],
   },

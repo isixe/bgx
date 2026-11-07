@@ -3,7 +3,7 @@ import type { PreprocessMode } from '../types/app';
 
 type ExecutionMode = 'gpu' | 'wasm';
 
-const DEFAULT_PREPROCESS: PreprocessMode = 'u2net';
+const DEFAULT_PREPROCESS: PreprocessMode = 'isnet';
 
 type InboundMessage =
   | {
@@ -247,13 +247,16 @@ async function warmupSession(target: InferenceSession, resolution: number): Prom
 // 预计算为常量，避免在逐像素循环里做分支判断。
 function getPreprocessAffine(mode: PreprocessMode): { scale: number[]; offset: number[] } {
   switch (mode) {
-    case 'benn':
-      return { scale: [1 / 255, 1 / 255, 1 / 255], offset: [0, 0, 0] };
-    case 'modnet':
-      return { scale: [2 / 255, 2 / 255, 2 / 255], offset: [-1, -1, -1] };
-    case 'u2net':
+    case 'imagenet':
+      // U2Net 系列：ImageNet 均值 (0.485,0.456,0.406)、标准差 (0.229,0.224,0.225)
+      return {
+        scale: [1 / (255 * 0.229), 1 / (255 * 0.224), 1 / (255 * 0.225)],
+        offset: [-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.225],
+      };
+    case 'isnet':
     default:
-      return { scale: [1 / 256, 1 / 256, 1 / 256], offset: [-0.5, -0.5, -0.5] };
+      // ISNet / BRIA RMBG：x/255 - 0.5
+      return { scale: [1 / 255, 1 / 255, 1 / 255], offset: [-0.5, -0.5, -0.5] };
   }
 }
 
