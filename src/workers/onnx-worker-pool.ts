@@ -3,7 +3,7 @@ import {
   DEFAULT_BATCH_CONCURRENCY,
   getSessionThreads,
 } from '../utils/concurrency';
-import type { PreprocessMode } from '../types/app';
+import type { PostprocessMode, PreprocessMode } from '../types/app';
 
 export interface PoolImageResult {
   type: 'success' | 'error' | 'cancelled';
@@ -17,6 +17,7 @@ interface PendingTask {
   modelUrl: string;
   resolution: number;
   preprocess?: PreprocessMode;
+  postprocess?: PostprocessMode;
   onProgress?: (progress: number) => void;
   attempts: number;
   inferenceStartedAt: number | null;
@@ -152,6 +153,7 @@ export class OnnxWorkerPool {
     modelUrl: string,
     resolution: number,
     preprocess?: PreprocessMode,
+    postprocess?: PostprocessMode,
     onProgress?: (progress: number) => void,
   ): Promise<PoolImageResult> {
     if (this.disposed) {
@@ -165,6 +167,7 @@ export class OnnxWorkerPool {
         modelUrl,
         resolution,
         preprocess,
+        postprocess,
         onProgress,
         attempts: 0,
         inferenceStartedAt: null,
@@ -518,6 +521,7 @@ export class OnnxWorkerPool {
         modelUrl: task.modelUrl,
         resolution: task.resolution,
         preprocess: task.preprocess,
+        postprocess: task.postprocess,
       });
     }
   }

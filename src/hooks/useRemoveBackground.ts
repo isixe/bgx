@@ -47,6 +47,7 @@ export function useRemoveBackground(
         modelUrl,
         model.resolution,
         model.preprocess ?? 'isnet',
+        model.postprocess ?? 'linear',
         (progress) => onProgress?.(progress),
       );
 

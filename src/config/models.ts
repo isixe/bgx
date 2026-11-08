@@ -153,6 +153,38 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
       },
     ],
   },
+  ben2: {
+    nameKey: 'modelGroup.ben2',
+    descKey: 'modelGroup.ben2Desc',
+    models: [
+      {
+        id: 'ben2-fp16',
+        name: 'BEN2 (FP16)',
+        resolution: 1024,
+        size: '~209MB',
+        filename: 'model_fp16.onnx',
+        descKey: 'model.ben2-fp16.desc',
+        downloadUrl:
+          'https://huggingface.co/onnx-community/BEN2-ONNX/resolve/main/onnx/model_fp16.onnx?download=true',
+        feedbackUrl: [],
+        preprocess: 'imagenet',
+        postprocess: 'minmax',
+      },
+      {
+        id: 'ben2-fp32',
+        name: 'BEN2 (FP32)',
+        resolution: 1024,
+        size: '~403MB',
+        filename: 'model.onnx',
+        descKey: 'model.ben2-fp32.desc',
+        downloadUrl:
+          'https://huggingface.co/Pezhgorski/BEN2-FP32-ONNX/resolve/main/onnx/model.onnx?download=true',
+        feedbackUrl: [],
+        preprocess: 'imagenet',
+        postprocess: 'minmax',
+      },
+    ],
+  },
 };
 
 const SERIES_KEYS = Object.keys(MODEL_SERIES) as ModelGroupId[];

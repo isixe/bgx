@@ -56,6 +56,8 @@ export const translations = {
     isnetDesc: 'High-resolution models with finer detail',
     bria: 'BRIA RMBG Series',
     briaDesc: 'Professional-grade background removal with the best quality',
+    ben2: 'BEN2 Series',
+    ben2Desc: 'State-of-the-art segmentation with smooth, detailed edges',
   },
 
   model: {
@@ -97,6 +99,12 @@ export const translations = {
     },
     'bria-rmbg-quantized': {
       desc: 'BRIA RMBG quantized version, smallest size with acceptable quality',
+    },
+    'ben2-fp16': {
+      desc: 'Excels at separating fine details like hair and fur, with a smaller download',
+    },
+    'ben2-fp32': {
+      desc: 'Excels at separating fine details like hair and fur, with cleaner edges',
     },
   },
 

@@ -146,6 +146,7 @@ export function AppProvider() {
           modelUrl,
           model.resolution,
           model.preprocess ?? 'isnet',
+          model.postprocess ?? 'linear',
           (progress) => setBatchItemProgress(item.id, progress),
         );
 

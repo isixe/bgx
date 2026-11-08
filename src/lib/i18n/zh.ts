@@ -55,6 +55,8 @@ export const translations = {
     isnetDesc: '高分辨率模型，细节更精细',
     bria: 'BRIA RMBG 系列',
     briaDesc: '专业级背景移除，效果最佳',
+    ben2: 'BEN2 系列',
+    ben2Desc: '新一代分割模型，边缘平滑、细节丰富',
   },
 
   model: {
@@ -96,6 +98,12 @@ export const translations = {
     },
     'bria-rmbg-quantized': {
       desc: 'BRIA RMBG 量化版本，体积最小，质量可接受',
+    },
+    'ben2-fp16': {
+      desc: '擅长分离发丝、毛发等精细边缘，体积更小',
+    },
+    'ben2-fp32': {
+      desc: '擅长分离发丝、毛发等精细边缘，边缘更干净',
     },
   },
 

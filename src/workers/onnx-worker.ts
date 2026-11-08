@@ -1,9 +1,10 @@
 import { env, InferenceSession, Tensor } from 'onnxruntime-web';
-import type { PreprocessMode } from '../types/app';
+import type { PostprocessMode, PreprocessMode } from '../types/app';
 
 type ExecutionMode = 'gpu' | 'wasm';
 
 const DEFAULT_PREPROCESS: PreprocessMode = 'isnet';
+const DEFAULT_POSTPROCESS: PostprocessMode = 'linear';
 
 type InboundMessage =
   | {
@@ -13,6 +14,7 @@ type InboundMessage =
       modelUrl: string;
       resolution: number;
       preprocess?: PreprocessMode;
+      postprocess?: PostprocessMode;
     }
   | { type: 'CANCEL_TASK'; taskId: string }
   | { type: 'CONFIGURE_WORKER'; numThreads: number; useGpu?: boolean }
@@ -267,6 +269,7 @@ async function runInference(
   report: (progress: number) => void,
   timings: Record<string, number>,
   preprocess: PreprocessMode,
+  postprocess: PostprocessMode,
 ): Promise<Blob> {
   let last = Date.now();
   const lap = (key: string) => {
@@ -334,10 +337,29 @@ async function runInference(
     // RGBA 内存为小端序，一次 32 位写入即可同时设置常量白色 RGB 与变化的 Alpha。
     const maskU32 = new Uint32Array(maskImage.data.buffer);
     const maskArea = maskWidth * maskHeight;
+    // linear 假定输出已在 [0,1]；minmax 先统计极值再线性映射到 [0,1]。
+    let maskScale = 255;
+    let maskOffset = 0;
+    if (postprocess === 'minmax') {
+      let min = Infinity;
+      let max = -Infinity;
+      for (let i = 0; i < maskArea; i += 1) {
+        const value = mask[i];
+        if (Number.isFinite(value)) {
+          if (value < min) min = value;
+          if (value > max) max = value;
+        }
+      }
+      const range = max - min;
+      if (range > 0) {
+        maskScale = 255 / range;
+        maskOffset = -min * maskScale;
+      }
+    }
     for (let i = 0; i < maskArea; i += 1) {
       const value = mask[i];
       const normalized = Number.isFinite(value) ? value : 0;
-      const alpha = Math.min(255, Math.max(0, Math.round(normalized * 255)));
+      const alpha = Math.min(255, Math.max(0, Math.round(normalized * maskScale + maskOffset)));
       maskU32[i] = (alpha << 24) | 0x00ffffff;
     }
     maskCtx.putImageData(maskImage, 0, 0);
@@ -391,6 +413,7 @@ async function handleTask(
       report,
       timings,
       message.preprocess ?? DEFAULT_PREPROCESS,
+      message.postprocess ?? DEFAULT_POSTPROCESS,
     );
 
     if (cancelledTasks.has(taskId)) {

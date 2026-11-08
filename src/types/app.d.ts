@@ -1,4 +1,4 @@
-export type ModelGroupId = 'u2net' | 'isnet' | 'bria';
+export type ModelGroupId = 'u2net' | 'isnet' | 'bria' | 'ben2';
 
 export interface ModelGroup {
   id: ModelGroupId;
@@ -10,6 +10,11 @@ export interface ModelGroup {
 // imagenet: U2Net 系列，按 ImageNet 均值/方差逐通道归一化
 // isnet:    ISNet / BRIA RMBG，按 x/255 - 0.5 归一化
 export type PreprocessMode = 'imagenet' | 'isnet';
+
+// 输出后处理方式（不同模型输出的数值范围不同）
+// linear: 输出已在 [0,1]，直接乘 255
+// minmax: 输出为任意范围，先按最小值/最大值线性映射到 [0,1]
+export type PostprocessMode = 'linear' | 'minmax';
 
 export type ModelConfig = {
   id: string;
@@ -23,6 +28,8 @@ export type ModelConfig = {
   feedbackUrl: string[];
   // 缺省视为 'isnet'
   preprocess?: PreprocessMode;
+  // 缺省视为 'linear'
+  postprocess?: PostprocessMode;
 };
 
 export type ModelStatus = 'not_downloaded' | 'downloading' | 'downloaded' | 'error';
