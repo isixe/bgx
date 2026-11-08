@@ -166,7 +166,9 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
         descKey: 'model.ben2-fp16.desc',
         downloadUrl:
           'https://huggingface.co/onnx-community/BEN2-ONNX/resolve/main/onnx/model_fp16.onnx?download=true',
-        feedbackUrl: [],
+        feedbackUrl: [
+          'https://www.modelscope.cn/models/onnx-community/BEN2-ONNX/resolve/master/onnx/model_fp16.onnx',
+        ],
         preprocess: 'imagenet',
         postprocess: 'minmax',
       },
@@ -179,7 +181,9 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
         descKey: 'model.ben2-fp32.desc',
         downloadUrl:
           'https://huggingface.co/Pezhgorski/BEN2-FP32-ONNX/resolve/main/onnx/model.onnx?download=true',
-        feedbackUrl: [],
+        feedbackUrl: [
+          'https://www.modelscope.cn/models/Rokaa111/BEN2-FP32-ONNX/resolve/master/onnx/model.onnx',
+        ],
         preprocess: 'imagenet',
         postprocess: 'minmax',
       },
