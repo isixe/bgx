@@ -209,6 +209,27 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
       },
     ],
   },
+  inspyrenet: {
+    nameKey: 'modelGroup.inspyrenet',
+    descKey: 'modelGroup.inspyrenetDesc',
+    models: [
+      {
+        id: 'inspyrenet-res2net50',
+        name: 'InSPyReNet Res2Net50',
+        resolution: 384,
+        size: '~58MB',
+        filename: 'inspyrenet_res2net50.onnx',
+        descKey: 'model.inspyrenet-res2net50.desc',
+        downloadUrl:
+          'https://huggingface.co/TheGuy444/InSPyReNet-Res2Net50/resolve/main/onnx/model.onnx?download=true',
+        feedbackUrl: [
+          'https://hf-mirror.com/TheGuy444/InSPyReNet-Res2Net50/resolve/main/onnx/model.onnx',
+        ],
+        preprocess: 'imagenet',
+        postprocess: 'linear',
+      },
+    ],
+  },
 };
 
 const SERIES_KEYS = Object.keys(MODEL_SERIES) as ModelGroupId[];

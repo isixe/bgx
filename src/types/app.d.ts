@@ -1,4 +1,4 @@
-export type ModelGroupId = 'u2net' | 'isnet' | 'bria' | 'ben2' | 'modnet';
+export type ModelGroupId = 'u2net' | 'isnet' | 'bria' | 'ben2' | 'modnet' | 'inspyrenet';
 
 export interface ModelGroup {
   id: ModelGroupId;

@@ -59,6 +59,8 @@ export const translations = {
     ben2Desc: '新一代分割模型，边缘平滑、细节丰富',
     modnet: 'MODNet 系列',
     modnetDesc: '实时人像抠图，适合人物照片与自拍',
+    inspyrenet: 'InSPyReNet 系列',
+    inspyrenetDesc: 'ACCV 2022 高精度分割，发丝与半透明边缘表现优秀',
   },
 
   model: {
@@ -109,6 +111,9 @@ export const translations = {
     },
     modnet: {
       desc: '免三分图的人像抠图模型，擅长半透明发丝，边缘过渡自然',
+    },
+    'inspyrenet-res2net50': {
+      desc: 'Res2Net50 主干，384px 输入，细节保留好，速度适中',
     },
   },
 

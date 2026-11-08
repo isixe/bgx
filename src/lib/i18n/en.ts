@@ -60,6 +60,8 @@ export const translations = {
     ben2Desc: 'State-of-the-art segmentation with smooth, detailed edges',
     modnet: 'MODNet Series',
     modnetDesc: 'Real-time portrait matting, best for people and selfies',
+    inspyrenet: 'InSPyReNet Series',
+    inspyrenetDesc: 'ACCV 2022 segmentation with excellent hair and translucent edge handling',
   },
 
   model: {
@@ -110,6 +112,9 @@ export const translations = {
     },
     modnet: {
       desc: 'Trimap-free portrait matting, excels at semi-transparent hair and keeps natural edges',
+    },
+    'inspyrenet-res2net50': {
+      desc: 'Res2Net50 backbone at 384px, strong detail retention with moderate speed',
     },
   },
 
