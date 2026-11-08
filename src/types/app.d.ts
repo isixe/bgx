@@ -1,4 +1,4 @@
-export type ModelGroupId = 'u2net' | 'isnet' | 'bria' | 'ben2';
+export type ModelGroupId = 'u2net' | 'isnet' | 'bria' | 'ben2' | 'modnet';
 
 export interface ModelGroup {
   id: ModelGroupId;
@@ -9,7 +9,8 @@ export interface ModelGroup {
 // 输入预处理方式（各模型归一化差异较大，不能统一处理）
 // imagenet: U2Net 系列，按 ImageNet 均值/方差逐通道归一化
 // isnet:    ISNet / BRIA RMBG，按 x/255 - 0.5 归一化
-export type PreprocessMode = 'imagenet' | 'isnet';
+// modnet:   MODNet，按 (x/255 - 0.5) / 0.5 归一化，即 x/127.5 - 1，范围 [-1, 1]
+export type PreprocessMode = 'imagenet' | 'isnet' | 'modnet';
 
 // 输出后处理方式（不同模型输出的数值范围不同）
 // linear: 输出已在 [0,1]，直接乘 255

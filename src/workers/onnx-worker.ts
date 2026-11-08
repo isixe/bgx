@@ -255,6 +255,12 @@ function getPreprocessAffine(mode: PreprocessMode): { scale: number[]; offset: n
         scale: [1 / (255 * 0.229), 1 / (255 * 0.224), 1 / (255 * 0.225)],
         offset: [-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.225],
       };
+    case 'modnet':
+      // MODNet：mean 0.5、std 0.5，等价于 (x/255 - 0.5) / 0.5，范围 [-1, 1]
+      return {
+        scale: [2 / 255, 2 / 255, 2 / 255],
+        offset: [-1, -1, -1],
+      };
     case 'isnet':
     default:
       // ISNet / BRIA RMBG：x/255 - 0.5

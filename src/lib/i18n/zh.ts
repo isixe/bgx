@@ -57,6 +57,8 @@ export const translations = {
     briaDesc: '专业级背景移除，效果最佳',
     ben2: 'BEN2 系列',
     ben2Desc: '新一代分割模型，边缘平滑、细节丰富',
+    modnet: 'MODNet 系列',
+    modnetDesc: '实时人像抠图，适合人物照片与自拍',
   },
 
   model: {
@@ -104,6 +106,9 @@ export const translations = {
     },
     'ben2-fp32': {
       desc: '擅长分离发丝、毛发等精细边缘，边缘更干净',
+    },
+    modnet: {
+      desc: '免三分图的人像抠图模型，擅长半透明发丝，边缘过渡自然',
     },
   },
 

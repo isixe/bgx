@@ -58,6 +58,8 @@ export const translations = {
     briaDesc: 'Professional-grade background removal with the best quality',
     ben2: 'BEN2 Series',
     ben2Desc: 'State-of-the-art segmentation with smooth, detailed edges',
+    modnet: 'MODNet Series',
+    modnetDesc: 'Real-time portrait matting, best for people and selfies',
   },
 
   model: {
@@ -105,6 +107,9 @@ export const translations = {
     },
     'ben2-fp32': {
       desc: 'Excels at separating fine details like hair and fur, with cleaner edges',
+    },
+    modnet: {
+      desc: 'Trimap-free portrait matting, excels at semi-transparent hair and keeps natural edges',
     },
   },
 

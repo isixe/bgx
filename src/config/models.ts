@@ -189,6 +189,26 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
       },
     ],
   },
+  modnet: {
+    nameKey: 'modelGroup.modnet',
+    descKey: 'modelGroup.modnetDesc',
+    models: [
+      {
+        id: 'modnet',
+        name: 'MODNet',
+        resolution: 512,
+        size: '~25MB',
+        filename: 'modnet.onnx',
+        descKey: 'model.modnet.desc',
+        downloadUrl:
+          'https://huggingface.co/Xenova/modnet/resolve/main/onnx/model.onnx?download=true',
+        feedbackUrl: [
+          'https://www.modelscope.cn/models/Xenova/modnet/resolve/master/onnx/model.onnx',
+        ],
+        preprocess: 'modnet',
+      },
+    ],
+  },
 };
 
 const SERIES_KEYS = Object.keys(MODEL_SERIES) as ModelGroupId[];
