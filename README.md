@@ -4,9 +4,9 @@ A free, privacy-first background removal tool powered by AI. All processing happ
 
 ## Features
 
-- **AI-Powered Background Removal** - Uses advanced ONNX models (U2Net, ISNet, BRIA RMBG) for high-quality results
+- **AI-Powered Background Removal** - Uses advanced ONNX models (U2Net, ISNet, BRIA RMBG, BEN2, MODNet, InSPyReNet) for high-quality results
 - **Privacy Protected** - 100% client-side processing, images never leave your device
-- **Multiple AI Models** - Choose from 9+ specialized models for different use cases
+- **Multiple AI Models** - Choose from 13 specialized models across 6 series for different use cases
 - **Multiple Export Formats** - PNG (transparent), JPG (white background), WebP
 - **Drag & Drop / Paste Support** - Upload images via drag-drop, file picker, or Ctrl+V paste
 - **Batch Processing Ready** - Process multiple images efficiently
@@ -25,17 +25,62 @@ A free, privacy-first background removal tool powered by AI. All processing happ
 
 ## Available Models
 
-| Model               | Resolution | Size   | Best For                     |
-| ------------------- | ---------- | ------ | ---------------------------- |
-| U2Netp              | 320px      | ~4MB   | Lightweight, fast processing |
-| U2Net               | 320px      | ~168MB | High-precision general use   |
-| U2Net Human Seg     | 320px      | ~168MB | Portrait photos              |
-| Silueta             | 320px      | ~42MB  | Lightweight silhouette       |
-| ISNet General       | 1024px     | ~170MB | High-res general use         |
-| ISNet Anime         | 1024px     | ~168MB | Anime/illustrations          |
-| BRIA RMBG           | 1024px     | ~176MB | Professional quality         |
-| BRIA RMBG FP16      | 1024px     | ~88MB  | Balanced quality/size        |
-| BRIA RMBG Quantized | 1024px     | ~44MB  | Smallest footprint           |
+13 models across 6 series, each tuned for a different balance of speed, quality, and subject matter.
+
+### U2Net Series
+
+Classic segmentation networks, fast and ideal for everyday use.
+
+| Model           | Resolution | Size   | Best For                     |
+| --------------- | ---------- | ------ | ---------------------------- |
+| U2Netp          | 320px      | ~4MB   | Lightweight, fast processing |
+| U2Net           | 320px      | ~168MB | High-precision general use   |
+| U2Net Human Seg | 320px      | ~168MB | Portrait photos              |
+| Silueta         | 320px      | ~42MB  | Lightweight silhouette       |
+
+### ISNet Series
+
+High-resolution models with finer detail.
+
+| Model         | Resolution | Size   | Best For            |
+| ------------- | ---------- | ------ | ------------------- |
+| ISNet General | 1024px     | ~170MB | High-res general use |
+| ISNet Anime   | 1024px     | ~168MB | Anime/illustrations  |
+
+### BRIA RMBG Series
+
+Professional-grade background removal with the best quality.
+
+| Model               | Resolution | Size   | Best For              |
+| ------------------- | ---------- | ------ | --------------------- |
+| BRIA RMBG           | 1024px     | ~176MB | Professional quality  |
+| BRIA RMBG FP16      | 1024px     | ~88MB  | Balanced quality/size |
+| BRIA RMBG Quantized | 1024px     | ~44MB  | Smallest footprint    |
+
+### BEN2 Series
+
+State-of-the-art segmentation with smooth, detailed edges.
+
+| Model      | Resolution | Size   | Best For                          |
+| ---------- | ---------- | ------ | --------------------------------- |
+| BEN2 FP16  | 1024px     | ~209MB | Fine hair/fur, smaller download   |
+| BEN2 FP32  | 1024px     | ~403MB | Fine hair/fur, cleanest edges     |
+
+### MODNet Series
+
+Real-time portrait matting, best for people and selfies.
+
+| Model  | Resolution | Size  | Best For                                       |
+| ------ | ---------- | ----- | ---------------------------------------------- |
+| MODNet | 512px      | ~25MB | Portraits, semi-transparent hair, natural edges |
+
+### InSPyReNet Series
+
+ACCV 2022 segmentation with excellent hair and translucent edge handling.
+
+| Model                | Resolution | Size  | Best For                             |
+| -------------------- | ---------- | ----- | ------------------------------------ |
+| InSPyReNet Res2Net50 | 384px      | ~58MB | Detail retention at moderate speed   |
 
 ## Installation
 
