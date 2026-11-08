@@ -95,8 +95,12 @@ export class OnnxWorkerPool {
     return this.slots.length;
   }
 
+  private get effectiveConcurrency(): number {
+    return clampBatchConcurrency(this.concurrencyLimit, this.useGpu);
+  }
+
   get concurrency(): number {
-    return this.concurrencyLimit;
+    return this.effectiveConcurrency;
   }
 
   setConcurrency(limit: number): void {
@@ -117,10 +121,9 @@ export class OnnxWorkerPool {
     }
 
     this.useGpu = useGpu;
-    const numThreads = getSessionThreads(this.concurrencyLimit);
-    for (const slot of this.slots) {
-      slot.worker.postMessage({ type: 'CONFIGURE_WORKER', numThreads, useGpu });
-    }
+    this.resizeSlots();
+    this.applyThreadConfig();
+    this.drainQueue();
   }
 
   preload(modelUrl: string, resolution: number): void {
@@ -276,7 +279,7 @@ export class OnnxWorkerPool {
 
     worker.postMessage({
       type: 'CONFIGURE_WORKER',
-      numThreads: getSessionThreads(this.concurrencyLimit),
+      numThreads: getSessionThreads(this.effectiveConcurrency),
       useGpu: this.useGpu,
     });
 
@@ -460,7 +463,7 @@ export class OnnxWorkerPool {
   }
 
   private applyThreadConfig(): void {
-    const numThreads = getSessionThreads(this.concurrencyLimit);
+    const numThreads = getSessionThreads(this.effectiveConcurrency);
     for (const slot of this.slots) {
       slot.worker.postMessage({ type: 'CONFIGURE_WORKER', numThreads, useGpu: this.useGpu });
     }
@@ -471,7 +474,7 @@ export class OnnxWorkerPool {
       return;
     }
 
-    while (this.slots.length < this.concurrencyLimit) {
+    while (this.slots.length < this.effectiveConcurrency) {
       this.slots.push(this.createSlot(this.slots.length));
     }
 
@@ -479,7 +482,7 @@ export class OnnxWorkerPool {
   }
 
   private trimSlots(): void {
-    for (let index = this.slots.length - 1; index >= this.concurrencyLimit; index -= 1) {
+    for (let index = this.slots.length - 1; index >= this.effectiveConcurrency; index -= 1) {
       const slot = this.slots[index];
       if (!slot || slot.busy) {
         continue;

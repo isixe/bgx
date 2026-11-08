@@ -20,8 +20,16 @@ export const DEFAULT_BATCH_CONCURRENCY = clamp(
   MAX_BATCH_CONCURRENCY,
 );
 
-export function clampBatchConcurrency(value: number): number {
-  return clamp(Math.round(value), 1, MAX_BATCH_CONCURRENCY);
+// Each WebGPU worker keeps its own device and shares one GPU, so parallel
+// sessions contend for VRAM; keep the GPU batch small to avoid device loss.
+export const MAX_GPU_BATCH_CONCURRENCY = Math.min(2, MAX_BATCH_CONCURRENCY);
+
+export function getMaxBatchConcurrency(useGpu: boolean): number {
+  return useGpu ? MAX_GPU_BATCH_CONCURRENCY : MAX_BATCH_CONCURRENCY;
+}
+
+export function clampBatchConcurrency(value: number, useGpu = false): number {
+  return clamp(Math.round(value), 1, getMaxBatchConcurrency(useGpu));
 }
 
 // Divides the cores between workers so the total thread count stays near the core count.
@@ -30,9 +38,9 @@ export function getSessionThreads(concurrency: number): number {
   return clamp(Math.floor(getHardwareConcurrency() / parallel), 1, 4);
 }
 
-export function getBatchConcurrencyOptions(): number[] {
+export function getBatchConcurrencyOptions(useGpu = false): number[] {
   const options: number[] = [];
-  for (let value = 1; value <= MAX_BATCH_CONCURRENCY; value += 1) {
+  for (let value = 1; value <= getMaxBatchConcurrency(useGpu); value += 1) {
     options.push(value);
   }
   return options;

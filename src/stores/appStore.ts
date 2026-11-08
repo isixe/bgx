@@ -41,14 +41,14 @@ function readPersistedPreferences(): Partial<AppState> {
 
   prefs.dismissedUpdateVersion = localStorage.getItem('bgx-dismissed-update');
 
-  const storedConcurrency = Number(localStorage.getItem('bgx-batch-concurrency'));
-  if (Number.isInteger(storedConcurrency) && storedConcurrency >= 1) {
-    prefs.batchConcurrency = clampBatchConcurrency(storedConcurrency);
-  }
-
   const storedGpu = localStorage.getItem('bgx-gpu-acceleration');
   if (storedGpu !== null) {
     prefs.gpuAcceleration = storedGpu === 'true';
+  }
+
+  const storedConcurrency = Number(localStorage.getItem('bgx-batch-concurrency'));
+  if (Number.isInteger(storedConcurrency) && storedConcurrency >= 1) {
+    prefs.batchConcurrency = clampBatchConcurrency(storedConcurrency, prefs.gpuAcceleration ?? true);
   }
 
   const storedPreload = localStorage.getItem('bgx-preload-enabled');
@@ -302,10 +302,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ checkUpdatesOnStartup: enabled });
   },
   setGpuAcceleration: (enabled) => {
+    const nextConcurrency = clampBatchConcurrency(get().batchConcurrency, enabled);
     if (typeof window !== 'undefined') {
       localStorage.setItem('bgx-gpu-acceleration', String(enabled));
+      localStorage.setItem('bgx-batch-concurrency', String(nextConcurrency));
     }
-    set({ gpuAcceleration: enabled, gpuFallbackActive: enabled ? false : get().gpuFallbackActive });
+    set({
+      gpuAcceleration: enabled,
+      batchConcurrency: nextConcurrency,
+      gpuFallbackActive: enabled ? false : get().gpuFallbackActive,
+    });
   },
   setGpuFallbackActive: (active) => set({ gpuFallbackActive: active }),
   applyGpuFallback: () => set({ gpuAcceleration: false, gpuFallbackActive: true }),
@@ -330,7 +336,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setBatchMode: (mode) => set({ batchMode: mode }),
   setBatchConcurrency: (value) => {
-    const next = clampBatchConcurrency(value);
+    const next = clampBatchConcurrency(value, get().gpuAcceleration);
     if (typeof window !== 'undefined') {
       localStorage.setItem('bgx-batch-concurrency', String(next));
     }

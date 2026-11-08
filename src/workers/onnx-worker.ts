@@ -46,6 +46,9 @@ const isOrtPthreadWorker = ctx.name.startsWith('em-pthread');
 const FATAL_PATTERN =
   /memory access out of bounds|cannot enlarge memory|out of memory|allocation failed|RangeError|Aborted|RuntimeError|Assertion failed|OOM/i;
 
+// WebGPU 设备丢失（驱动重置 / TDR）在推理期抛出的错误特征，用于触发无损回退。
+const GPU_DEVICE_LOST_PATTERN = /device\s*(?:was\s*)?lost|GPUDevice|gpu device lost/i;
+
 // onnxruntime-web/webgpu 内置的是 asyncify 版 WASM 胶水，必须加载与之 ABI 匹配的
 // ort-wasm-simd-threaded.asyncify.wasm（由 postinstall 复制到 public/），否则后端初始化会失败。
 const WASM_URL = '/ort-wasm-simd-threaded.asyncify.wasm';
@@ -56,6 +59,8 @@ let sessionMode: ExecutionMode | null = null;
 let session: InferenceSession | null = null;
 let wantsGpu = false;
 let gpuFailed = false;
+// 最近一次 runInference 实际使用的执行后端，用于判断错误是否发生在 GPU 推理途中。
+let lastRunMode: ExecutionMode = 'wasm';
 const cancelledTasks = new Set<string>();
 
 // 共享模型字节（由 worker-pool 一次性读入并广播），避免每个 worker 各自重复读取模型。
@@ -141,12 +146,68 @@ function ensureWasmBinary(): Promise<void> {
   return wasmBinaryPromise;
 }
 
-function hasWebGpu(): boolean {
-  try {
-    return typeof navigator !== 'undefined' && Boolean((navigator as { gpu?: unknown }).gpu);
-  } catch {
-    return false;
+interface WebGpuAdapter {
+  requestDevice(descriptor?: Record<string, unknown>): Promise<WebGpuDevice>;
+}
+
+interface WebGpuDevice {
+  lost: Promise<{ reason?: string; message?: string }>;
+}
+
+interface WebGpuNavigator {
+  gpu?: { requestAdapter(): Promise<WebGpuAdapter | null> };
+}
+
+// 真正向浏览器申请一次适配器，而非仅判断 navigator.gpu 是否存在：部分环境
+// navigator.gpu 存在却拿不到适配器（驱动被屏蔽、纯软件渲染等）。结果缓存复用。
+let adapterProbe: Promise<WebGpuAdapter | null> | null = null;
+
+function probeWebGpuAdapter(): Promise<WebGpuAdapter | null> {
+  if (!adapterProbe) {
+    adapterProbe = (async () => {
+      try {
+        const gpu =
+          typeof navigator !== 'undefined'
+            ? (navigator as unknown as WebGpuNavigator).gpu
+            : undefined;
+        if (!gpu) {
+          return null;
+        }
+        return await gpu.requestAdapter();
+      } catch {
+        return null;
+      }
+    })();
   }
+  return adapterProbe;
+}
+
+// ORT 在 EP 内部自行创建 GPUDevice，外部拿不到引用。这里用同一适配器额外申请一个
+// 监控设备：物理 GPU 重置时该适配器的所有设备都会触发 lost，作为可靠的失效信号。
+let deviceMonitorStarted = false;
+
+function watchGpuDeviceLoss(adapter: WebGpuAdapter): void {
+  if (deviceMonitorStarted) {
+    return;
+  }
+  deviceMonitorStarted = true;
+  void adapter
+    .requestDevice()
+    .then((device) => {
+      void device.lost.then((info) => {
+        deviceMonitorStarted = false;
+        if (gpuFailed) {
+          return;
+        }
+        gpuFailed = true;
+        postGpuStatus(false, `GPU device lost: ${info?.message ?? info?.reason ?? 'unknown'}`);
+        void releaseSession();
+      });
+    })
+    .catch((error) => {
+      deviceMonitorStarted = false;
+      console.warn('Failed to start GPU device loss monitor:', error);
+    });
 }
 
 function postGpuStatus(active: boolean, reason?: string): void {
@@ -197,8 +258,24 @@ async function createSession(
   return buildSession(new Uint8Array(await response.arrayBuffer()), mode);
 }
 
+async function resolveExecutionMode(): Promise<ExecutionMode> {
+  if (!wantsGpu || gpuFailed) {
+    return 'wasm';
+  }
+
+  const adapter = await probeWebGpuAdapter();
+  if (!adapter) {
+    gpuFailed = true;
+    postGpuStatus(false, 'WebGPU adapter unavailable');
+    return 'wasm';
+  }
+
+  watchGpuDeviceLoss(adapter);
+  return 'gpu';
+}
+
 async function getSession(modelUrl: string): Promise<InferenceSession> {
-  const desiredMode: ExecutionMode = wantsGpu && !gpuFailed && hasWebGpu() ? 'gpu' : 'wasm';
+  const desiredMode = await resolveExecutionMode();
 
   if (session && sessionModelUrl === modelUrl && sessionMode === desiredMode) {
     return session;
@@ -220,8 +297,6 @@ async function getSession(modelUrl: string): Promise<InferenceSession> {
       gpuFailed = true;
       postGpuStatus(false, error instanceof Error ? error.message : String(error));
     }
-  } else if (wantsGpu && !gpuFailed && !hasWebGpu()) {
-    postGpuStatus(false, 'WebGPU not available');
   }
 
   session = await createSession(modelUrl, 'wasm', providedBuffer);
@@ -285,6 +360,7 @@ async function runInference(
   };
 
   const inferenceSession = await getSession(modelUrl);
+  lastRunMode = sessionMode ?? 'wasm';
   lap('session');
   report(25);
 
@@ -389,6 +465,49 @@ async function runInference(
   }
 }
 
+// GPU 设备在推理途中丢失时，同一个 worker 内无损回退到 WASM 重跑一次，
+// 避免把错误冒泡给上层导致整个任务失败。
+async function runInferenceWithFallback(
+  imageBlob: Blob,
+  modelUrl: string,
+  resolution: number,
+  report: (progress: number) => void,
+  timings: Record<string, number>,
+  preprocess: PreprocessMode,
+  postprocess: PostprocessMode,
+): Promise<Blob> {
+  try {
+    return await runInference(
+      imageBlob,
+      modelUrl,
+      resolution,
+      report,
+      timings,
+      preprocess,
+      postprocess,
+    );
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (lastRunMode !== 'gpu' || !GPU_DEVICE_LOST_PATTERN.test(errorMessage)) {
+      throw error;
+    }
+    if (!gpuFailed) {
+      gpuFailed = true;
+      postGpuStatus(false, errorMessage);
+    }
+    await releaseSession();
+    return await runInference(
+      imageBlob,
+      modelUrl,
+      resolution,
+      report,
+      timings,
+      preprocess,
+      postprocess,
+    );
+  }
+}
+
 async function handleTask(
   message: Extract<InboundMessage, { type: 'PROCESS_IMAGE_TASK' }>,
 ): Promise<void> {
@@ -412,7 +531,7 @@ async function handleTask(
       return;
     }
 
-    const resultBlob = await runInference(
+    const resultBlob = await runInferenceWithFallback(
       message.imageBlob,
       message.modelUrl,
       message.resolution,

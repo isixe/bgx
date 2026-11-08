@@ -84,6 +84,7 @@ export function ImagePreview() {
     backToBatchQueue,
     reprocessBatchItem,
     setBatchConcurrency,
+    gpuAcceleration,
   } = useAppStore();
   const { t } = useTranslation();
   const [sliderPosition, setSliderPosition] = useState(50);
@@ -257,7 +258,7 @@ export function ImagePreview() {
       (item) => item.status === 'completed' || item.status === 'error',
     ).length;
     const progressPercent = totalCount === 0 ? 0 : Math.round((processedCount / totalCount) * 100);
-    const concurrencyOptions = getBatchConcurrencyOptions().map((value) => ({
+    const concurrencyOptions = getBatchConcurrencyOptions(gpuAcceleration).map((value) => ({
       value,
       label: String(value),
     }));

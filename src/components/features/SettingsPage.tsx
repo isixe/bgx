@@ -27,13 +27,14 @@ export function SettingsPage() {
     setBatchConcurrency,
     preloadEnabled,
     setPreloadEnabled,
+    gpuAcceleration,
   } = useAppStore();
 
   const cardClasses = `rounded-xl border p-4 ${
     isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'
   }`;
 
-  const concurrencyOptions = getBatchConcurrencyOptions().map((value) => ({
+  const concurrencyOptions = getBatchConcurrencyOptions(gpuAcceleration).map((value) => ({
     value,
     label: String(value),
   }));
