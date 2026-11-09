@@ -264,9 +264,8 @@ export function ImagePreview() {
     const isGpu = gpuAcceleration;
     const activeConcurrency = isGpu ? gpuConcurrency : batchConcurrency;
     const concurrencyLabel = isGpu ? t('gpuConcurrency') : t('cpuConcurrency');
-    const concurrencyOptions = (isGpu
-      ? getGpuConcurrencyOptions(gpuVramGb)
-      : getBatchConcurrencyOptions()
+    const concurrencyOptions = (
+      isGpu ? getGpuConcurrencyOptions(gpuVramGb) : getBatchConcurrencyOptions()
     ).map((value) => ({
       value,
       label: String(value),

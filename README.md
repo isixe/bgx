@@ -42,8 +42,8 @@ Classic segmentation networks, fast and ideal for everyday use.
 
 High-resolution models with finer detail.
 
-| Model         | Resolution | Size   | Best For            |
-| ------------- | ---------- | ------ | ------------------- |
+| Model         | Resolution | Size   | Best For             |
+| ------------- | ---------- | ------ | -------------------- |
 | ISNet General | 1024px     | ~170MB | High-res general use |
 | ISNet Anime   | 1024px     | ~168MB | Anime/illustrations  |
 
@@ -61,26 +61,26 @@ Professional-grade background removal with the best quality.
 
 State-of-the-art segmentation with smooth, detailed edges.
 
-| Model      | Resolution | Size   | Best For                          |
-| ---------- | ---------- | ------ | --------------------------------- |
-| BEN2 FP16  | 1024px     | ~209MB | Fine hair/fur, smaller download   |
-| BEN2 FP32  | 1024px     | ~403MB | Fine hair/fur, cleanest edges     |
+| Model     | Resolution | Size   | Best For                        |
+| --------- | ---------- | ------ | ------------------------------- |
+| BEN2 FP16 | 1024px     | ~209MB | Fine hair/fur, smaller download |
+| BEN2 FP32 | 1024px     | ~403MB | Fine hair/fur, cleanest edges   |
 
 ### MODNet Series
 
 Real-time portrait matting, best for people and selfies.
 
-| Model  | Resolution | Size  | Best For                                       |
-| ------ | ---------- | ----- | ---------------------------------------------- |
+| Model  | Resolution | Size  | Best For                                        |
+| ------ | ---------- | ----- | ----------------------------------------------- |
 | MODNet | 512px      | ~25MB | Portraits, semi-transparent hair, natural edges |
 
 ### InSPyReNet Series
 
 ACCV 2022 segmentation with excellent hair and translucent edge handling.
 
-| Model                | Resolution | Size  | Best For                             |
-| -------------------- | ---------- | ----- | ------------------------------------ |
-| InSPyReNet Res2Net50 | 384px      | ~58MB | Detail retention at moderate speed   |
+| Model                | Resolution | Size  | Best For                           |
+| -------------------- | ---------- | ----- | ---------------------------------- |
+| InSPyReNet Res2Net50 | 384px      | ~58MB | Detail retention at moderate speed |
 
 ## Installation
 

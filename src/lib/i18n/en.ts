@@ -209,7 +209,8 @@ export const translations = {
   gpuFallbackNotice: 'GPU acceleration is unavailable here, switched to CPU.',
   cpuConcurrency: 'CPU concurrency',
   gpuConcurrency: 'GPU concurrency',
-  settingsGpuConcurrencyDesc: 'Parallel jobs when using the GPU (WebGPU), estimate from the VRAM below.',
+  settingsGpuConcurrencyDesc:
+    'Parallel jobs when using the GPU (WebGPU), estimate from the VRAM below.',
   gpuVramLabel: 'VRAM (GB)',
   gpuVramPlaceholder: 'Optional',
   gpuConcurrencyHint:
