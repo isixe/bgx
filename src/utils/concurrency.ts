@@ -44,12 +44,13 @@ export function getSessionThreads(concurrency: number): number {
   return clamp(Math.floor(available / parallel), 1, available);
 }
 
-// Each WASM worker copies the whole model into its own heap (roughly an order of
-// magnitude above the model bytes once activations and the emscripten heap are
-// counted), so a wide batch of large models exhausts renderer memory. Cap the
-// batch width from a fixed budget instead of only core count.
+// Each WASM worker copies the whole model into its own heap, so a wide batch of
+// large models exhausts renderer memory. Cap the batch width from a fixed budget
+// instead of only core count. Measured with u2net (168MB): ~838MB per worker,
+// which is ~4x the model bytes plus a ~160MB runtime baseline; that lands at two
+// workers for large models inside the 2GB budget.
 const WORKER_MEMORY_BUDGET_MB = 2048;
-const WORKER_MODEL_MULTIPLIER = 10;
+const WORKER_MODEL_MULTIPLIER = 4;
 const WORKER_BASE_MB = 160;
 
 export function getMaxWorkersForModelBytes(modelBytes: number): number {
