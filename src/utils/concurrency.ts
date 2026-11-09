@@ -12,6 +12,8 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 // Floor of 1: on tiny machines reserving a UI core would otherwise yield zero workers.
+// 实测（8 逻辑核、u2netp@320）: 4 worker 吞吐已饱和，6 worker 持平，8 worker 反而退化；
+// 每多一个 worker 都要多建一份 session，因此上限固定为 4。
 export const MAX_BATCH_CONCURRENCY = clamp(getHardwareConcurrency() - 1, 1, 4);
 
 export const DEFAULT_BATCH_CONCURRENCY = clamp(
