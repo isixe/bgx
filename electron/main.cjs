@@ -5,7 +5,7 @@ const fsSync = require('node:fs');
 
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 const APP_HOST = 'bundle';
-const DEV_URL = 'http://localhost:4321';
+const DEV_URL = 'http://127.0.0.1:8971';
 
 // Window/taskbar icon: prefer the built asset (packaged app), fall back to
 // public/ when running from source (astro dev serves dist/ only after build).

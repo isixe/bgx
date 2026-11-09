@@ -59,7 +59,7 @@ bgx/
 ## COMMANDS
 
 ```bash
-pnpm dev      # Start dev server at localhost:4321
+pnpm dev      # Start dev server at localhost:8971
 pnpm build    # Build to ./dist/
 pnpm preview  # Preview production build
 ```

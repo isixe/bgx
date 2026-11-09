@@ -103,7 +103,7 @@ pnpm install
 pnpm dev
 ```
 
-The application will be available at `http://localhost:4321`.
+The application will be available at `http://localhost:8971`.
 
 ## Build for Production
 
@@ -167,7 +167,7 @@ bgx/
 
 | Command          | Action                               |
 | ---------------- | ------------------------------------ |
-| `pnpm dev`       | Start dev server at `localhost:4321` |
+| `pnpm dev`       | Start dev server at `localhost:8971` |
 | `pnpm build`     | Build production site to `./dist/`   |
 | `pnpm preview`   | Preview production build             |
 | `pnpm astro ...` | Run Astro CLI commands               |

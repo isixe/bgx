@@ -25,6 +25,10 @@ function stripRedundantOrtWasm() {
 }
 
 export default defineConfig({
+  server: {
+    port: 8971,
+    host: '127.0.0.1',
+  },
   integrations: [
     react({
       include: ['**/react/**/*', '**/*.tsx'],
@@ -35,6 +39,8 @@ export default defineConfig({
     plugins: [stripRedundantOrtWasm()],
     optimizeDeps: {},
     server: {
+      // Fail loudly instead of silently drifting to 8972+; dev:electron waits on a fixed port.
+      strictPort: true,
       headers: {
         'Cross-Origin-Opener-Policy': 'same-origin',
         'Cross-Origin-Embedder-Policy': 'require-corp',
