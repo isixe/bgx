@@ -207,6 +207,13 @@ export const translations = {
   gpuAccelerationDesc:
     'Use the GPU (WebGPU) to speed up processing. Falls back to CPU automatically when unavailable.',
   gpuFallbackNotice: 'GPU acceleration is unavailable here, switched to CPU.',
+  cpuConcurrency: 'CPU concurrency',
+  gpuConcurrency: 'GPU concurrency',
+  settingsGpuConcurrencyDesc: 'Parallel jobs when using the GPU (WebGPU), estimate from the VRAM below.',
+  gpuVramLabel: 'VRAM (GB)',
+  gpuVramPlaceholder: 'Optional',
+  gpuConcurrencyHint:
+    'Concurrency is estimated from VRAM. Avoid setting it too high, or you may run out of VRAM and trigger a device-lost crash.',
   preloadModels: 'Preload models',
   settingsPreloadDesc:
     'Warm up idle workers when a batch is queued, so processing starts faster. Uses more memory.',

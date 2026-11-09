@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import { clampBatchConcurrency, DEFAULT_BATCH_CONCURRENCY } from '../utils/concurrency';
+import {
+  clampBatchConcurrency,
+  clampGpuConcurrency,
+  DEFAULT_BATCH_CONCURRENCY,
+  DEFAULT_GPU_BATCH_CONCURRENCY,
+} from '../utils/concurrency';
 import type {
   AppState,
   ModelStatus,
@@ -46,9 +51,18 @@ function readPersistedPreferences(): Partial<AppState> {
     prefs.gpuAcceleration = storedGpu === 'true';
   }
 
+  const storedVram = localStorage.getItem('bgx-gpu-vram-gb');
+  const vram = storedVram !== null && storedVram !== '' ? Number(storedVram) : null;
+  prefs.gpuVramGb = vram !== null && Number.isFinite(vram) && vram > 0 ? vram : null;
+
   const storedConcurrency = Number(localStorage.getItem('bgx-batch-concurrency'));
   if (Number.isInteger(storedConcurrency) && storedConcurrency >= 1) {
-    prefs.batchConcurrency = clampBatchConcurrency(storedConcurrency, prefs.gpuAcceleration ?? true);
+    prefs.batchConcurrency = clampBatchConcurrency(storedConcurrency);
+  }
+
+  const storedGpuConcurrency = Number(localStorage.getItem('bgx-gpu-concurrency'));
+  if (Number.isInteger(storedGpuConcurrency) && storedGpuConcurrency >= 1) {
+    prefs.gpuConcurrency = clampGpuConcurrency(storedGpuConcurrency, prefs.gpuVramGb ?? null);
   }
 
   const storedPreload = localStorage.getItem('bgx-preload-enabled');
@@ -101,6 +115,8 @@ const initialState = {
   batchMode: false,
   batchQueue: [] as BatchItem[],
   batchConcurrency: DEFAULT_BATCH_CONCURRENCY,
+  gpuConcurrency: DEFAULT_GPU_BATCH_CONCURRENCY,
+  gpuVramGb: null as number | null,
   activeBatchItemId: null as string | null,
   viewingBatchResult: false,
   selectedBatchItemIds: [] as string[],
@@ -302,19 +318,36 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ checkUpdatesOnStartup: enabled });
   },
   setGpuAcceleration: (enabled) => {
-    const nextConcurrency = clampBatchConcurrency(get().batchConcurrency, enabled);
     if (typeof window !== 'undefined') {
       localStorage.setItem('bgx-gpu-acceleration', String(enabled));
-      localStorage.setItem('bgx-batch-concurrency', String(nextConcurrency));
     }
     set({
       gpuAcceleration: enabled,
-      batchConcurrency: nextConcurrency,
       gpuFallbackActive: enabled ? false : get().gpuFallbackActive,
     });
   },
   setGpuFallbackActive: (active) => set({ gpuFallbackActive: active }),
   applyGpuFallback: () => set({ gpuAcceleration: false, gpuFallbackActive: true }),
+  setGpuConcurrency: (value) => {
+    const next = clampGpuConcurrency(value, get().gpuVramGb);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bgx-gpu-concurrency', String(next));
+    }
+    set({ gpuConcurrency: next });
+  },
+  setGpuVramGb: (value) => {
+    const nextVram = value !== null && Number.isFinite(value) && value > 0 ? value : null;
+    const nextConcurrency = clampGpuConcurrency(get().gpuConcurrency, nextVram);
+    if (typeof window !== 'undefined') {
+      if (nextVram === null) {
+        localStorage.removeItem('bgx-gpu-vram-gb');
+      } else {
+        localStorage.setItem('bgx-gpu-vram-gb', String(nextVram));
+      }
+      localStorage.setItem('bgx-gpu-concurrency', String(nextConcurrency));
+    }
+    set({ gpuVramGb: nextVram, gpuConcurrency: nextConcurrency });
+  },
   setPreloadEnabled: (enabled) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('bgx-preload-enabled', String(enabled));
@@ -336,7 +369,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setBatchMode: (mode) => set({ batchMode: mode }),
   setBatchConcurrency: (value) => {
-    const next = clampBatchConcurrency(value, get().gpuAcceleration);
+    const next = clampBatchConcurrency(value);
     if (typeof window !== 'undefined') {
       localStorage.setItem('bgx-batch-concurrency', String(next));
     }

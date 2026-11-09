@@ -34,6 +34,7 @@ export function AppProvider() {
     batchMode,
     batchQueue,
     batchConcurrency,
+    gpuConcurrency,
     updateBatchItemStatus,
     setBatchItemProgress,
     cachedModelUrl,
@@ -43,6 +44,8 @@ export function AppProvider() {
     preloadEnabled,
     hydrateFromStorage,
   } = useAppStore();
+
+  const activeConcurrency = gpuAcceleration ? gpuConcurrency : batchConcurrency;
 
   useEffect(() => {
     hydrateFromStorage();
@@ -188,9 +191,9 @@ export function AppProvider() {
 
   useEffect(() => {
     if (isPoolReady) {
-      poolRef.current?.setConcurrency(batchConcurrency);
+      poolRef.current?.setConcurrency(activeConcurrency);
     }
-  }, [batchConcurrency, isPoolReady]);
+  }, [activeConcurrency, isPoolReady]);
 
   useEffect(() => {
     if (isPoolReady) {
@@ -229,7 +232,7 @@ export function AppProvider() {
       return;
     }
     // 懒预热：仅当待处理队列超过并发数（确实会占用多个 worker）时才预热所有空闲 slot
-    if (batchQueue.length <= batchConcurrency) {
+    if (batchQueue.length <= activeConcurrency) {
       return;
     }
     if (preloadedUrlRef.current === cachedModelUrl) {
@@ -243,7 +246,7 @@ export function AppProvider() {
 
     preloadedUrlRef.current = cachedModelUrl;
     poolRef.current?.preload(cachedModelUrl, model.resolution);
-  }, [cachedModelUrl, currentModel, isPoolReady, preloadEnabled, batchQueue, batchConcurrency]);
+  }, [cachedModelUrl, currentModel, isPoolReady, preloadEnabled, batchQueue, activeConcurrency]);
 
   useEffect(() => {
     if (!batchMode || !isPoolReady) {
@@ -255,7 +258,7 @@ export function AppProvider() {
       return;
     }
 
-    const available = Math.min(pool.poolSize, batchConcurrency) - inFlightRef.current.size;
+    const available = Math.min(pool.poolSize, activeConcurrency) - inFlightRef.current.size;
     if (available <= 0) {
       return;
     }
@@ -268,7 +271,7 @@ export function AppProvider() {
       inFlightRef.current.add(item.id);
       void runItem(item);
     }
-  }, [batchMode, batchQueue, batchConcurrency, isPoolReady, runItem]);
+  }, [batchMode, batchQueue, activeConcurrency, isPoolReady, runItem]);
 
   useEffect(() => {
     if (originalImage && !isProcessing && isReadyToProcess) {

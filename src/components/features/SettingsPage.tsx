@@ -4,7 +4,7 @@ import { ModelsPage } from './ModelsPage';
 import { checkForAppUpdate, isDesktopApp, DOWNLOAD_URL } from '../../lib/appUpdate';
 import pkg from '../../../package.json';
 import { Select } from '../ui/Select';
-import { getBatchConcurrencyOptions } from '../../utils/concurrency';
+import { getBatchConcurrencyOptions, getGpuConcurrencyOptions } from '../../utils/concurrency';
 
 // Keep the "checking…" indicator visible for at least this long so an instant
 // network response does not cause a distracting flash.
@@ -27,14 +27,22 @@ export function SettingsPage() {
     setBatchConcurrency,
     preloadEnabled,
     setPreloadEnabled,
-    gpuAcceleration,
+    gpuConcurrency,
+    setGpuConcurrency,
+    gpuVramGb,
+    setGpuVramGb,
   } = useAppStore();
 
   const cardClasses = `rounded-xl border p-4 ${
     isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'
   }`;
 
-  const concurrencyOptions = getBatchConcurrencyOptions(gpuAcceleration).map((value) => ({
+  const concurrencyOptions = getBatchConcurrencyOptions().map((value) => ({
+    value,
+    label: String(value),
+  }));
+
+  const gpuConcurrencyOptions = getGpuConcurrencyOptions(gpuVramGb).map((value) => ({
     value,
     label: String(value),
   }));
@@ -394,7 +402,7 @@ export function SettingsPage() {
                         <p
                           className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
                         >
-                          {t('batchConcurrency')}
+                          {t('cpuConcurrency')}
                         </p>
                         <p
                           className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
@@ -407,9 +415,62 @@ export function SettingsPage() {
                         options={concurrencyOptions}
                         onChange={setBatchConcurrency}
                         isDarkMode={isDarkMode}
-                        ariaLabel={t('batchConcurrency')}
-                        title={t('batchConcurrency')}
+                        ariaLabel={t('cpuConcurrency')}
+                        title={t('cpuConcurrency')}
                       />
+                    </div>
+                    <div className={`${cardClasses} space-y-3`}>
+                      <div>
+                        <p
+                          className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                        >
+                          {t('gpuConcurrency')}
+                        </p>
+                        <p
+                          className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                        >
+                          {t('settingsGpuConcurrencyDesc')}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <label className="flex items-center gap-2">
+                          <span
+                            className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                          >
+                            {t('gpuVramLabel')}
+                          </span>
+                          <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            inputMode="numeric"
+                            value={gpuVramGb ?? ''}
+                            onChange={(event) => {
+                              const raw = event.target.value.trim();
+                              setGpuVramGb(raw === '' ? null : Number(raw));
+                            }}
+                            placeholder={t('gpuVramPlaceholder')}
+                            className={`w-20 rounded border px-2 py-1 text-xs tabular-nums outline-none transition-colors focus-visible:ring-1 focus-visible:ring-indigo-400 ${
+                              isDarkMode
+                                ? 'bg-slate-600 text-gray-200 border-slate-500 hover:border-slate-400'
+                                : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                            }`}
+                          />
+                        </label>
+                        <Select
+                          value={gpuConcurrency}
+                          options={gpuConcurrencyOptions}
+                          onChange={setGpuConcurrency}
+                          isDarkMode={isDarkMode}
+                          ariaLabel={t('gpuConcurrency')}
+                          title={t('gpuConcurrency')}
+                        />
+                      </div>
+                      <p
+                        className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}
+                      >
+                        {t('gpuConcurrencyHint')}
+                      </p>
                     </div>
                     <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
                       <div className="min-w-0">

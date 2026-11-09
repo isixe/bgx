@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../lib/i18n';
 import { downloadResultImage } from '../../utils/downloadImage';
-import { getBatchConcurrencyOptions } from '../../utils/concurrency';
+import { getBatchConcurrencyOptions, getGpuConcurrencyOptions } from '../../utils/concurrency';
 import { Select } from '../ui/Select';
 
 function formatDuration(ms: number): string {
@@ -85,6 +85,9 @@ export function ImagePreview() {
     reprocessBatchItem,
     setBatchConcurrency,
     gpuAcceleration,
+    gpuConcurrency,
+    setGpuConcurrency,
+    gpuVramGb,
   } = useAppStore();
   const { t } = useTranslation();
   const [sliderPosition, setSliderPosition] = useState(50);
@@ -258,7 +261,13 @@ export function ImagePreview() {
       (item) => item.status === 'completed' || item.status === 'error',
     ).length;
     const progressPercent = totalCount === 0 ? 0 : Math.round((processedCount / totalCount) * 100);
-    const concurrencyOptions = getBatchConcurrencyOptions(gpuAcceleration).map((value) => ({
+    const isGpu = gpuAcceleration;
+    const activeConcurrency = isGpu ? gpuConcurrency : batchConcurrency;
+    const concurrencyLabel = isGpu ? t('gpuConcurrency') : t('cpuConcurrency');
+    const concurrencyOptions = (isGpu
+      ? getGpuConcurrencyOptions(gpuVramGb)
+      : getBatchConcurrencyOptions()
+    ).map((value) => ({
       value,
       label: String(value),
     }));
@@ -295,15 +304,15 @@ export function ImagePreview() {
                     </span>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <Select
-                        value={batchConcurrency}
+                        value={activeConcurrency}
                         options={concurrencyOptions}
-                        onChange={setBatchConcurrency}
+                        onChange={isGpu ? setGpuConcurrency : setBatchConcurrency}
                         isDarkMode={isDarkMode}
-                        ariaLabel={t('batchConcurrency')}
-                        title={t('batchConcurrency')}
+                        ariaLabel={concurrencyLabel}
+                        title={concurrencyLabel}
                       />
                       <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {t('batchConcurrency')}
+                        {concurrencyLabel}
                       </span>
                     </div>
                   </div>

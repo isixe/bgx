@@ -1,6 +1,8 @@
 import {
   clampBatchConcurrency,
+  clampGpuConcurrency,
   DEFAULT_BATCH_CONCURRENCY,
+  getMaxWorkersForModelBytes,
   getSessionThreads,
 } from '../utils/concurrency';
 import type { PostprocessMode, PreprocessMode } from '../types/app';
@@ -84,6 +86,7 @@ export class OnnxWorkerPool {
   private concurrencyLimit = DEFAULT_BATCH_CONCURRENCY;
   private useGpu = true;
   private gpuActive: boolean | null = null;
+  private currentModelBytes = 0;
 
   onGpuStatus: ((status: { active: boolean; reason?: string }) => void) | null = null;
 
@@ -95,8 +98,17 @@ export class OnnxWorkerPool {
     return this.slots.length;
   }
 
+  private clampLimit(value: number): number {
+    return this.useGpu ? clampGpuConcurrency(value, null) : clampBatchConcurrency(value);
+  }
+
+  // GPU 模式下模型常驻显存，不受 CPU 堆内存预算约束，因此跳过该上限。
   private get effectiveConcurrency(): number {
-    return clampBatchConcurrency(this.concurrencyLimit, this.useGpu);
+    const requested = this.clampLimit(this.concurrencyLimit);
+    if (this.useGpu) {
+      return Math.max(1, requested);
+    }
+    return Math.max(1, Math.min(requested, getMaxWorkersForModelBytes(this.currentModelBytes)));
   }
 
   get concurrency(): number {
@@ -104,7 +116,7 @@ export class OnnxWorkerPool {
   }
 
   setConcurrency(limit: number): void {
-    const next = clampBatchConcurrency(limit);
+    const next = this.clampLimit(limit);
     if (next === this.concurrencyLimit) {
       return;
     }
@@ -258,6 +270,7 @@ export class OnnxWorkerPool {
         new Uint8Array(shared).set(new Uint8Array(bytes));
         this.modelBuffers.set(modelUrl, shared);
         this.broadcastModelBuffer(modelUrl, shared);
+        this.applyModelMemoryLimit(bytes.byteLength);
       } catch (error) {
         // 共享緩衝不可用時靜默回退到 worker 內的獨立 fetch。
         console.warn('[onnx-pool] shared model buffer unavailable, falling back:', error);
@@ -265,6 +278,22 @@ export class OnnxWorkerPool {
     })();
 
     this.modelBufferRequests.set(modelUrl, request);
+  }
+
+  private applyModelMemoryLimit(modelBytes: number): void {
+    if (this.disposed || modelBytes <= this.currentModelBytes) {
+      return;
+    }
+
+    const before = this.effectiveConcurrency;
+    this.currentModelBytes = modelBytes;
+    if (this.effectiveConcurrency === before) {
+      return;
+    }
+
+    this.resizeSlots();
+    this.applyThreadConfig();
+    this.drainQueue();
   }
 
   private broadcastModelBuffer(modelUrl: string, buffer: SharedArrayBuffer): void {
