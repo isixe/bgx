@@ -191,15 +191,15 @@ export function AppProvider() {
 
   useEffect(() => {
     if (isPoolReady) {
-      poolRef.current?.setConcurrency(activeConcurrency);
-    }
-  }, [activeConcurrency, isPoolReady]);
-
-  useEffect(() => {
-    if (isPoolReady) {
       poolRef.current?.setUseGpu(gpuAcceleration);
     }
   }, [gpuAcceleration, isPoolReady]);
+
+  useEffect(() => {
+    if (isPoolReady) {
+      poolRef.current?.setConcurrency(activeConcurrency);
+    }
+  }, [activeConcurrency, isPoolReady]);
 
   useEffect(() => {
     if (!isPoolReady) {

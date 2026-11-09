@@ -1,9 +1,9 @@
 import {
   clampBatchConcurrency,
-  clampGpuConcurrency,
   DEFAULT_BATCH_CONCURRENCY,
   getMaxWorkersForModelBytes,
   getSessionThreads,
+  MAX_GPU_CONCURRENCY,
 } from '../utils/concurrency';
 import type { PostprocessMode, PreprocessMode } from '../types/app';
 
@@ -83,7 +83,8 @@ export class OnnxWorkerPool {
   private readonly modelBuffers = new Map<string, SharedArrayBuffer>();
   private readonly modelBufferRequests = new Map<string, Promise<void>>();
   private disposed = false;
-  private concurrencyLimit = DEFAULT_BATCH_CONCURRENCY;
+  // 存原始请求值，切换 GPU/CPU 模式时按新模式重新夹取，避免沿用上一模式夹过的值。
+  private requestedConcurrency = DEFAULT_BATCH_CONCURRENCY;
   private useGpu = true;
   private gpuActive: boolean | null = null;
   private currentModelBytes = 0;
@@ -98,13 +99,15 @@ export class OnnxWorkerPool {
     return this.slots.length;
   }
 
+  // GPU 的显存夹取已由 store 依 VRAM 完成，这里只做硬上限保护，避免用 null 重新夹回默认值。
   private clampLimit(value: number): number {
-    return this.useGpu ? clampGpuConcurrency(value, null) : clampBatchConcurrency(value);
+    const rounded = Math.max(1, Math.round(value));
+    return this.useGpu ? Math.min(rounded, MAX_GPU_CONCURRENCY) : clampBatchConcurrency(rounded);
   }
 
   // GPU 模式下模型常驻显存，不受 CPU 堆内存预算约束，因此跳过该上限。
   private get effectiveConcurrency(): number {
-    const requested = this.clampLimit(this.concurrencyLimit);
+    const requested = this.clampLimit(this.requestedConcurrency);
     if (this.useGpu) {
       return Math.max(1, requested);
     }
@@ -116,12 +119,12 @@ export class OnnxWorkerPool {
   }
 
   setConcurrency(limit: number): void {
-    const next = this.clampLimit(limit);
-    if (next === this.concurrencyLimit) {
+    const before = this.effectiveConcurrency;
+    this.requestedConcurrency = limit;
+    if (this.effectiveConcurrency === before) {
       return;
     }
 
-    this.concurrencyLimit = next;
     this.resizeSlots();
     this.applyThreadConfig();
     this.drainQueue();
