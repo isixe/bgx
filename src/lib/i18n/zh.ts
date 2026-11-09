@@ -205,11 +205,9 @@ export const translations = {
   gpuFallbackNotice: '当前环境不支持 GPU 加速，已切换到 CPU。',
   cpuConcurrency: 'CPU 并发',
   gpuConcurrency: 'GPU 并发',
-  settingsGpuConcurrencyDesc: '使用 GPU（WebGPU）时的并行数量，可结合下方显存估算。',
-  gpuVramLabel: '显存 (GB)',
-  gpuVramPlaceholder: '留空',
+  settingsGpuConcurrencyDesc: 'GPU 任务在同一条设备队列上依次执行，并发数固定为 1。',
   gpuConcurrencyHint:
-    '并发数为按显存估算的参考值，不建议设置过高，否则可能因显存不足导致设备丢失或崩溃。',
+    '实测增加 GPU 并发并不能提升吞吐，只会让图片在队列里互相排队、单张处理更慢。',
   preloadModels: '预热模型',
   settingsPreloadDesc:
     '队列中的图片超过并发数时，提前在空闲 worker 中加载模型以加快起步，会占用更多内存。',

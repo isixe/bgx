@@ -8,13 +8,22 @@ export interface SelectOption {
 interface SelectProps {
   value: number;
   options: SelectOption[];
-  onChange: (value: number) => void;
+  onChange?: (value: number) => void;
   isDarkMode: boolean;
   ariaLabel?: string;
   title?: string;
+  disabled?: boolean;
 }
 
-export function Select({ value, options, onChange, isDarkMode, ariaLabel, title }: SelectProps) {
+export function Select({
+  value,
+  options,
+  onChange,
+  isDarkMode,
+  ariaLabel,
+  title,
+  disabled = false,
+}: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const selected = options.find((option) => option.value === value);
@@ -47,7 +56,12 @@ export function Select({ value, options, onChange, isDarkMode, ariaLabel, title 
     <div ref={containerRef} className="relative flex-shrink-0">
       <button
         type="button"
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={() => {
+          if (!disabled) {
+            setIsOpen((open) => !open);
+          }
+        }}
+        disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label={ariaLabel}
@@ -56,7 +70,7 @@ export function Select({ value, options, onChange, isDarkMode, ariaLabel, title 
           isDarkMode
             ? 'bg-slate-600 text-gray-200 border border-slate-500 hover:border-slate-400'
             : 'bg-white text-gray-700 border border-gray-300 hover:border-gray-400'
-        }`}
+        } ${disabled ? 'cursor-not-allowed opacity-60 hover:border-slate-500' : ''}`}
       >
         <span className="tabular-nums">{selected ? selected.label : value}</span>
         <svg
@@ -87,7 +101,7 @@ export function Select({ value, options, onChange, isDarkMode, ariaLabel, title 
                 role="option"
                 aria-selected={isSelected}
                 onClick={() => {
-                  onChange(option.value);
+                  onChange?.(option.value);
                   setIsOpen(false);
                 }}
                 className={`w-full flex items-center justify-between gap-3 px-2.5 py-1 text-xs tabular-nums text-left transition-colors ${

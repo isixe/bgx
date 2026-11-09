@@ -1,5 +1,6 @@
 import { env, InferenceSession, Tensor } from 'onnxruntime-web';
 import type { PostprocessMode, PreprocessMode } from '../types/app';
+import { getMaxSessionThreads } from '../utils/concurrency';
 
 type ExecutionMode = 'gpu' | 'wasm';
 
@@ -62,6 +63,10 @@ let gpuFailed = false;
 // 最近一次 runInference 实际使用的执行后端，用于判断错误是否发生在 GPU 推理途中。
 let lastRunMode: ExecutionMode = 'wasm';
 const cancelledTasks = new Set<string>();
+// ORT 只在 runtime 初始化时读取 numThreads，已建好的 session 不会跟随 CONFIGURE_WORKER 变化；
+// 记录目标线程数，并在下一个任务开始（此时必无推理在跑）时重建 session。
+let sessionThreads = 0;
+let sessionStale = false;
 
 // 共享模型字节（由 worker-pool 一次性读入并广播），避免每个 worker 各自重复读取模型。
 const providedModelBuffers = new Map<string, Uint8Array>();
@@ -226,6 +231,15 @@ async function releaseSession(): Promise<void> {
       console.warn('Failed to release inference session:', error);
     }
   }
+}
+
+// 只能在任务边界调用：重建 session 期间不能有推理在跑。
+async function applyPendingThreadChange(): Promise<void> {
+  if (!sessionStale) {
+    return;
+  }
+  sessionStale = false;
+  await releaseSession();
 }
 
 function buildSession(data: Uint8Array, mode: ExecutionMode): Promise<InferenceSession> {
@@ -513,6 +527,7 @@ async function handleTask(
 ): Promise<void> {
   const { taskId } = message;
   cancelledTasks.delete(taskId);
+  await applyPendingThreadChange();
 
   const report = (progress: number) => {
     if (!cancelledTasks.has(taskId)) {
@@ -571,6 +586,7 @@ async function handlePreload(
   message: Extract<InboundMessage, { type: 'PRELOAD_MODEL' }>,
 ): Promise<void> {
   try {
+    await applyPendingThreadChange();
     const target = await getSession(message.modelUrl);
     await warmupSession(target, message.resolution);
   } catch (error) {
@@ -596,7 +612,15 @@ function handleMessage(event: MessageEvent<InboundMessage>): void {
   }
 
   if (message.type === 'CONFIGURE_WORKER') {
-    env.wasm.numThreads = Math.max(1, Math.min(4, Math.floor(message.numThreads)));
+    const nextThreads = Math.max(
+      1,
+      Math.min(getMaxSessionThreads(), Math.floor(message.numThreads)),
+    );
+    if (nextThreads !== sessionThreads) {
+      sessionThreads = nextThreads;
+      env.wasm.numThreads = nextThreads;
+      sessionStale = session !== null;
+    }
     if (typeof message.useGpu === 'boolean') {
       if (message.useGpu && !wantsGpu) {
         gpuFailed = false;

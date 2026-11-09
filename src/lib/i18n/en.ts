@@ -210,11 +210,9 @@ export const translations = {
   cpuConcurrency: 'CPU concurrency',
   gpuConcurrency: 'GPU concurrency',
   settingsGpuConcurrencyDesc:
-    'Parallel jobs when using the GPU (WebGPU), estimate from the VRAM below.',
-  gpuVramLabel: 'VRAM (GB)',
-  gpuVramPlaceholder: 'Optional',
+    'GPU tasks run one after another on a single device queue, so this is fixed at 1.',
   gpuConcurrencyHint:
-    'Concurrency is estimated from VRAM. Avoid setting it too high, or you may run out of VRAM and trigger a device-lost crash.',
+    'Measured on WebGPU: raising GPU concurrency never improved throughput, it only queued images behind each other and made every image slower.',
   preloadModels: 'Preload models',
   settingsPreloadDesc:
     'Warm up idle workers when a batch is queued, so processing starts faster. Uses more memory.',

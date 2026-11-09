@@ -3,7 +3,7 @@ import {
   DEFAULT_BATCH_CONCURRENCY,
   getMaxWorkersForModelBytes,
   getSessionThreads,
-  MAX_GPU_CONCURRENCY,
+  GPU_CONCURRENCY,
 } from '../utils/concurrency';
 import type { PostprocessMode, PreprocessMode } from '../types/app';
 
@@ -85,37 +85,34 @@ export class OnnxWorkerPool {
   private disposed = false;
   // 存原始请求值，切换 GPU/CPU 模式时按新模式重新夹取，避免沿用上一模式夹过的值。
   private requestedConcurrency = DEFAULT_BATCH_CONCURRENCY;
+  // 单图流程传 1：只有一个 worker 时让它独占全部线程；null 表示按并发容量切分。
+  private jobConcurrency: number | null = null;
   private useGpu = true;
   private gpuActive: boolean | null = null;
   private currentModelBytes = 0;
 
   onGpuStatus: ((status: { active: boolean; reason?: string }) => void) | null = null;
 
-  constructor() {
-    this.resizeSlots();
-  }
-
   get poolSize(): number {
-    return this.slots.length;
-  }
-
-  // GPU 的显存夹取已由 store 依 VRAM 完成，这里只做硬上限保护，避免用 null 重新夹回默认值。
-  private clampLimit(value: number): number {
-    const rounded = Math.max(1, Math.round(value));
-    return this.useGpu ? Math.min(rounded, MAX_GPU_CONCURRENCY) : clampBatchConcurrency(rounded);
+    return this.plannedWorkers;
   }
 
   // GPU 模式下模型常驻显存，不受 CPU 堆内存预算约束，因此跳过该上限。
   private get effectiveConcurrency(): number {
-    const requested = this.clampLimit(this.requestedConcurrency);
     if (this.useGpu) {
-      return Math.max(1, requested);
+      return GPU_CONCURRENCY;
     }
+    const requested = clampBatchConcurrency(Math.max(1, Math.round(this.requestedConcurrency)));
     return Math.max(1, Math.min(requested, getMaxWorkersForModelBytes(this.currentModelBytes)));
   }
 
   get concurrency(): number {
     return this.effectiveConcurrency;
+  }
+
+  private get plannedWorkers(): number {
+    const requested = this.jobConcurrency ?? this.effectiveConcurrency;
+    return Math.max(1, Math.min(this.effectiveConcurrency, Math.round(requested)));
   }
 
   setConcurrency(limit: number): void {
@@ -125,7 +122,19 @@ export class OnnxWorkerPool {
       return;
     }
 
-    this.resizeSlots();
+    this.trimSlots();
+    this.applyThreadConfig();
+    this.drainQueue();
+  }
+
+  setJobConcurrency(limit: number | null): void {
+    const normalized = limit === null ? null : Math.max(1, Math.round(limit));
+    if (normalized === this.jobConcurrency) {
+      return;
+    }
+
+    this.jobConcurrency = normalized;
+    this.trimSlots();
     this.applyThreadConfig();
     this.drainQueue();
   }
@@ -136,7 +145,7 @@ export class OnnxWorkerPool {
     }
 
     this.useGpu = useGpu;
-    this.resizeSlots();
+    this.trimSlots();
     this.applyThreadConfig();
     this.drainQueue();
   }
@@ -147,6 +156,7 @@ export class OnnxWorkerPool {
     }
 
     this.ensureModelBuffer(modelUrl);
+    this.ensureSlots(this.plannedWorkers);
 
     for (const slot of this.slots) {
       if (slot.busy || slot.preloading) {
@@ -294,7 +304,7 @@ export class OnnxWorkerPool {
       return;
     }
 
-    this.resizeSlots();
+    this.trimSlots();
     this.applyThreadConfig();
     this.drainQueue();
   }
@@ -308,12 +318,6 @@ export class OnnxWorkerPool {
   private createSlot(index: number): WorkerSlot {
     const worker = new Worker(new URL('./onnx-worker.ts', import.meta.url), { type: 'module' });
     const slot: WorkerSlot = { worker, busy: false, preloading: false, currentTaskId: null, index };
-
-    worker.postMessage({
-      type: 'CONFIGURE_WORKER',
-      numThreads: getSessionThreads(this.effectiveConcurrency),
-      useGpu: this.useGpu,
-    });
 
     for (const [modelUrl, buffer] of this.modelBuffers) {
       worker.postMessage({ type: 'PROVIDE_MODEL', modelUrl, buffer });
@@ -492,29 +496,37 @@ export class OnnxWorkerPool {
   private restartSlot(slot: WorkerSlot): void {
     slot.worker.terminate();
     this.slots[slot.index] = this.createSlot(slot.index);
+    this.applyThreadConfig();
   }
 
   private applyThreadConfig(): void {
-    const numThreads = getSessionThreads(this.effectiveConcurrency);
+    const numThreads = getSessionThreads(this.plannedWorkers);
     for (const slot of this.slots) {
       slot.worker.postMessage({ type: 'CONFIGURE_WORKER', numThreads, useGpu: this.useGpu });
     }
   }
 
-  private resizeSlots(): void {
+  private ensureSlots(target: number): void {
     if (this.disposed) {
       return;
     }
 
-    while (this.slots.length < this.effectiveConcurrency) {
+    const before = this.slots.length;
+    while (this.slots.length < target) {
       this.slots.push(this.createSlot(this.slots.length));
     }
 
-    this.trimSlots();
+    if (this.slots.length !== before) {
+      this.applyThreadConfig();
+    }
   }
 
   private trimSlots(): void {
-    for (let index = this.slots.length - 1; index >= this.effectiveConcurrency; index -= 1) {
+    if (this.disposed) {
+      return;
+    }
+
+    for (let index = this.slots.length - 1; index >= this.plannedWorkers; index -= 1) {
       const slot = this.slots[index];
       if (!slot || slot.busy) {
         continue;
@@ -535,7 +547,7 @@ export class OnnxWorkerPool {
     }
 
     while (this.pendingTasks.length > 0) {
-      const slot = this.slots.find((candidate) => !candidate.busy && !candidate.preloading);
+      const slot = this.takeIdleSlot();
       if (!slot) {
         return;
       }
@@ -559,6 +571,27 @@ export class OnnxWorkerPool {
         postprocess: task.postprocess,
       });
     }
+  }
+
+  private takeIdleSlot(): WorkerSlot | undefined {
+    const idle = this.slots.find((candidate) => !candidate.busy && !candidate.preloading);
+    if (idle) {
+      return idle;
+    }
+
+    // 有 worker 正在预热时优先等它，别为了同一批任务再拉一个没预热的 worker。
+    if (this.slots.some((candidate) => candidate.preloading)) {
+      return undefined;
+    }
+
+    if (this.slots.length >= this.plannedWorkers) {
+      return undefined;
+    }
+
+    const slot = this.createSlot(this.slots.length);
+    this.slots.push(slot);
+    this.applyThreadConfig();
+    return slot;
   }
 }
 

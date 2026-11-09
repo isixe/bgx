@@ -80,8 +80,6 @@ export type AppState = {
   gpuFallbackActive: boolean;
   // 批处理数量超过并发数时，提前把模型加载进空闲 worker（懒预热）
   preloadEnabled: boolean;
-  gpuConcurrency: number;
-  gpuVramGb: number | null;
 
   // 客户端挂载后应用持久化偏好，确保 SSR 与客户端首帧一致
   hydrateFromStorage: () => void;
@@ -91,8 +89,6 @@ export type AppState = {
   // GPU 自动回退到 CPU：仅影响当前会话，不写入用户偏好（下次启动仍默认启用 GPU）
   applyGpuFallback: () => void;
   setPreloadEnabled: (enabled: boolean) => void;
-  setGpuConcurrency: (value: number) => void;
-  setGpuVramGb: (value: number | null) => void;
 
   setCurrentModel: (model: string) => Promise<void>;
   setDefaultModel: (modelId: string) => void;

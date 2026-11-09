@@ -6,6 +6,7 @@ import { useTranslation, i18n } from '../lib/i18n';
 import { isModelCached, getCachedModelBlobUrl } from '../utils/modelCache';
 import { getModelById } from '../utils/modelUtils';
 import { checkForAppUpdate, isDesktopApp } from '../lib/appUpdate';
+import { GPU_CONCURRENCY } from '../utils/concurrency';
 import type { OnnxWorkerPool } from '../workers/onnx-worker-pool';
 import type { BatchItem } from '../types/app';
 
@@ -34,7 +35,6 @@ export function AppProvider() {
     batchMode,
     batchQueue,
     batchConcurrency,
-    gpuConcurrency,
     updateBatchItemStatus,
     setBatchItemProgress,
     cachedModelUrl,
@@ -45,7 +45,7 @@ export function AppProvider() {
     hydrateFromStorage,
   } = useAppStore();
 
-  const activeConcurrency = gpuAcceleration ? gpuConcurrency : batchConcurrency;
+  const activeConcurrency = gpuAcceleration ? GPU_CONCURRENCY : batchConcurrency;
 
   useEffect(() => {
     hydrateFromStorage();
@@ -200,6 +200,12 @@ export function AppProvider() {
       poolRef.current?.setConcurrency(activeConcurrency);
     }
   }, [activeConcurrency, isPoolReady]);
+
+  useEffect(() => {
+    if (isPoolReady) {
+      poolRef.current?.setJobConcurrency(batchMode ? null : 1);
+    }
+  }, [batchMode, isPoolReady]);
 
   useEffect(() => {
     if (!isPoolReady) {

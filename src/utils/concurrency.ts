@@ -11,8 +11,8 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-// Leaves one core for the UI thread; each extra worker holds another model session.
-export const MAX_BATCH_CONCURRENCY = clamp(getHardwareConcurrency() - 1, 2, 4);
+// Floor of 1: on tiny machines reserving a UI core would otherwise yield zero workers.
+export const MAX_BATCH_CONCURRENCY = clamp(getHardwareConcurrency() - 1, 1, 4);
 
 export const DEFAULT_BATCH_CONCURRENCY = clamp(
   getHardwareConcurrency() >= 8 ? 3 : getHardwareConcurrency() >= 4 ? 2 : 1,
@@ -20,30 +20,28 @@ export const DEFAULT_BATCH_CONCURRENCY = clamp(
   MAX_BATCH_CONCURRENCY,
 );
 
-export const DEFAULT_GPU_BATCH_CONCURRENCY = 2;
-
-// GPU 并发由显存决定而非 CPU 核数，需独立上限，否则会被 CPU 侧的上限掩盖而失去意义。
-export const MAX_GPU_CONCURRENCY = 8;
-
-// 每个 GPU worker 各自持有一份模型权重与推理缓冲，按约 1GB 显存估算；
-// 另预留 0.5GB 给系统与显示合成，用于反推用户显存可支撑的最大并发数。
-const GPU_VRAM_PER_WORKER_GB = 1;
-const GPU_VRAM_RESERVE_GB = 0.5;
+// GPU 任务提交到同一条设备队列，实测多开 worker 只把单图延迟从 401ms 拉到 847/1566ms，
+// 吞吐没有提升，因此 GPU 路径固定单 worker。
+export const GPU_CONCURRENCY = 1;
 
 export function clampBatchConcurrency(value: number): number {
   return clamp(Math.round(value), 1, MAX_BATCH_CONCURRENCY);
+}
+
+// One logical core stays free for the UI thread and the worker's JS glue (decode/encode).
+export function getMaxSessionThreads(): number {
+  return Math.max(1, getHardwareConcurrency() - 1);
 }
 
 // Divides the cores between workers so the total thread count stays near the core count.
 // Keeps at least one thread per worker even when the batch width exceeds the core count.
 export function getSessionThreads(concurrency: number): number {
   const parallel = Math.max(1, Math.round(concurrency));
-  const cores = getHardwareConcurrency();
-  const shared = cores - 1;
+  const available = getMaxSessionThreads();
   if (parallel <= 1) {
-    return clamp(shared, 1, 4);
+    return available;
   }
-  return clamp(Math.floor(shared / parallel), 1, 4);
+  return clamp(Math.floor(available / parallel), 1, available);
 }
 
 // Each WASM worker copies the whole model into its own heap (roughly an order of
@@ -68,23 +66,6 @@ export function getBatchConcurrencyOptions(): number[] {
   return options;
 }
 
-export function getMaxGpuConcurrency(vramGb: number | null): number {
-  // 未填写显存时没有换算依据，默认只开放到常规默认值，避免把最宽松的上限当成默认推荐。
-  if (vramGb === null || !Number.isFinite(vramGb) || vramGb <= 0) {
-    return DEFAULT_GPU_BATCH_CONCURRENCY;
-  }
-  const usable = vramGb - GPU_VRAM_RESERVE_GB;
-  return clamp(Math.floor(usable / GPU_VRAM_PER_WORKER_GB), 1, MAX_GPU_CONCURRENCY);
-}
-
-export function clampGpuConcurrency(value: number, vramGb: number | null): number {
-  return clamp(Math.round(value), 1, getMaxGpuConcurrency(vramGb));
-}
-
-export function getGpuConcurrencyOptions(vramGb: number | null): number[] {
-  const options: number[] = [];
-  for (let value = 1; value <= getMaxGpuConcurrency(vramGb); value += 1) {
-    options.push(value);
-  }
-  return options;
+export function getGpuConcurrencyOptions(): number[] {
+  return [GPU_CONCURRENCY];
 }

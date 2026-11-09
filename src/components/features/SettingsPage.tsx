@@ -4,7 +4,11 @@ import { ModelsPage } from './ModelsPage';
 import { checkForAppUpdate, isDesktopApp, DOWNLOAD_URL } from '../../lib/appUpdate';
 import pkg from '../../../package.json';
 import { Select } from '../ui/Select';
-import { getBatchConcurrencyOptions, getGpuConcurrencyOptions } from '../../utils/concurrency';
+import {
+  GPU_CONCURRENCY,
+  getBatchConcurrencyOptions,
+  getGpuConcurrencyOptions,
+} from '../../utils/concurrency';
 
 // Keep the "checking…" indicator visible for at least this long so an instant
 // network response does not cause a distracting flash.
@@ -27,10 +31,6 @@ export function SettingsPage() {
     setBatchConcurrency,
     preloadEnabled,
     setPreloadEnabled,
-    gpuConcurrency,
-    setGpuConcurrency,
-    gpuVramGb,
-    setGpuVramGb,
   } = useAppStore();
 
   const cardClasses = `rounded-xl border p-4 ${
@@ -42,7 +42,7 @@ export function SettingsPage() {
     label: String(value),
   }));
 
-  const gpuConcurrencyOptions = getGpuConcurrencyOptions(gpuVramGb).map((value) => ({
+  const gpuConcurrencyOptions = getGpuConcurrencyOptions().map((value) => ({
     value,
     label: String(value),
   }));
@@ -432,40 +432,14 @@ export function SettingsPage() {
                           {t('settingsGpuConcurrencyDesc')}
                         </p>
                       </div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <label className="flex items-center gap-2">
-                          <span
-                            className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
-                          >
-                            {t('gpuVramLabel')}
-                          </span>
-                          <input
-                            type="number"
-                            min={1}
-                            step={1}
-                            inputMode="numeric"
-                            value={gpuVramGb ?? ''}
-                            onChange={(event) => {
-                              const raw = event.target.value.trim();
-                              setGpuVramGb(raw === '' ? null : Number(raw));
-                            }}
-                            placeholder={t('gpuVramPlaceholder')}
-                            className={`w-20 rounded border px-2 py-1 text-xs tabular-nums outline-none transition-colors focus-visible:ring-1 focus-visible:ring-indigo-400 ${
-                              isDarkMode
-                                ? 'bg-slate-600 text-gray-200 border-slate-500 hover:border-slate-400'
-                                : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-                            }`}
-                          />
-                        </label>
-                        <Select
-                          value={gpuConcurrency}
-                          options={gpuConcurrencyOptions}
-                          onChange={setGpuConcurrency}
-                          isDarkMode={isDarkMode}
-                          ariaLabel={t('gpuConcurrency')}
-                          title={t('gpuConcurrency')}
-                        />
-                      </div>
+                      <Select
+                        value={GPU_CONCURRENCY}
+                        options={gpuConcurrencyOptions}
+                        isDarkMode={isDarkMode}
+                        disabled
+                        ariaLabel={t('gpuConcurrency')}
+                        title={t('gpuConcurrency')}
+                      />
                       <p
                         className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}
                       >
