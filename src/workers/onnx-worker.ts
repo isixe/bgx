@@ -1,6 +1,7 @@
 import { env, InferenceSession, Tensor } from 'onnxruntime-web';
 import type { PostprocessMode, PreprocessMode } from '../types/app';
 import { getMaxSessionThreads } from '../utils/concurrency';
+import { ORT_WASM_URL } from './ort-wasm';
 
 type ExecutionMode = 'gpu' | 'wasm';
 
@@ -21,7 +22,8 @@ type InboundMessage =
   | { type: 'CONFIGURE_WORKER'; numThreads: number; useGpu?: boolean }
   | { type: 'PRELOAD_MODEL'; modelUrl: string; resolution: number }
   | { type: 'UNLOAD_MODEL' }
-  | { type: 'PROVIDE_MODEL'; modelUrl: string; buffer: SharedArrayBuffer };
+  | { type: 'PROVIDE_MODEL'; modelUrl: string; buffer: SharedArrayBuffer }
+  | { type: 'PROVIDE_WASM'; buffer: SharedArrayBuffer };
 
 type OutboundMessage =
   | { type: 'PROGRESS_TASK'; taskId: string; progress: number }
@@ -50,11 +52,10 @@ const FATAL_PATTERN =
 // WebGPU 设备丢失（驱动重置 / TDR）在推理期抛出的错误特征，用于触发无损回退。
 const GPU_DEVICE_LOST_PATTERN = /device\s*(?:was\s*)?lost|GPUDevice|gpu device lost/i;
 
-// onnxruntime-web/webgpu 内置的是 asyncify 版 WASM 胶水，必须加载与之 ABI 匹配的
-// ort-wasm-simd-threaded.asyncify.wasm（由 postinstall 复制到 public/），否则后端初始化会失败。
-const WASM_URL = '/ort-wasm-simd-threaded.asyncify.wasm';
-
 let wasmBinaryPromise: Promise<void> | null = null;
+// 主线程抓取一次后透過 SharedArrayBuffer 分享過來；worker 仍需自行複製一份 ArrayBuffer，
+// 因為 WebAssembly.compile 不接受以 SAB 為底的緩衝。
+let providedWasmBuffer: SharedArrayBuffer | null = null;
 let sessionModelUrl: string | null = null;
 let sessionMode: ExecutionMode | null = null;
 let session: InferenceSession | null = null;
@@ -131,15 +132,23 @@ function setWasmBinary(buffer: ArrayBuffer): void {
   (env.wasm as unknown as { wasmBinary?: ArrayBuffer }).wasmBinary = buffer;
 }
 
+async function loadWasmBinary(): Promise<ArrayBuffer> {
+  if (providedWasmBuffer) {
+    const copy = new ArrayBuffer(providedWasmBuffer.byteLength);
+    new Uint8Array(copy).set(new Uint8Array(providedWasmBuffer));
+    return copy;
+  }
+
+  const response = await fetch(ORT_WASM_URL);
+  if (!response.ok) {
+    throw new Error(`Failed to load WASM binary: HTTP ${response.status}`);
+  }
+  return response.arrayBuffer();
+}
+
 function ensureWasmBinary(): Promise<void> {
   if (!wasmBinaryPromise) {
-    wasmBinaryPromise = fetch(WASM_URL)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to load WASM binary: HTTP ${response.status}`);
-        }
-        return response.arrayBuffer();
-      })
+    wasmBinaryPromise = loadWasmBinary()
       .then((buffer) => {
         setWasmBinary(buffer);
       })
@@ -642,6 +651,11 @@ function handleMessage(event: MessageEvent<InboundMessage>): void {
 
   if (message.type === 'PROVIDE_MODEL') {
     providedModelBuffers.set(message.modelUrl, new Uint8Array(message.buffer));
+    return;
+  }
+
+  if (message.type === 'PROVIDE_WASM') {
+    providedWasmBuffer = message.buffer;
     return;
   }
 

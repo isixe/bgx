@@ -6,6 +6,7 @@ import {
   GPU_CONCURRENCY,
 } from '../utils/concurrency';
 import type { PostprocessMode, PreprocessMode } from '../types/app';
+import { ORT_WASM_URL } from './ort-wasm';
 
 export interface PoolImageResult {
   type: 'success' | 'error' | 'cancelled';
@@ -82,6 +83,9 @@ export class OnnxWorkerPool {
   private readonly activeTasks = new Map<string, PendingTask>();
   private readonly modelBuffers = new Map<string, SharedArrayBuffer>();
   private readonly modelBufferRequests = new Map<string, Promise<void>>();
+  private wasmBuffer: SharedArrayBuffer | null = null;
+  private wasmBufferRequest: Promise<void> | null = null;
+  private wasmBufferReady = false;
   private disposed = false;
   // 存原始请求值，切换 GPU/CPU 模式时按新模式重新夹取，避免沿用上一模式夹过的值。
   private requestedConcurrency = DEFAULT_BATCH_CONCURRENCY;
@@ -156,15 +160,20 @@ export class OnnxWorkerPool {
     }
 
     this.ensureModelBuffer(modelUrl);
-    this.ensureSlots(this.plannedWorkers);
-
-    for (const slot of this.slots) {
-      if (slot.busy || slot.preloading) {
-        continue;
+    void this.ensureWasmBuffer().then(() => {
+      if (this.disposed) {
+        return;
       }
-      slot.preloading = true;
-      slot.worker.postMessage({ type: 'PRELOAD_MODEL', modelUrl, resolution });
-    }
+      this.ensureSlots(this.plannedWorkers);
+
+      for (const slot of this.slots) {
+        if (slot.busy || slot.preloading) {
+          continue;
+        }
+        slot.preloading = true;
+        slot.worker.postMessage({ type: 'PRELOAD_MODEL', modelUrl, resolution });
+      }
+    });
   }
 
   get activeCount(): number {
@@ -203,6 +212,7 @@ export class OnnxWorkerPool {
         resolve,
       });
       this.ensureModelBuffer(modelUrl);
+      this.ensureWasmBuffer();
       this.drainQueue();
     });
   }
@@ -254,6 +264,44 @@ export class OnnxWorkerPool {
     this.slots.length = 0;
     this.modelBuffers.clear();
     this.modelBufferRequests.clear();
+    this.wasmBuffer = null;
+    this.wasmBufferRequest = null;
+  }
+
+  private ensureWasmBuffer(): Promise<void> {
+    if (this.wasmBufferRequest) {
+      return this.wasmBufferRequest;
+    }
+
+    this.wasmBufferRequest = (async () => {
+      if (typeof SharedArrayBuffer === 'undefined') {
+        return;
+      }
+      try {
+        const response = await fetch(ORT_WASM_URL);
+        if (!response.ok) {
+          return;
+        }
+        const bytes = await response.arrayBuffer();
+        if (this.disposed) {
+          return;
+        }
+        const shared = new SharedArrayBuffer(bytes.byteLength);
+        new Uint8Array(shared).set(new Uint8Array(bytes));
+        this.wasmBuffer = shared;
+        for (const slot of this.slots) {
+          slot.worker.postMessage({ type: 'PROVIDE_WASM', buffer: shared });
+        }
+      } catch (error) {
+        // 共享緩衝不可用時靜默回退到 worker 內的獨立 fetch。
+        console.warn('[onnx-pool] shared wasm buffer unavailable, falling back:', error);
+      } finally {
+        this.wasmBufferReady = true;
+        this.drainQueue();
+      }
+    })();
+
+    return this.wasmBufferRequest;
   }
 
   private ensureModelBuffer(modelUrl: string): void {
@@ -318,6 +366,10 @@ export class OnnxWorkerPool {
   private createSlot(index: number): WorkerSlot {
     const worker = new Worker(new URL('./onnx-worker.ts', import.meta.url), { type: 'module' });
     const slot: WorkerSlot = { worker, busy: false, preloading: false, currentTaskId: null, index };
+
+    if (this.wasmBuffer) {
+      worker.postMessage({ type: 'PROVIDE_WASM', buffer: this.wasmBuffer });
+    }
 
     for (const [modelUrl, buffer] of this.modelBuffers) {
       worker.postMessage({ type: 'PROVIDE_MODEL', modelUrl, buffer });
@@ -585,6 +637,12 @@ export class OnnxWorkerPool {
     }
 
     if (this.slots.length >= this.plannedWorkers) {
+      return undefined;
+    }
+
+    // 多 worker 時先等共享 wasm 就緒，否則第一個 worker 會自己抓一份，
+    // 共享緩衝就白做了；單 worker 無需等待，讓它直接抓取反而更快。
+    if (this.plannedWorkers > 1 && this.wasmBufferRequest !== null && !this.wasmBufferReady) {
       return undefined;
     }
 
