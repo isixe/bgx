@@ -574,7 +574,13 @@ async function refineEdges(
     cropContext.drawImage(crop, 0, 0);
     crop.close();
     const cropPixels = cropContext.getImageData(0, 0, resolution, resolution).data;
-    const refined = await predictMask(inferenceSession, cropPixels, resolution, preprocess, postprocess);
+    const refined = await predictMask(
+      inferenceSession,
+      cropPixels,
+      resolution,
+      preprocess,
+      postprocess,
+    );
 
     const tile = paintMask(refined.alpha, refined.width, refined.height);
     featherCanvas(tile);
@@ -644,6 +650,10 @@ async function runInference(
     lap('refine');
 
     const { canvas: outputCanvas, ctx: outputCtx } = getOutputCanvas(bitmap.width, bitmap.height);
+    // 画布是复用的：上一次任务留下的 destination-in 与像素必须清掉，否则同尺寸的
+    // 下一个任务会把上一张图的画面当作底图，产出「别的图片」的结果。
+    outputCtx.globalCompositeOperation = 'source-over';
+    outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
     outputCtx.drawImage(bitmap, 0, 0);
     outputCtx.globalCompositeOperation = 'destination-in';
     outputCtx.imageSmoothingEnabled = true;
