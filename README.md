@@ -205,6 +205,8 @@ Packaging output goes to `./release/` (never `./dist/`, which belongs to Astro):
 
 Other platforms can be packaged by replacing `--win` with `--mac` or `--linux`.
 
+Prebuilt installers for every release are published to the [GitHub Releases](https://github.com/isixe/bgx/releases) page; check there first before building from source.
+
 ## License
 
 This project is licensed under the [MIT](LICENSE) License.
