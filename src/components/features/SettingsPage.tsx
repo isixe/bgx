@@ -88,29 +88,25 @@ export function SettingsPage() {
   };
 
   const tabs = [
-    ...(isDesktopApp()
-      ? [
-          {
-            id: 'general' as const,
-            label: t('settingsGeneral'),
-            icon: (
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                />
-              </svg>
-            ),
-          },
-        ]
-      : []),
+    {
+      id: 'general' as const,
+      label: t('settingsGeneral'),
+      icon: (
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+          />
+        </svg>
+      ),
+    },
     {
       id: 'performance' as const,
       label: t('settingsPerformance'),
@@ -340,40 +336,42 @@ export function SettingsPage() {
                   </div>
 
                   <div className="grid gap-4">
-                    <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
-                      <div className="min-w-0">
-                        <p
-                          className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
-                        >
-                          {t('settingsCheckUpdates')}
-                        </p>
-                        <p
-                          className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
-                        >
-                          {t('settingsCheckUpdatesDesc')}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={checkUpdatesOnStartup}
-                        aria-label={t('settingsCheckUpdates')}
-                        onClick={() => setCheckUpdatesOnStartup(!checkUpdatesOnStartup)}
-                        className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
-                          checkUpdatesOnStartup
-                            ? 'bg-indigo-600'
-                            : isDarkMode
-                              ? 'bg-slate-600'
-                              : 'bg-slate-300'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                            checkUpdatesOnStartup ? 'translate-x-6' : 'translate-x-1'
+                    {isDesktopApp() && (
+                      <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
+                        <div className="min-w-0">
+                          <p
+                            className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                          >
+                            {t('settingsCheckUpdates')}
+                          </p>
+                          <p
+                            className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                          >
+                            {t('settingsCheckUpdatesDesc')}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={checkUpdatesOnStartup}
+                          aria-label={t('settingsCheckUpdates')}
+                          onClick={() => setCheckUpdatesOnStartup(!checkUpdatesOnStartup)}
+                          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
+                            checkUpdatesOnStartup
+                              ? 'bg-indigo-600'
+                              : isDarkMode
+                                ? 'bg-slate-600'
+                                : 'bg-slate-300'
                           }`}
-                        />
-                      </button>
-                    </div>
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              checkUpdatesOnStartup ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    )}
                     <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
                       <div className="min-w-0">
                         <p
