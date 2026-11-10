@@ -232,6 +232,8 @@ export const translations = {
 
   selectAll: '全选',
   back: '返回',
+  previousImage: '上一张',
+  nextImage: '下一张',
   batchEmpty: '暂无图片',
   batchProgress: '处理进度',
   batchProgressFailed: '失败',

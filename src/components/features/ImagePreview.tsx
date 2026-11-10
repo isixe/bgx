@@ -65,6 +65,47 @@ function ProgressRing({ progress, isDarkMode }: { progress: number; isDarkMode: 
   );
 }
 
+function BatchNavButton({
+  direction,
+  disabled,
+  label,
+  onClick,
+}: {
+  direction: 'prev' | 'next';
+  disabled: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  const isPrev = direction === 'prev';
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      className={`absolute bottom-3 z-30 w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+        isPrev ? 'left-3' : 'right-3'
+      } ${
+        disabled
+          ? 'bg-white/10 text-black/30 cursor-not-allowed'
+          : 'bg-white/25 text-black/80 hover:bg-white/40'
+      }`}
+    >
+      <svg
+        className="w-4 h-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path d={isPrev ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6'} />
+      </svg>
+    </button>
+  );
+}
+
 export function ImagePreview() {
   const {
     originalImage,
@@ -242,6 +283,41 @@ export function ImagePreview() {
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     setScale((prev) => Math.max(0.1, Math.min(5, prev * delta)));
   };
+
+  const previewableItems = batchMode
+    ? batchQueue.filter((item) => item.status === 'completed' && item.resultImage)
+    : [];
+  const activePreviewIndex = previewableItems.findIndex((item) => item.id === activeBatchItemId);
+  const previousBatchItem =
+    activePreviewIndex > 0 ? previewableItems[activePreviewIndex - 1] : null;
+  const nextBatchItem =
+    activePreviewIndex >= 0 && activePreviewIndex < previewableItems.length - 1
+      ? previewableItems[activePreviewIndex + 1]
+      : null;
+  const showBatchNav = batchMode && viewingBatchResult && previewableItems.length > 1;
+
+  useEffect(() => {
+    if (!showBatchNav) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+      ) {
+        return;
+      }
+      if (event.key === 'ArrowLeft' && previousBatchItem) {
+        event.preventDefault();
+        selectBatchItem(previousBatchItem.id);
+      } else if (event.key === 'ArrowRight' && nextBatchItem) {
+        event.preventDefault();
+        selectBatchItem(nextBatchItem.id);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showBatchNav, previousBatchItem, nextBatchItem, selectBatchItem]);
 
   if (!showQueueList && !displayOriginal) return null;
 
@@ -607,6 +683,23 @@ export function ImagePreview() {
             </svg>
             {t('back')}
           </button>
+        )}
+
+        {showBatchNav && (
+          <>
+            <BatchNavButton
+              direction="prev"
+              disabled={!previousBatchItem}
+              label={t('previousImage')}
+              onClick={() => previousBatchItem && selectBatchItem(previousBatchItem.id)}
+            />
+            <BatchNavButton
+              direction="next"
+              disabled={!nextBatchItem}
+              label={t('nextImage')}
+              onClick={() => nextBatchItem && selectBatchItem(nextBatchItem.id)}
+            />
+          </>
         )}
 
         <div

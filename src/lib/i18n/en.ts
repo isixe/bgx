@@ -239,6 +239,8 @@ export const translations = {
 
   selectAll: 'Select All',
   back: 'Back',
+  previousImage: 'Previous image',
+  nextImage: 'Next image',
   batchEmpty: 'No images yet',
   batchProgress: 'Progress',
   batchProgressFailed: 'failed',
