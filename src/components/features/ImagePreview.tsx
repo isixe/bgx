@@ -194,6 +194,14 @@ export function ImagePreview() {
 
   const handleContainerMouseDown = (e: React.MouseEvent) => {
     if (isBatchProcessing) return;
+    if (e.button === 1) {
+      // 中键在对比区任意位置都能拖动对比轴；浏览器默认会把中键按下当成自动滚动。
+      e.preventDefault();
+      if (!displayResult) return;
+      setIsDraggingSlider(true);
+      handleSliderMove(e.clientX);
+      return;
+    }
     if (e.button !== 0) return;
     setIsPanning(true);
     setPanStart({ x: e.clientX, y: e.clientY });
@@ -368,17 +376,24 @@ export function ImagePreview() {
       const isRight = event.key === 'ArrowRight';
       if (!isLeft && !isRight) return;
       event.preventDefault();
-      if (event.repeat) return;
+      const next = isLeft ? -1 : 1;
+      if (event.repeat) {
+        // 自动重复只用来保证动画在跑：对侧键的 keyup 可能晚于本键 keydown 到达，
+        // 会把刚启动的滑动停掉，此时没有新的 keydown 能把它拉回来。
+        startSliding(next);
+        return;
+      }
       if (isDoublePress(isLeft ? 'ArrowLeft' : 'ArrowRight')) {
         stopSliding();
         setSliderPosition(isLeft ? 0 : 100);
         return;
       }
-      startSliding(isLeft ? -1 : 1);
+      startSliding(next);
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') stopSliding();
+      const released = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0;
+      if (released !== 0 && released === direction) stopSliding();
     };
 
     window.addEventListener('keydown', handleKeyDown);
