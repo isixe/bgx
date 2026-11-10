@@ -7,7 +7,6 @@ import { Select } from '../ui/Select';
 import {
   GPU_CONCURRENCY,
   getBatchConcurrencyOptions,
-  getGpuConcurrencyOptions,
 } from '../../utils/concurrency';
 
 // Keep the "checking…" indicator visible for at least this long so an instant
@@ -38,11 +37,6 @@ export function SettingsPage() {
   }`;
 
   const concurrencyOptions = getBatchConcurrencyOptions().map((value) => ({
-    value,
-    label: String(value),
-  }));
-
-  const gpuConcurrencyOptions = getGpuConcurrencyOptions().map((value) => ({
     value,
     label: String(value),
   }));
@@ -434,9 +428,9 @@ export function SettingsPage() {
                       </div>
                       <Select
                         value={GPU_CONCURRENCY}
-                        options={gpuConcurrencyOptions}
+                        options={[{ value: GPU_CONCURRENCY, label: String(GPU_CONCURRENCY) }]}
                         isDarkMode={isDarkMode}
-                        disabled
+                        readOnly
                         ariaLabel={t('gpuConcurrency')}
                         title={t('gpuConcurrency')}
                       />

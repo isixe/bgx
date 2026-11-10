@@ -13,6 +13,7 @@ interface SelectProps {
   ariaLabel?: string;
   title?: string;
   disabled?: boolean;
+  readOnly?: boolean;
 }
 
 export function Select({
@@ -23,6 +24,7 @@ export function Select({
   ariaLabel,
   title,
   disabled = false,
+  readOnly = false,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -51,6 +53,31 @@ export function Select({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
+
+  if (readOnly) {
+    return (
+      <span
+        aria-label={ariaLabel}
+        title={title}
+        className={`flex flex-shrink-0 items-center gap-1 text-xs rounded px-1.5 py-0.5 cursor-not-allowed opacity-60 ${
+          isDarkMode
+            ? 'bg-slate-600 text-gray-200 border border-slate-500'
+            : 'bg-white text-gray-700 border border-gray-300'
+        }`}
+      >
+        <span className="tabular-nums">{selected ? selected.label : value}</span>
+        <svg
+          className="w-3 h-3"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+        </svg>
+      </span>
+    );
+  }
 
   return (
     <div ref={containerRef} className="relative flex-shrink-0">

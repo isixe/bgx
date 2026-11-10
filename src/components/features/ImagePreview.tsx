@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../lib/i18n';
 import { downloadResultImage } from '../../utils/downloadImage';
-import { getBatchConcurrencyOptions, getGpuConcurrencyOptions } from '../../utils/concurrency';
+import { GPU_CONCURRENCY, getBatchConcurrencyOptions } from '../../utils/concurrency';
 import { Select } from '../ui/Select';
 
 function formatDuration(ms: number): string {
@@ -85,9 +85,6 @@ export function ImagePreview() {
     reprocessBatchItem,
     setBatchConcurrency,
     gpuAcceleration,
-    gpuConcurrency,
-    setGpuConcurrency,
-    gpuVramGb,
   } = useAppStore();
   const { t } = useTranslation();
   const [sliderPosition, setSliderPosition] = useState(50);
@@ -262,11 +259,9 @@ export function ImagePreview() {
     ).length;
     const progressPercent = totalCount === 0 ? 0 : Math.round((processedCount / totalCount) * 100);
     const isGpu = gpuAcceleration;
-    const activeConcurrency = isGpu ? gpuConcurrency : batchConcurrency;
+    const activeConcurrency = isGpu ? GPU_CONCURRENCY : batchConcurrency;
     const concurrencyLabel = isGpu ? t('gpuConcurrency') : t('cpuConcurrency');
-    const concurrencyOptions = (
-      isGpu ? getGpuConcurrencyOptions(gpuVramGb) : getBatchConcurrencyOptions()
-    ).map((value) => ({
+    const concurrencyOptions = getBatchConcurrencyOptions().map((value) => ({
       value,
       label: String(value),
     }));
@@ -305,8 +300,9 @@ export function ImagePreview() {
                       <Select
                         value={activeConcurrency}
                         options={concurrencyOptions}
-                        onChange={isGpu ? setGpuConcurrency : setBatchConcurrency}
+                        onChange={setBatchConcurrency}
                         isDarkMode={isDarkMode}
+                        readOnly={isGpu}
                         ariaLabel={concurrencyLabel}
                         title={concurrencyLabel}
                       />
