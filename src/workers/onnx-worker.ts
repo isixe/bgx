@@ -154,7 +154,9 @@ interface WebGpuNavigator {
 }
 
 // 真正向浏览器申请一次适配器，而非仅判断 navigator.gpu 是否存在：部分环境
-// navigator.gpu 存在却拿不到适配器（驱动被屏蔽、纯软件渲染等）。结果缓存复用。
+// navigator.gpu 存在却拿不到适配器（驱动被屏蔽、纯软件渲染等）。只缓存成功结果：
+// 失败可能是暂时状态（设备被占用、驱动重置），缓存 null 会让本会话内重新开启 GPU
+// 也永远失败，而 worker 不会重建。
 let adapterProbe: Promise<WebGpuAdapter | null> | null = null;
 
 function probeWebGpuAdapter(): Promise<WebGpuAdapter | null> {
@@ -172,9 +174,18 @@ function probeWebGpuAdapter(): Promise<WebGpuAdapter | null> {
       } catch {
         return null;
       }
-    })();
+    })().then((adapter) => {
+      if (!adapter) {
+        adapterProbe = null;
+      }
+      return adapter;
+    });
   }
   return adapterProbe;
+}
+
+function resetAdapterProbe(): void {
+  adapterProbe = null;
 }
 
 // ORT 在 EP 内部自行创建 GPUDevice，外部拿不到引用。这里用同一适配器额外申请一个
@@ -206,6 +217,11 @@ function watchGpuDeviceLoss(adapter: WebGpuAdapter): void {
 }
 
 function postGpuStatus(active: boolean, reason?: string): void {
+  if (!active && reason) {
+    // 回退原因依赖运行环境（secure context、驱动、显存），UI 只能给出通用提示，
+    // 真实原因必须留在控制台，否则无从排查。
+    console.warn('[onnx-worker] GPU acceleration disabled:', reason);
+  }
   ctx.postMessage({ type: 'GPU_STATUS', active, reason });
 }
 
@@ -270,7 +286,14 @@ async function resolveExecutionMode(): Promise<ExecutionMode> {
   const adapter = await probeWebGpuAdapter();
   if (!adapter) {
     gpuFailed = true;
-    postGpuStatus(false, 'WebGPU adapter unavailable');
+    const hasGpuApi =
+      typeof navigator !== 'undefined' && !!(navigator as unknown as WebGpuNavigator).gpu;
+    postGpuStatus(
+      false,
+      hasGpuApi
+        ? 'WebGPU adapter unavailable'
+        : 'WebGPU needs a secure context (localhost or HTTPS)',
+    );
     return 'wasm';
   }
 
@@ -816,6 +839,7 @@ function handleMessage(event: MessageEvent<InboundMessage>): void {
     if (typeof message.useGpu === 'boolean') {
       if (message.useGpu && !wantsGpu) {
         gpuFailed = false;
+        resetAdapterProbe();
       }
       wantsGpu = message.useGpu;
     }

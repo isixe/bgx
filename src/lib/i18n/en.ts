@@ -207,6 +207,8 @@ export const translations = {
   gpuAccelerationDesc:
     'Use the GPU (WebGPU) to speed up processing. Falls back to CPU automatically when unavailable.',
   gpuFallbackNotice: 'GPU acceleration is unavailable here, switched to CPU.',
+  gpuFallbackInsecure: 'WebGPU needs a secure context: open this page over localhost or HTTPS.',
+  gpuFallbackUnsupported: 'This browser does not expose WebGPU.',
   cpuConcurrency: 'CPU concurrency',
   gpuConcurrency: 'GPU concurrency',
   settingsGpuConcurrencyDesc:

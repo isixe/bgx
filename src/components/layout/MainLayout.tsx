@@ -4,7 +4,7 @@ import { Monitor } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../lib/i18n';
 import { useGlobalDragDrop } from '../../hooks/useGlobalDragDrop';
-import type { BatchItem } from '../../types/app';
+import type { BatchItem, GpuFallbackReason } from '../../types/app';
 import { ImageUploader } from '../features/ImageUploader';
 import { ModelSelector } from '../features/ModelSelector';
 import { ImagePreview } from '../features/ImagePreview';
@@ -427,6 +427,12 @@ export function MainLayout() {
   );
 }
 
+const GPU_FALLBACK_NOTICE_KEYS: Record<GpuFallbackReason, string> = {
+  'insecure-context': 'gpuFallbackInsecure',
+  'no-adapter': 'gpuFallbackUnsupported',
+  runtime: 'gpuFallbackNotice',
+};
+
 // Sidebar content component to avoid duplication
 interface SidebarContentProps {
   error: string | null;
@@ -474,6 +480,8 @@ function SidebarContent({
   const latestVersion = useAppStore((state) => state.latestVersion);
   const dismissedUpdateVersion = useAppStore((state) => state.dismissedUpdateVersion);
   const success = useAppStore((state) => state.success);
+  const gpuFallbackReason = useAppStore((state) => state.gpuFallbackReason);
+  const gpuFallbackNoticeKey = GPU_FALLBACK_NOTICE_KEYS[gpuFallbackReason ?? 'runtime'];
   const updateNoticeVisible =
     isDesktopApp() && !!latestVersion && latestVersion !== dismissedUpdateVersion;
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -807,7 +815,7 @@ function SidebarContent({
               />
             </button>
           </div>
-          {gpuFallbackActive && <p className="text-xs">{t('gpuFallbackNotice')}</p>}
+          {gpuFallbackActive && <p className="text-xs">{t(gpuFallbackNoticeKey)}</p>}
         </div>
 
         {originalImage && !batchMode && <ExportPanel disabled={isProcessing} />}

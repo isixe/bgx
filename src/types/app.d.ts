@@ -1,5 +1,8 @@
 export type ModelGroupId = 'u2net' | 'isnet' | 'bria' | 'ben2' | 'modnet' | 'inspyrenet';
 
+// GPU 回退原因：insecure-context = 非安全上下文（如 LAN HTTP），no-adapter = 浏览器无 WebGPU，runtime = 运行期创建/运行失败
+export type GpuFallbackReason = 'insecure-context' | 'no-adapter' | 'runtime';
+
 export interface ModelGroup {
   id: ModelGroupId;
   nameKey: string;
@@ -78,6 +81,8 @@ export type AppState = {
   gpuAcceleration: boolean;
   // 运行期状态：GPU 已启用但实际回退到 CPU
   gpuFallbackActive: boolean;
+  // 回退原因，决定提示文案（安全上下文 / 无 WebGPU / 运行期失败）
+  gpuFallbackReason: GpuFallbackReason | null;
   // 批处理数量超过并发数时，提前把模型加载进空闲 worker（懒预热）
   preloadEnabled: boolean;
 
@@ -87,7 +92,7 @@ export type AppState = {
   setGpuAcceleration: (enabled: boolean) => void;
   setGpuFallbackActive: (active: boolean) => void;
   // GPU 自动回退到 CPU：仅影响当前会话，不写入用户偏好（下次启动仍默认启用 GPU）
-  applyGpuFallback: () => void;
+  applyGpuFallback: (reason?: GpuFallbackReason) => void;
   setPreloadEnabled: (enabled: boolean) => void;
 
   setCurrentModel: (model: string) => Promise<void>;

@@ -7,6 +7,7 @@ import type {
   BatchItemStatus,
   SettingsTab,
   UpdateCheckState,
+  GpuFallbackReason,
 } from '../types/app';
 import {
   getCachedModelBlobUrl,
@@ -107,6 +108,7 @@ const initialState = {
   selectionAnchorId: null as string | null,
   gpuAcceleration: true,
   gpuFallbackActive: false,
+  gpuFallbackReason: null as GpuFallbackReason | null,
   preloadEnabled: true,
 };
 
@@ -308,10 +310,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       gpuAcceleration: enabled,
       gpuFallbackActive: enabled ? false : get().gpuFallbackActive,
+      gpuFallbackReason: enabled ? null : get().gpuFallbackReason,
     });
   },
-  setGpuFallbackActive: (active) => set({ gpuFallbackActive: active }),
-  applyGpuFallback: () => set({ gpuAcceleration: false, gpuFallbackActive: true }),
+  setGpuFallbackActive: (active) =>
+    set({
+      gpuFallbackActive: active,
+      gpuFallbackReason: active ? get().gpuFallbackReason : null,
+    }),
+  applyGpuFallback: (reason = 'runtime') =>
+    set({ gpuAcceleration: false, gpuFallbackActive: true, gpuFallbackReason: reason }),
   setPreloadEnabled: (enabled) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('bgx-preload-enabled', String(enabled));

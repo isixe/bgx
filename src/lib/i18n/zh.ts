@@ -203,6 +203,8 @@ export const translations = {
   gpuAcceleration: 'GPU 加速',
   gpuAccelerationDesc: '使用 GPU（WebGPU）加速处理，不可用时自动回退到 CPU。',
   gpuFallbackNotice: '当前环境不支持 GPU 加速，已切换到 CPU。',
+  gpuFallbackInsecure: 'WebGPU 需要安全上下文：请通过 localhost 或 HTTPS 访问。',
+  gpuFallbackUnsupported: '当前浏览器未提供 WebGPU。',
   cpuConcurrency: 'CPU 并发',
   gpuConcurrency: 'GPU 并发',
   settingsGpuConcurrencyDesc:

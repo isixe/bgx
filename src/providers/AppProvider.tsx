@@ -8,7 +8,21 @@ import { getModelById } from '../utils/modelUtils';
 import { checkForAppUpdate, isDesktopApp } from '../lib/appUpdate';
 import { GPU_CONCURRENCY } from '../utils/concurrency';
 import type { OnnxWorkerPool } from '../workers/onnx-worker-pool';
-import type { BatchItem } from '../types/app';
+import type { BatchItem, GpuFallbackReason } from '../types/app';
+
+// WebGPU 只在安全上下文暴露：LAN HTTP 下 navigator.gpu 不存在，重开开关也不会生效
+function detectGpuUnavailableReason(): GpuFallbackReason | null {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return null;
+  }
+  if (!window.isSecureContext) {
+    return 'insecure-context';
+  }
+  if (!('gpu' in navigator)) {
+    return 'no-adapter';
+  }
+  return null;
+}
 
 export function AppProvider() {
   const { language, t } = useTranslation();
@@ -223,7 +237,7 @@ export function AppProvider() {
         return;
       }
       if (useAppStore.getState().gpuAcceleration) {
-        applyGpuFallback();
+        applyGpuFallback('runtime');
       }
     };
 
@@ -231,6 +245,16 @@ export function AppProvider() {
       pool.onGpuStatus = null;
     };
   }, [isPoolReady, setGpuFallbackActive, applyGpuFallback]);
+
+  useEffect(() => {
+    if (!gpuAcceleration) {
+      return;
+    }
+    const reason = detectGpuUnavailableReason();
+    if (reason) {
+      applyGpuFallback(reason);
+    }
+  }, [gpuAcceleration, applyGpuFallback]);
 
   const preloadedUrlRef = useRef<string | null>(null);
   useEffect(() => {
