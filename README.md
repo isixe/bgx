@@ -1,6 +1,21 @@
-# BGX
+<p align="center">
+  <img src="public/favicon.png" alt="bgx" width="90px">
+</p>
 
-A free, privacy-first background removal tool powered by AI. All processing happens locally in your browser.
+<h2 align="center">BGX</h2>
+
+<p align="center">A free, privacy-first AI background removal tool that runs entirely in your browser.</p>
+
+<p align="center">
+  <a href="https://bgx.itea.dev/">Demo</a> ·
+  <a href="#installation">Installation</a> ·
+  <a href="#desktop-app-electron">Desktop App</a> ·
+  <a href="https://github.com/isixe/bgx">GitHub</a>
+</p>
+
+<p align="center">
+  <a href="README.zh-CN.md">简体中文</a>
+</p>
 
 ## Features
 
@@ -87,7 +102,7 @@ ACCV 2022 segmentation with excellent hair and translucent edge handling.
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/bgx.git
+git clone https://github.com/isixe/bgx.git
 cd bgx
 ```
 
