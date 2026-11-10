@@ -788,6 +788,38 @@ export function ImagePreview() {
           </button>
         )}
 
+        {displayResult && (
+          <button
+            onClick={() =>
+              downloadResultImage(
+                displayOriginal!,
+                displayResult,
+                activeBatchItem?.name ?? 'image',
+                'png',
+              )
+            }
+            onMouseDown={(e) => e.stopPropagation()}
+            className="absolute top-3 right-3 z-30 px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-black/80 hover:bg-white/30 transition-colors flex items-center gap-1"
+            title={t('downloadImage')}
+            aria-label={t('downloadImage')}
+          >
+            <svg
+              className="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              />
+            </svg>
+            {t('downloadImage')}
+          </button>
+        )}
+
         {showBatchNav && (
           <>
             <BatchNavButton
