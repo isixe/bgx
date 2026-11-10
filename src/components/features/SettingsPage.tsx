@@ -4,10 +4,7 @@ import { ModelsPage } from './ModelsPage';
 import { checkForAppUpdate, isDesktopApp, DOWNLOAD_URL } from '../../lib/appUpdate';
 import pkg from '../../../package.json';
 import { Select } from '../ui/Select';
-import {
-  GPU_CONCURRENCY,
-  getBatchConcurrencyOptions,
-} from '../../utils/concurrency';
+import { GPU_CONCURRENCY, getBatchConcurrencyOptions } from '../../utils/concurrency';
 
 // Keep the "checking…" indicator visible for at least this long so an instant
 // network response does not cause a distracting flash.
