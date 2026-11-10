@@ -28,6 +28,12 @@ export default defineConfig({
   server: {
     port: 8971,
     host: '127.0.0.1',
+    // 開發伺服器同樣需要這兩個標頭，否則 dev 下不是 cross-origin isolated，
+    // SharedArrayBuffer 不存在，多執行緒 WASM 與共享模型緩衝都會退化。
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
   },
   integrations: [
     react({
@@ -41,10 +47,6 @@ export default defineConfig({
     server: {
       // Fail loudly instead of silently drifting to 8972+; dev:electron waits on a fixed port.
       strictPort: true,
-      headers: {
-        'Cross-Origin-Opener-Policy': 'same-origin',
-        'Cross-Origin-Embedder-Policy': 'require-corp',
-      },
     },
     resolve: {
       alias: {

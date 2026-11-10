@@ -274,10 +274,12 @@ export class OnnxWorkerPool {
     }
 
     this.wasmBufferRequest = (async () => {
-      if (typeof SharedArrayBuffer === 'undefined') {
-        return;
-      }
       try {
+        // 必須留在 try 內：finally 才會把 wasmBufferReady 置位，否則 takeIdleSlot 的
+        // 多 worker 等待條件永遠不成立，整個佇列不會被派發。
+        if (typeof SharedArrayBuffer === 'undefined') {
+          return;
+        }
         const response = await fetch(ORT_WASM_URL);
         if (!response.ok) {
           return;

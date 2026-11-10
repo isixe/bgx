@@ -35,9 +35,17 @@ export function getMaxSessionThreads(): number {
   return Math.max(1, getHardwareConcurrency() - 1);
 }
 
+export function isSharedMemoryAvailable(): boolean {
+  return typeof SharedArrayBuffer !== 'undefined';
+}
+
 // Divides the cores between workers so the total thread count stays near the core count.
 // Keeps at least one thread per worker even when the batch width exceeds the core count.
 export function getSessionThreads(concurrency: number): number {
+  // 多執行緒 WASM 依賴 SharedArrayBuffer，缺少時 ORT 後端初始化會失敗。
+  if (!isSharedMemoryAvailable()) {
+    return 1;
+  }
   const parallel = Math.max(1, Math.round(concurrency));
   const available = getMaxSessionThreads();
   if (parallel <= 1) {
