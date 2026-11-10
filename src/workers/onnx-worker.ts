@@ -72,11 +72,9 @@ let sessionStale = false;
 // 共享模型字节（由 worker-pool 一次性读入并广播），避免每个 worker 各自重复读取模型。
 const providedModelBuffers = new Map<string, Uint8Array>();
 
-// 复用 OffscreenCanvas，避免每个任务重复分配三个画布。
+// 复用 OffscreenCanvas，避免每个任务重复分配两个画布。
 let cachedPreprocessCanvas: OffscreenCanvas | null = null;
 let cachedPreprocessCtx: OffscreenCanvasRenderingContext2D | null = null;
-let cachedMaskCanvas: OffscreenCanvas | null = null;
-let cachedMaskCtx: OffscreenCanvasRenderingContext2D | null = null;
 let cachedOutputCanvas: OffscreenCanvas | null = null;
 let cachedOutputCtx: OffscreenCanvasRenderingContext2D | null = null;
 
@@ -92,23 +90,6 @@ function getPreprocessContext(size: number): OffscreenCanvasRenderingContext2D {
     throw new Error('Failed to create 2D context for preprocessing');
   }
   return cachedPreprocessCtx;
-}
-
-function getMaskCanvas(
-  width: number,
-  height: number,
-): { canvas: OffscreenCanvas; ctx: OffscreenCanvasRenderingContext2D } {
-  if (!cachedMaskCanvas) {
-    cachedMaskCanvas = new OffscreenCanvas(width, height);
-    cachedMaskCtx = cachedMaskCanvas.getContext('2d');
-  } else if (cachedMaskCanvas.width !== width || cachedMaskCanvas.height !== height) {
-    cachedMaskCanvas.width = width;
-    cachedMaskCanvas.height = height;
-  }
-  if (!cachedMaskCtx) {
-    throw new Error('Failed to create 2D context for mask');
-  }
-  return { canvas: cachedMaskCanvas, ctx: cachedMaskCtx };
 }
 
 function getOutputCanvas(
@@ -366,6 +347,243 @@ function getPreprocessAffine(mode: PreprocessMode): { scale: number[]; offset: n
   }
 }
 
+// 边缘带重算：粗推理在低分辨率下完成，再把 alpha 处于过渡区间的格子按原始
+// 分辨率重跑一次，用更密的采样修正边缘。
+const EDGE_BAND_LOW = 16;
+const EDGE_BAND_HIGH = 239;
+// 真实照片的过渡像素散布全图，用外接框判断必然退化成整图；改为网格分块，
+// 只重算含有足够多过渡像素的格子，每格独立放大到模型分辨率以获得更密的采样。
+const EDGE_REFINE_GRID = 3;
+const EDGE_REFINE_MAX_TILES = 4;
+const EDGE_REFINE_CELL_BAND_RATIO = 0.02;
+const EDGE_REFINE_PADDING = 0.08;
+const EDGE_REFINE_FEATHER = 0.18;
+
+function toAlpha(mask: Float32Array, postprocess: PostprocessMode): Uint8ClampedArray {
+  const area = mask.length;
+  const alpha = new Uint8ClampedArray(area);
+  // linear 假定输出已在 [0,1]；minmax 先统计极值再线性映射到 [0,1]。
+  let maskScale = 255;
+  let maskOffset = 0;
+  if (postprocess === 'minmax') {
+    let min = Infinity;
+    let max = -Infinity;
+    for (let i = 0; i < area; i += 1) {
+      const value = mask[i];
+      if (Number.isFinite(value)) {
+        if (value < min) min = value;
+        if (value > max) max = value;
+      }
+    }
+    const range = max - min;
+    if (range > 0) {
+      maskScale = 255 / range;
+      maskOffset = -min * maskScale;
+    }
+  }
+  for (let i = 0; i < area; i += 1) {
+    const value = mask[i];
+    const normalized = Number.isFinite(value) ? value : 0;
+    alpha[i] = normalized * maskScale + maskOffset;
+  }
+  return alpha;
+}
+
+function buildInput(
+  pixels: Uint8ClampedArray,
+  resolution: number,
+  preprocess: PreprocessMode,
+): Float32Array {
+  const area = resolution * resolution;
+  const input = new Float32Array(area * 3);
+  const affine = getPreprocessAffine(preprocess);
+  const scaleR = affine.scale[0];
+  const scaleG = affine.scale[1];
+  const scaleB = affine.scale[2];
+  const offsetR = affine.offset[0];
+  const offsetG = affine.offset[1];
+  const offsetB = affine.offset[2];
+  for (let i = 0; i < area; i += 1) {
+    const pixel = i * 4;
+    input[i] = pixels[pixel] * scaleR + offsetR;
+    input[area + i] = pixels[pixel + 1] * scaleG + offsetG;
+    input[area * 2 + i] = pixels[pixel + 2] * scaleB + offsetB;
+  }
+  return input;
+}
+
+interface MaskPrediction {
+  alpha: Uint8ClampedArray;
+  width: number;
+  height: number;
+}
+
+async function predictMask(
+  inferenceSession: InferenceSession,
+  pixels: Uint8ClampedArray,
+  resolution: number,
+  preprocess: PreprocessMode,
+  postprocess: PostprocessMode,
+): Promise<MaskPrediction> {
+  const input = buildInput(pixels, resolution, preprocess);
+  const inputName = inferenceSession.inputNames[0];
+  const outputName = inferenceSession.outputNames[0];
+  const tensor = new Tensor('float32', input, [1, 3, resolution, resolution]);
+  const outputs = await inferenceSession.run({ [inputName]: tensor });
+  const output = outputs[outputName];
+  const raw = output.data;
+  const mask = raw instanceof Float32Array ? raw : Float32Array.from(raw as ArrayLike<number>);
+  const dims = output.dims;
+  return {
+    alpha: toAlpha(mask, postprocess),
+    width: dims[dims.length - 1],
+    height: dims[dims.length - 2],
+  };
+}
+
+function paintMask(alpha: Uint8ClampedArray, width: number, height: number): OffscreenCanvas {
+  const canvas = new OffscreenCanvas(width, height);
+  const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('Failed to create 2D context for refined mask');
+  }
+  const image = context.createImageData(width, height);
+  const pixels = new Uint32Array(image.data.buffer);
+  for (let i = 0; i < pixels.length; i += 1) {
+    pixels[i] = (alpha[i] << 24) | 0x00ffffff;
+  }
+  context.putImageData(image, 0, 0);
+  return canvas;
+}
+
+// 以椭圆径向渐变做边缘羽化，避免重算区域与粗结果之间出现硬接缝。
+function featherCanvas(canvas: OffscreenCanvas): void {
+  const context = canvas.getContext('2d');
+  if (!context) {
+    return;
+  }
+  const { width, height } = canvas;
+  const gradient = context.createRadialGradient(
+    width / 2,
+    height / 2,
+    Math.min(width, height) * (0.5 - EDGE_REFINE_FEATHER),
+    width / 2,
+    height / 2,
+    Math.max(width, height) * 0.5,
+  );
+  gradient.addColorStop(0, 'rgba(255,255,255,1)');
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
+  context.globalCompositeOperation = 'destination-in';
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, width, height);
+  context.globalCompositeOperation = 'source-over';
+}
+
+async function refineEdges(
+  inferenceSession: InferenceSession,
+  bitmap: ImageBitmap,
+  coarse: MaskPrediction,
+  resolution: number,
+  preprocess: PreprocessMode,
+  postprocess: PostprocessMode,
+): Promise<OffscreenCanvas | null> {
+  const { alpha, width, height } = coarse;
+  const cellWidth = Math.ceil(width / EDGE_REFINE_GRID);
+  const cellHeight = Math.ceil(height / EDGE_REFINE_GRID);
+
+  const candidates: Array<{ cx: number; cy: number; band: number }> = [];
+  for (let cy = 0; cy < EDGE_REFINE_GRID; cy += 1) {
+    for (let cx = 0; cx < EDGE_REFINE_GRID; cx += 1) {
+      const startX = cx * cellWidth;
+      const startY = cy * cellHeight;
+      const endX = Math.min(width, startX + cellWidth);
+      const endY = Math.min(height, startY + cellHeight);
+      const cellArea = (endX - startX) * (endY - startY);
+      if (cellArea <= 0) {
+        continue;
+      }
+      let band = 0;
+      for (let y = startY; y < endY; y += 1) {
+        const row = y * width;
+        for (let x = startX; x < endX; x += 1) {
+          const value = alpha[row + x];
+          if (value > EDGE_BAND_LOW && value < EDGE_BAND_HIGH) {
+            band += 1;
+          }
+        }
+      }
+      if (band / cellArea >= EDGE_REFINE_CELL_BAND_RATIO) {
+        candidates.push({ cx, cy, band });
+      }
+    }
+  }
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  candidates.sort((a, b) => b.band - a.band);
+  const selected = candidates.slice(0, EDGE_REFINE_MAX_TILES);
+
+  const scaleX = bitmap.width / width;
+  const scaleY = bitmap.height / height;
+  const alphaCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const alphaContext = alphaCanvas.getContext('2d');
+  if (!alphaContext) {
+    return null;
+  }
+  alphaContext.imageSmoothingEnabled = true;
+  alphaContext.imageSmoothingQuality = 'high';
+  alphaContext.drawImage(paintMask(alpha, width, height), 0, 0, bitmap.width, bitmap.height);
+
+  for (const cell of selected) {
+    const startX = cell.cx * cellWidth;
+    const startY = cell.cy * cellHeight;
+    const endX = Math.min(width, startX + cellWidth);
+    const endY = Math.min(height, startY + cellHeight);
+    const padX = (endX - startX) * EDGE_REFINE_PADDING;
+    const padY = (endY - startY) * EDGE_REFINE_PADDING;
+    let left = Math.floor((startX - padX) * scaleX);
+    let top = Math.floor((startY - padY) * scaleY);
+    const right = Math.ceil((endX + padX) * scaleX);
+    const bottom = Math.ceil((endY + padY) * scaleY);
+
+    // 模型输入是正方形，取覆盖该格的最大边长并居中，避免拉伸导致 alpha 错位。
+    const side = Math.max(right - left, bottom - top);
+    const centerX = (left + right) / 2;
+    const centerY = (top + bottom) / 2;
+    left = Math.round(centerX - side / 2);
+    top = Math.round(centerY - side / 2);
+    left = Math.max(0, Math.min(left, Math.max(0, bitmap.width - side)));
+    top = Math.max(0, Math.min(top, Math.max(0, bitmap.height - side)));
+    const cropSize = Math.min(side, bitmap.width - left, bitmap.height - top);
+    if (cropSize <= 0) {
+      continue;
+    }
+
+    const crop = await createImageBitmap(bitmap, left, top, cropSize, cropSize, {
+      resizeWidth: resolution,
+      resizeHeight: resolution,
+      resizeQuality: 'high',
+    });
+    const cropCanvas = new OffscreenCanvas(resolution, resolution);
+    const cropContext = cropCanvas.getContext('2d', { willReadFrequently: true });
+    if (!cropContext) {
+      crop.close();
+      continue;
+    }
+    cropContext.drawImage(crop, 0, 0);
+    crop.close();
+    const cropPixels = cropContext.getImageData(0, 0, resolution, resolution).data;
+    const refined = await predictMask(inferenceSession, cropPixels, resolution, preprocess, postprocess);
+
+    const tile = paintMask(refined.alpha, refined.width, refined.height);
+    featherCanvas(tile);
+    alphaContext.drawImage(tile, left, top, cropSize, cropSize);
+  }
+
+  return alphaCanvas;
+}
+
 async function runInference(
   imageBlob: Blob,
   modelUrl: string,
@@ -404,78 +622,33 @@ async function runInference(
     resized.close();
 
     const pixels = workCtx.getImageData(0, 0, resolution, resolution).data;
-    const area = resolution * resolution;
-    const input = new Float32Array(area * 3);
-    const affine = getPreprocessAffine(preprocess);
-    const scaleR = affine.scale[0];
-    const scaleG = affine.scale[1];
-    const scaleB = affine.scale[2];
-    const offsetR = affine.offset[0];
-    const offsetG = affine.offset[1];
-    const offsetB = affine.offset[2];
-    for (let i = 0; i < area; i += 1) {
-      const pixel = i * 4;
-      input[i] = pixels[pixel] * scaleR + offsetR;
-      input[area + i] = pixels[pixel + 1] * scaleG + offsetG;
-      input[area * 2 + i] = pixels[pixel + 2] * scaleB + offsetB;
-    }
     lap('preprocess');
     report(40);
 
-    const inputName = inferenceSession.inputNames[0];
-    const outputName = inferenceSession.outputNames[0];
-    const tensor = new Tensor('float32', input, [1, 3, resolution, resolution]);
-    const outputs = await inferenceSession.run({ [inputName]: tensor });
+    const coarse = await predictMask(inferenceSession, pixels, resolution, preprocess, postprocess);
     lap('inference');
-    const output = outputs[outputName];
-
-    const rawMask = output.data;
-    const mask =
-      rawMask instanceof Float32Array ? rawMask : Float32Array.from(rawMask as ArrayLike<number>);
-    const dims = output.dims;
-    const maskWidth = dims[dims.length - 1];
-    const maskHeight = dims[dims.length - 2];
     report(90);
 
-    const { canvas: maskCanvas, ctx: maskCtx } = getMaskCanvas(maskWidth, maskHeight);
-    const maskImage = maskCtx.createImageData(maskWidth, maskHeight);
-    // RGBA 内存为小端序，一次 32 位写入即可同时设置常量白色 RGB 与变化的 Alpha。
-    const maskU32 = new Uint32Array(maskImage.data.buffer);
-    const maskArea = maskWidth * maskHeight;
-    // linear 假定输出已在 [0,1]；minmax 先统计极值再线性映射到 [0,1]。
-    let maskScale = 255;
-    let maskOffset = 0;
-    if (postprocess === 'minmax') {
-      let min = Infinity;
-      let max = -Infinity;
-      for (let i = 0; i < maskArea; i += 1) {
-        const value = mask[i];
-        if (Number.isFinite(value)) {
-          if (value < min) min = value;
-          if (value > max) max = value;
-        }
-      }
-      const range = max - min;
-      if (range > 0) {
-        maskScale = 255 / range;
-        maskOffset = -min * maskScale;
-      }
-    }
-    for (let i = 0; i < maskArea; i += 1) {
-      const value = mask[i];
-      const normalized = Number.isFinite(value) ? value : 0;
-      const alpha = Math.min(255, Math.max(0, Math.round(normalized * maskScale + maskOffset)));
-      maskU32[i] = (alpha << 24) | 0x00ffffff;
-    }
-    maskCtx.putImageData(maskImage, 0, 0);
+    const coarseCanvas = paintMask(coarse.alpha, coarse.width, coarse.height);
     lap('postprocess');
+
+    const refined = await refineEdges(
+      inferenceSession,
+      bitmap,
+      coarse,
+      resolution,
+      preprocess,
+      postprocess,
+    );
+    const alphaSource: OffscreenCanvas = refined ?? coarseCanvas;
+    lap('refine');
 
     const { canvas: outputCanvas, ctx: outputCtx } = getOutputCanvas(bitmap.width, bitmap.height);
     outputCtx.drawImage(bitmap, 0, 0);
     outputCtx.globalCompositeOperation = 'destination-in';
     outputCtx.imageSmoothingEnabled = true;
     outputCtx.imageSmoothingQuality = 'high';
-    outputCtx.drawImage(maskCanvas, 0, 0, bitmap.width, bitmap.height);
+    outputCtx.drawImage(alphaSource, 0, 0, bitmap.width, bitmap.height);
     lap('composite');
     report(95);
 
