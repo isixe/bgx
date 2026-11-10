@@ -65,6 +65,9 @@ function ProgressRing({ progress, isDarkMode }: { progress: number; isDarkMode: 
   );
 }
 
+const SLIDER_KEY_STEP = 5;
+const SLIDER_DOUBLE_PRESS_MS = 350;
+
 function BatchNavButton({
   direction,
   disabled,
@@ -136,6 +139,7 @@ export function ImagePreview() {
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
+  const lastArrowRef = useRef<{ key: string; at: number }>({ key: '', at: 0 });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const hasProcessingItem = batchQueue.some((item) => item.status === 'processing');
   const [now, setNow] = useState(() => Date.now());
@@ -295,9 +299,17 @@ export function ImagePreview() {
       ? previewableItems[activePreviewIndex + 1]
       : null;
   const showBatchNav = batchMode && viewingBatchResult && previewableItems.length > 1;
+  const hasComparison = !!displayResult;
 
   useEffect(() => {
-    if (!showBatchNav) return;
+    if (!showBatchNav && !hasComparison) return;
+    const isDoublePress = (key: string) => {
+      const pressedAt = Date.now();
+      const previous = lastArrowRef.current;
+      const double = previous.key === key && pressedAt - previous.at < SLIDER_DOUBLE_PRESS_MS;
+      lastArrowRef.current = { key: double ? '' : key, at: pressedAt };
+      return double;
+    };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
@@ -307,17 +319,30 @@ export function ImagePreview() {
       ) {
         return;
       }
-      if (event.key === 'ArrowLeft' && previousBatchItem) {
+      if (event.key === 'ArrowUp' && previousBatchItem) {
         event.preventDefault();
         selectBatchItem(previousBatchItem.id);
-      } else if (event.key === 'ArrowRight' && nextBatchItem) {
+        return;
+      }
+      if (event.key === 'ArrowDown' && nextBatchItem) {
         event.preventDefault();
         selectBatchItem(nextBatchItem.id);
+        return;
+      }
+      if (!hasComparison) return;
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        const double = isDoublePress('ArrowLeft');
+        setSliderPosition((current) => (double ? 0 : Math.max(0, current - SLIDER_KEY_STEP)));
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        const double = isDoublePress('ArrowRight');
+        setSliderPosition((current) => (double ? 100 : Math.min(100, current + SLIDER_KEY_STEP)));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showBatchNav, previousBatchItem, nextBatchItem, selectBatchItem]);
+  }, [showBatchNav, hasComparison, previousBatchItem, nextBatchItem, selectBatchItem]);
 
   if (!showQueueList && !displayOriginal) return null;
 
