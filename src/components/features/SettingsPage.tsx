@@ -419,8 +419,8 @@ export function SettingsPage() {
                         title={t('cpuConcurrency')}
                       />
                     </div>
-                    <div className={`${cardClasses} space-y-3`}>
-                      <div>
+                    <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
+                      <div className="min-w-0">
                         <p
                           className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
                         >
@@ -440,11 +440,6 @@ export function SettingsPage() {
                         ariaLabel={t('gpuConcurrency')}
                         title={t('gpuConcurrency')}
                       />
-                      <p
-                        className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}
-                      >
-                        {t('gpuConcurrencyHint')}
-                      </p>
                     </div>
                     <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
                       <div className="min-w-0">

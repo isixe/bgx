@@ -210,8 +210,6 @@ export const translations = {
   cpuConcurrency: 'CPU concurrency',
   gpuConcurrency: 'GPU concurrency',
   settingsGpuConcurrencyDesc:
-    'GPU tasks run one after another on a single device queue, so this is fixed at 1.',
-  gpuConcurrencyHint:
     'Measured on WebGPU: raising GPU concurrency never improved throughput, it only queued images behind each other and made every image slower.',
   preloadModels: 'Preload models',
   settingsPreloadDesc:

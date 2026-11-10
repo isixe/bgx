@@ -205,8 +205,7 @@ export const translations = {
   gpuFallbackNotice: '当前环境不支持 GPU 加速，已切换到 CPU。',
   cpuConcurrency: 'CPU 并发',
   gpuConcurrency: 'GPU 并发',
-  settingsGpuConcurrencyDesc: 'GPU 任务在同一条设备队列上依次执行，并发数固定为 1。',
-  gpuConcurrencyHint:
+  settingsGpuConcurrencyDesc:
     '实测增加 GPU 并发并不能提升吞吐，只会让图片在队列里互相排队、单张处理更慢。',
   preloadModels: '预热模型',
   settingsPreloadDesc:
