@@ -130,6 +130,7 @@ export function ImagePreview() {
     reprocessBatchItem,
     setBatchConcurrency,
     gpuAcceleration,
+    keyboardMode,
   } = useAppStore();
   const { t } = useTranslation();
   const [sliderPosition, setSliderPosition] = useState(50);
@@ -352,6 +353,11 @@ export function ImagePreview() {
       return double;
     };
 
+    const keyMap =
+      keyboardMode === 'wasd'
+        ? { prev: 'w', next: 's', left: 'a', right: 'd' }
+        : { prev: 'arrowup', next: 'arrowdown', left: 'arrowleft', right: 'arrowright' };
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
@@ -361,19 +367,20 @@ export function ImagePreview() {
       ) {
         return;
       }
-      if (event.key === 'ArrowUp' && previousBatchItem) {
+      const key = event.key.toLowerCase();
+      if (key === keyMap.prev && previousBatchItem) {
         event.preventDefault();
         selectBatchItem(previousBatchItem.id);
         return;
       }
-      if (event.key === 'ArrowDown' && nextBatchItem) {
+      if (key === keyMap.next && nextBatchItem) {
         event.preventDefault();
         selectBatchItem(nextBatchItem.id);
         return;
       }
       if (!hasComparison) return;
-      const isLeft = event.key === 'ArrowLeft';
-      const isRight = event.key === 'ArrowRight';
+      const isLeft = key === keyMap.left;
+      const isRight = key === keyMap.right;
       if (!isLeft && !isRight) return;
       event.preventDefault();
       const next = isLeft ? -1 : 1;
@@ -383,7 +390,7 @@ export function ImagePreview() {
         startSliding(next);
         return;
       }
-      if (isDoublePress(isLeft ? 'ArrowLeft' : 'ArrowRight')) {
+      if (isDoublePress(key)) {
         stopSliding();
         setSliderPosition(isLeft ? 0 : 100);
         return;
@@ -392,7 +399,8 @@ export function ImagePreview() {
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      const released = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0;
+      const key = event.key.toLowerCase();
+      const released = key === keyMap.left ? -1 : key === keyMap.right ? 1 : 0;
       if (released !== 0 && released === direction) stopSliding();
     };
 
@@ -405,7 +413,14 @@ export function ImagePreview() {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', stopSliding);
     };
-  }, [showBatchNav, hasComparison, previousBatchItem, nextBatchItem, selectBatchItem]);
+  }, [
+    showBatchNav,
+    hasComparison,
+    previousBatchItem,
+    nextBatchItem,
+    selectBatchItem,
+    keyboardMode,
+  ]);
 
   if (!showQueueList && !displayOriginal) return null;
 

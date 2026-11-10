@@ -216,6 +216,9 @@ export const translations = {
   preloadModels: 'Preload models',
   settingsPreloadDesc:
     'Warm up idle workers when a batch is queued, so processing starts faster. Uses more memory.',
+  keyboardMode: 'Keyboard keys',
+  keyboardModeDesc:
+    'Which keys move the comparison axis and switch between results. Arrows use ↑ ↓ to change image and ← → to slide; WASD uses W S and A D.',
   relatedToolsSubtitle:
     "Here are some of my other projects. If you're interested in image processing tools, feel free to check them out.",
   toolImageDashName: 'Image Dash',

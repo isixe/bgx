@@ -3,6 +3,9 @@ export type ModelGroupId = 'u2net' | 'isnet' | 'bria' | 'ben2' | 'modnet' | 'ins
 // GPU 回退原因：insecure-context = 非安全上下文（如 LAN HTTP），no-adapter = 浏览器无 WebGPU，runtime = 运行期创建/运行失败
 export type GpuFallbackReason = 'insecure-context' | 'no-adapter' | 'runtime';
 
+// 预览区键盘操作模式：arrows = 方向键（↑↓←→），wasd = WASD 键
+export type KeyboardMode = 'arrows' | 'wasd';
+
 export interface ModelGroup {
   id: ModelGroupId;
   nameKey: string;
@@ -85,6 +88,8 @@ export type AppState = {
   gpuFallbackReason: GpuFallbackReason | null;
   // 批处理数量超过并发数时，提前把模型加载进空闲 worker（懒预热）
   preloadEnabled: boolean;
+  // 预览区键盘操作模式，用户偏好，持久化到 localStorage
+  keyboardMode: KeyboardMode;
 
   // 客户端挂载后应用持久化偏好，确保 SSR 与客户端首帧一致
   hydrateFromStorage: () => void;
@@ -94,6 +99,7 @@ export type AppState = {
   // GPU 自动回退到 CPU：仅影响当前会话，不写入用户偏好（下次启动仍默认启用 GPU）
   applyGpuFallback: (reason?: GpuFallbackReason) => void;
   setPreloadEnabled: (enabled: boolean) => void;
+  setKeyboardMode: (mode: KeyboardMode) => void;
 
   setCurrentModel: (model: string) => Promise<void>;
   setDefaultModel: (modelId: string) => void;

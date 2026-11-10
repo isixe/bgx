@@ -8,6 +8,7 @@ import type {
   SettingsTab,
   UpdateCheckState,
   GpuFallbackReason,
+  KeyboardMode,
 } from '../types/app';
 import {
   getCachedModelBlobUrl,
@@ -55,6 +56,11 @@ function readPersistedPreferences(): Partial<AppState> {
   const storedPreload = localStorage.getItem('bgx-preload-enabled');
   if (storedPreload !== null) {
     prefs.preloadEnabled = storedPreload === 'true';
+  }
+
+  const storedKeyboardMode = localStorage.getItem('bgx-keyboard-mode');
+  if (storedKeyboardMode === 'arrows' || storedKeyboardMode === 'wasd') {
+    prefs.keyboardMode = storedKeyboardMode;
   }
 
   const storedDefaultModel = localStorage.getItem('bgx-default-model');
@@ -110,6 +116,7 @@ const initialState = {
   gpuFallbackActive: false,
   gpuFallbackReason: null as GpuFallbackReason | null,
   preloadEnabled: true,
+  keyboardMode: 'arrows' as KeyboardMode,
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -325,6 +332,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       localStorage.setItem('bgx-preload-enabled', String(enabled));
     }
     set({ preloadEnabled: enabled });
+  },
+  setKeyboardMode: (mode) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bgx-keyboard-mode', mode);
+    }
+    set({ keyboardMode: mode });
   },
   setUpdateCheckState: (state) => set({ updateCheckState: state }),
   setLatestVersion: (version) => set({ latestVersion: version }),

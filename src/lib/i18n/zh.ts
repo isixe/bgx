@@ -212,6 +212,9 @@ export const translations = {
   preloadModels: '预热模型',
   settingsPreloadDesc:
     '队列中的图片超过并发数时，提前在空闲 worker 中加载模型以加快起步，会占用更多内存。',
+  keyboardMode: '键盘按键',
+  keyboardModeDesc:
+    '选择用哪组按键操作预览区：方向键用 ↑ ↓ 切换图片、← → 移动对比轴；WASD 键用 W S 切换图片、A D 移动对比轴。',
   relatedToolsSubtitle: '以下我的一些其他项目，如果你对图片处理工具感兴趣，欢迎使用它们',
   toolImageDashName: 'Image Dash',
   toolImageDashDesc:

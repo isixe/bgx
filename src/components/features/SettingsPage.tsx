@@ -5,10 +5,16 @@ import { checkForAppUpdate, isDesktopApp, DOWNLOAD_URL } from '../../lib/appUpda
 import pkg from '../../../package.json';
 import { Select } from '../ui/Select';
 import { GPU_CONCURRENCY, getBatchConcurrencyOptions } from '../../utils/concurrency';
+import type { KeyboardMode } from '../../types/app';
 
 // Keep the "checking…" indicator visible for at least this long so an instant
 // network response does not cause a distracting flash.
 const MIN_CHECKING_MS = 2500;
+
+const KEYBOARD_MODE_OPTIONS: { value: KeyboardMode; label: string }[] = [
+  { value: 'arrows', label: '↑ ↓ ← →' },
+  { value: 'wasd', label: 'W A S D' },
+];
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -27,6 +33,8 @@ export function SettingsPage() {
     setBatchConcurrency,
     preloadEnabled,
     setPreloadEnabled,
+    keyboardMode,
+    setKeyboardMode,
   } = useAppStore();
 
   const cardClasses = `rounded-xl border p-4 ${
@@ -365,6 +373,46 @@ export function SettingsPage() {
                           }`}
                         />
                       </button>
+                    </div>
+                    <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                        >
+                          {t('keyboardMode')}
+                        </p>
+                        <p
+                          className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                        >
+                          {t('keyboardModeDesc')}
+                        </p>
+                      </div>
+                      <div
+                        className={`flex flex-shrink-0 items-center gap-1 rounded-lg p-0.5 ${
+                          isDarkMode ? 'bg-slate-700' : 'bg-slate-100'
+                        }`}
+                      >
+                        {KEYBOARD_MODE_OPTIONS.map((option) => {
+                          const isActive = keyboardMode === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              aria-pressed={isActive}
+                              onClick={() => setKeyboardMode(option.value)}
+                              className={`rounded-md px-2 py-0.5 text-xs transition-colors ${
+                                isActive
+                                  ? 'bg-indigo-600 text-white'
+                                  : isDarkMode
+                                    ? 'text-slate-300 hover:text-white'
+                                    : 'text-slate-600 hover:text-slate-900'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 </div>
