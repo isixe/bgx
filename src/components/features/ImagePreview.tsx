@@ -65,7 +65,8 @@ function ProgressRing({ progress, isDarkMode }: { progress: number; isDarkMode: 
   );
 }
 
-const SLIDER_KEY_STEP = 5;
+// 按住方向键时对比轴每秒移动的百分比，决定长按的滑动手感。
+const SLIDER_HOLD_SPEED = 50;
 const SLIDER_DOUBLE_PRESS_MS = 350;
 
 function BatchNavButton({
@@ -303,6 +304,38 @@ export function ImagePreview() {
 
   useEffect(() => {
     if (!showBatchNav && !hasComparison) return;
+    let frame: number | null = null;
+    let direction = 0;
+    let lastFrameAt = 0;
+
+    const stopSliding = () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+      frame = null;
+      direction = 0;
+      lastFrameAt = 0;
+    };
+
+    const step = (timestamp: number) => {
+      if (direction === 0) {
+        frame = null;
+        return;
+      }
+      if (lastFrameAt !== 0) {
+        const delta = ((timestamp - lastFrameAt) / 1000) * SLIDER_HOLD_SPEED * direction;
+        setSliderPosition((current) => Math.max(0, Math.min(100, current + delta)));
+      }
+      lastFrameAt = timestamp;
+      frame = requestAnimationFrame(step);
+    };
+
+    const startSliding = (next: number) => {
+      direction = next;
+      if (frame === null) {
+        lastFrameAt = 0;
+        frame = requestAnimationFrame(step);
+      }
+    };
+
     const isDoublePress = (key: string) => {
       const pressedAt = Date.now();
       const previous = lastArrowRef.current;
@@ -310,6 +343,7 @@ export function ImagePreview() {
       lastArrowRef.current = { key: double ? '' : key, at: pressedAt };
       return double;
     };
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
@@ -330,18 +364,32 @@ export function ImagePreview() {
         return;
       }
       if (!hasComparison) return;
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        const double = isDoublePress('ArrowLeft');
-        setSliderPosition((current) => (double ? 0 : Math.max(0, current - SLIDER_KEY_STEP)));
-      } else if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        const double = isDoublePress('ArrowRight');
-        setSliderPosition((current) => (double ? 100 : Math.min(100, current + SLIDER_KEY_STEP)));
+      const isLeft = event.key === 'ArrowLeft';
+      const isRight = event.key === 'ArrowRight';
+      if (!isLeft && !isRight) return;
+      event.preventDefault();
+      if (event.repeat) return;
+      if (isDoublePress(isLeft ? 'ArrowLeft' : 'ArrowRight')) {
+        stopSliding();
+        setSliderPosition(isLeft ? 0 : 100);
+        return;
       }
+      startSliding(isLeft ? -1 : 1);
     };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') stopSliding();
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', stopSliding);
+    return () => {
+      stopSliding();
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', stopSliding);
+    };
   }, [showBatchNav, hasComparison, previousBatchItem, nextBatchItem, selectBatchItem]);
 
   if (!showQueueList && !displayOriginal) return null;
