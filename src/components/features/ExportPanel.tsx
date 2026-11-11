@@ -1,6 +1,8 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../lib/i18n';
+import { downloadResultImage } from '../../utils/downloadImage';
+import { getImageBlob } from '../../utils/imageStore';
 
 type ExportFormat = 'png' | 'jpg' | 'webp';
 
@@ -43,54 +45,18 @@ export function ExportPanel({ disabled = false }: ExportPanelProps) {
   const handleDownload = useCallback(() => {
     if (!resultImage || !originalImage) return;
 
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // 先加载原始图片获取原始尺寸
-    const originalImg = new Image();
-    originalImg.onload = () => {
-      // 使用原始图片的尺寸
-      canvas.width = originalImg.width;
-      canvas.height = originalImg.height;
-
-      if (selectedFormat === 'jpg') {
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-
-      // 再加载结果图片并绘制
-      const resultImg = new Image();
-      resultImg.onload = () => {
-        ctx.drawImage(resultImg, 0, 0, canvas.width, canvas.height);
-
-        const quality = selectedFormat === 'webp' ? 0.9 : undefined;
-        const downloadName = `bgx-removed-${Date.now()}.${selectedFormat}`;
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) return;
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.download = downloadName;
-            link.href = url;
-            link.click();
-            URL.revokeObjectURL(url);
-          },
-          `image/${selectedFormat}`,
-          quality,
-        );
-      };
-      resultImg.src = resultImage;
-    };
-    originalImg.src = originalImage;
+    void downloadResultImage(originalImage, resultImage, `bgx-${Date.now()}`, selectedFormat).catch(
+      (err) => {
+        console.error('Download failed:', err);
+      },
+    );
   }, [resultImage, originalImage, selectedFormat]);
 
   const handleCopy = useCallback(async () => {
     if (!resultImage) return;
 
     try {
-      const response = await fetch(resultImage);
-      const blob = await response.blob();
+      const blob = await getImageBlob(resultImage);
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

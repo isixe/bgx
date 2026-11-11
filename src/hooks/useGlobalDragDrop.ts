@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { useAppStore } from '../stores/appStore';
 import { useTranslation } from '../lib/i18n';
+import { createRememberedImageUrl } from '../utils/imageStore';
 
 const SUPPORTED_FORMATS = [
   'image/jpeg',
@@ -77,7 +78,7 @@ export function useGlobalDragDrop({
       if (validFiles.length === 1) {
         clearBatchQueue();
         setBatchMode(false);
-        setOriginalImage(URL.createObjectURL(validFiles[0]));
+        setOriginalImage(createRememberedImageUrl(validFiles[0]));
         setError(null);
       } else {
         clearBatchQueue();

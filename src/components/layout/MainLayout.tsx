@@ -12,6 +12,7 @@ import { ExportPanel } from '../features/ExportPanel';
 import { SettingsPage } from '../features/SettingsPage';
 import { LanguageSwitcher } from '../ui/LanguageSwitcher';
 import { saveImagesBatchToDirectory } from '../../utils/downloadImage';
+import { getImageBlob } from '../../utils/imageStore';
 import { DOWNLOAD_URL, isDesktopApp } from '../../lib/appUpdate';
 
 export function MainLayout() {
@@ -569,8 +570,7 @@ function SidebarContent({
       for (let i = 0; i < toExport.length; i += 1) {
         const item = toExport[i];
         if (item.resultImage) {
-          const response = await fetch(item.resultImage);
-          const blob = await response.blob();
+          const blob = await getImageBlob(item.resultImage);
           const baseName = item.name.replace(/\.[^.]+$/, '');
           zip.file(`${baseName}-removed.png`, blob);
         }

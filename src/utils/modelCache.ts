@@ -1,4 +1,5 @@
 import { getModelById } from './modelUtils';
+import { forgetImageBlob } from './imageStore';
 
 const DB_NAME = 'bgx-models-db';
 const DB_VERSION = 1;
@@ -373,6 +374,7 @@ export function revokeObjectUrl(url: string | null | undefined): void {
     if (shared === url) return;
   }
   URL.revokeObjectURL(url);
+  forgetImageBlob(url);
 }
 
 export function revokeCachedUrl(url: string): void {

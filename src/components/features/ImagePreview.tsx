@@ -5,6 +5,8 @@ import { useTranslation } from '../../lib/i18n';
 import { downloadResultImage } from '../../utils/downloadImage';
 import { GPU_CONCURRENCY, getBatchConcurrencyOptions } from '../../utils/concurrency';
 import { Select } from '../ui/Select';
+import { SelfHealingImage } from '../ui/SelfHealingImage';
+import { getImageBlob } from '../../utils/imageStore';
 
 function formatDuration(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) {
@@ -406,8 +408,7 @@ export function ImagePreview() {
   const copyImageToClipboard = useCallback(
     async (resultImageUrl: string) => {
       try {
-        const response = await fetch(resultImageUrl);
-        const blob = await response.blob();
+        const blob = await getImageBlob(resultImageUrl);
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
         showToast(t('copied'));
       } catch (err) {
@@ -897,7 +898,7 @@ export function ImagePreview() {
                         className="flex-1 min-w-0"
                       >
                         <div className="flex items-center gap-3">
-                          <img
+                          <SelfHealingImage
                             src={item.originalImage}
                             alt={item.name}
                             className="w-8 h-8 rounded object-cover flex-shrink-0"
@@ -1101,7 +1102,7 @@ export function ImagePreview() {
             transition: isDraggingSlider || isPanning ? 'none' : 'transform 0.1s ease-out',
           }}
         >
-          <img
+          <SelfHealingImage
             src={displayOriginal!}
             alt="Original"
             className="max-w-full max-h-full object-contain"
@@ -1125,7 +1126,7 @@ export function ImagePreview() {
                 transition: isDraggingSlider || isPanning ? 'none' : 'transform 0.1s ease-out',
               }}
             >
-              <img
+              <SelfHealingImage
                 src={displayResult}
                 alt="Result"
                 className="max-w-full max-h-full object-contain"

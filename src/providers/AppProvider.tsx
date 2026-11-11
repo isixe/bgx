@@ -4,6 +4,7 @@ import { useRemoveBackground, MODEL_NOT_CACHED } from '../hooks/useRemoveBackgro
 import { MainLayout } from '../components/layout/MainLayout';
 import { useTranslation, i18n } from '../lib/i18n';
 import { isModelCached, getCachedModelBlobUrl } from '../utils/modelCache';
+import { createRememberedImageUrl, getImageBlob, pruneImageStore } from '../utils/imageStore';
 import { getModelById } from '../utils/modelUtils';
 import { checkForAppUpdate, isDesktopApp } from '../lib/appUpdate';
 import { GPU_CONCURRENCY } from '../utils/concurrency';
@@ -68,6 +69,10 @@ export function AppProvider() {
   useEffect(() => {
     initializeModelStatuses();
   }, [initializeModelStatuses]);
+
+  useEffect(() => {
+    void pruneImageStore();
+  }, []);
 
   useEffect(() => {
     if (isModelStatusesLoaded) {
@@ -156,7 +161,7 @@ export function AppProvider() {
         const model = getModelById(item.modelId);
         updateBatchItemStatus(item.id, 'processing');
 
-        const imageBlob = await fetch(item.originalImage).then((response) => response.blob());
+        const imageBlob = await getImageBlob(item.originalImage);
         const result = await pool.processImage(
           item.id,
           imageBlob,
@@ -168,7 +173,7 @@ export function AppProvider() {
         );
 
         if (result.type === 'success' && result.blob) {
-          updateBatchItemStatus(item.id, 'completed', URL.createObjectURL(result.blob));
+          updateBatchItemStatus(item.id, 'completed', createRememberedImageUrl(result.blob));
         } else if (result.type === 'error') {
           updateBatchItemStatus(item.id, 'error', null, result.error);
         } else {

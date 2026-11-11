@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { MODELS } from '../config/models';
 import { getCachedModelBlobUrl, isModelCached } from '../utils/modelCache';
+import { createRememberedImageUrl, getImageBlob } from '../utils/imageStore';
 import type { UseRemoveBackgroundOptions, UseRemoveBackgroundReturn } from '../types/app';
 
 export const MODEL_NOT_CACHED = 'model_not_cached';
@@ -36,7 +37,7 @@ export function useRemoveBackground(
         throw new Error('Model URL unavailable');
       }
 
-      const imageBlob = await fetch(imageUrl).then((response) => response.blob());
+      const imageBlob = await getImageBlob(imageUrl);
       const { getOnnxWorkerPool } = await import('../workers/onnx-worker-pool');
       const pool = getOnnxWorkerPool();
 
@@ -53,7 +54,7 @@ export function useRemoveBackground(
 
       if (result.type === 'success' && result.blob) {
         onProgress?.(100);
-        onSuccess?.(URL.createObjectURL(result.blob));
+        onSuccess?.(createRememberedImageUrl(result.blob));
         return;
       }
 

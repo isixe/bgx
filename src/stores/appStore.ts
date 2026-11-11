@@ -21,6 +21,7 @@ import {
   getAllCachedModels,
   clearModelDataFromMemory,
 } from '../utils/modelCache';
+import { createRememberedImageUrl } from '../utils/imageStore';
 import { MODELS } from '../config/models';
 
 // 读取持久化的用户偏好。仅在客户端挂载后调用，不能在模块初始化阶段读取，
@@ -414,9 +415,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    const originalImage = createRememberedImageUrl(file);
     const item: BatchItem = {
       id,
-      originalImage: URL.createObjectURL(file),
+      originalImage,
       resultImage: null,
       status: 'pending',
       modelId: get().currentModel,

@@ -1,56 +1,55 @@
-export function downloadResultImage(
+import { getImageBlob } from './imageStore';
+
+export async function downloadResultImage(
   originalImage: string,
   resultImage: string,
   filename: string,
   format: 'png' | 'jpg' | 'webp',
 ) {
+  const originalImg = await loadImage(originalImage);
   const canvas = document.createElement('canvas');
+  canvas.width = originalImg.width;
+  canvas.height = originalImg.height;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const originalImg = new Image();
-  originalImg.onload = () => {
-    canvas.width = originalImg.width;
-    canvas.height = originalImg.height;
+  if (format === 'jpg') {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
 
-    if (format === 'jpg') {
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+  const resultImg = await loadImage(resultImage);
+  ctx.drawImage(resultImg, 0, 0, canvas.width, canvas.height);
 
-    const resultImg = new Image();
-    resultImg.onload = () => {
-      ctx.drawImage(resultImg, 0, 0, canvas.width, canvas.height);
+  const quality = format === 'webp' ? 0.9 : undefined;
+  const baseName = filename.replace(/\.[^.]+$/, '');
+  const downloadName = `${baseName}-removed.${format}`;
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, `image/${format}`, quality);
+  });
+  if (!blob) return;
 
-      const quality = format === 'webp' ? 0.9 : undefined;
-      const baseName = filename.replace(/\.[^.]+$/, '');
-      const downloadName = `${baseName}-removed.${format}`;
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) return;
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.download = downloadName;
-          link.href = url;
-          link.click();
-          URL.revokeObjectURL(url);
-        },
-        `image/${format}`,
-        quality,
-      );
-    };
-    resultImg.src = resultImage;
-  };
-  originalImg.src = originalImage;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.download = downloadName;
+  link.href = url;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Failed to load image'));
-    img.src = src;
-  });
+// 先取缓存里的字节再交给 <img>，避免直接引用已失效的 blob: URL。
+async function loadImage(source: string): Promise<HTMLImageElement> {
+  const url = URL.createObjectURL(await getImageBlob(source));
+  try {
+    return await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = url;
+    });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 async function renderResultBlob(
@@ -60,9 +59,10 @@ async function renderResultBlob(
 ): Promise<Blob> {
   if (format === 'png') {
     // 结果已是全分辨率 PNG，直接复用其字节，省去解码与重编码。
-    const response = await fetch(resultImage);
-    if (response.ok) {
-      return await response.blob();
+    try {
+      return await getImageBlob(resultImage);
+    } catch {
+      // 取不到原始字节时退回画布重编码。
     }
   }
   const originalImg = await loadImage(originalImage);
@@ -130,7 +130,7 @@ export async function saveImagesBatchToDirectory(
   }
 
   for (const item of valid) {
-    downloadResultImage(item.originalImage, item.resultImage!, item.name, format);
+    await downloadResultImage(item.originalImage, item.resultImage!, item.name, format);
   }
   return { canceled: false, saved: valid.length };
 }
