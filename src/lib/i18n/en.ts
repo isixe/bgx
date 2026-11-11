@@ -146,6 +146,11 @@ export const translations = {
   previewOriginal: 'Original',
   previewResult: 'Result',
   previewDragHint: 'Drag slider to compare before and after',
+  previewBackground: 'Preview background',
+  backgroundTransparent: 'Transparent',
+  backgroundBlack: 'Black',
+  backgroundWhite: 'White',
+  backgroundCustom: 'Custom color',
   processingHint: 'Processing...',
   processingModelDownload: 'First use requires downloading model files',
 

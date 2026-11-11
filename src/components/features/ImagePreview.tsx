@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '../../stores/appStore';
+import type { PreviewBackground } from '../../types/app';
 import { useTranslation } from '../../lib/i18n';
 import { downloadResultImage } from '../../utils/downloadImage';
 import { GPU_CONCURRENCY, getBatchConcurrencyOptions } from '../../utils/concurrency';
@@ -65,6 +66,85 @@ function ProgressRing({ progress, isDarkMode }: { progress: number; isDarkMode: 
   );
 }
 
+function getPreviewBackgroundStyle(
+  mode: PreviewBackground,
+  customColor: string,
+  isDarkMode: boolean,
+): React.CSSProperties {
+  if (mode === 'black') {
+    return { backgroundColor: '#000000', backgroundImage: 'none' };
+  }
+  if (mode === 'white') {
+    return { backgroundColor: '#ffffff', backgroundImage: 'none' };
+  }
+  if (mode === 'custom') {
+    return { backgroundColor: customColor, backgroundImage: 'none' };
+  }
+
+  const tile = isDarkMode ? '#334155' : '#e5e7eb';
+  return {
+    backgroundImage: `
+			linear-gradient(45deg, ${tile} 25%, transparent 25%),
+			linear-gradient(-45deg, ${tile} 25%, transparent 25%),
+			linear-gradient(45deg, transparent 75%, ${tile} 75%),
+			linear-gradient(-45deg, transparent 75%, ${tile} 75%)
+		`,
+    backgroundSize: '20px 20px',
+    backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+    backgroundColor: isDarkMode ? '#1e293b' : '#f3f4f6',
+  };
+}
+
+function getRelativeLuminance(hex: string): number | null {
+  const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim());
+  if (!match) {
+    return null;
+  }
+  const value =
+    match[1].length === 3
+      ? match[1]
+          .split('')
+          .map((char) => char + char)
+          .join('')
+      : match[1];
+  const channel = (offset: number) => {
+    const srgb = parseInt(value.slice(offset, offset + 2), 16) / 255;
+    return srgb <= 0.03928 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4);
+}
+
+// 叠加在预览区上的控件（返回/下载/翻页/背景切换）必须随底色切换明暗，
+// 否则黑色或深色自定义背景上的黑色文字几乎不可见。0.35 是保证对比度的经验阈值。
+function isLightPreviewBackground(
+  mode: PreviewBackground,
+  customColor: string,
+  isDarkMode: boolean,
+): boolean {
+  if (mode === 'white') {
+    return true;
+  }
+  if (mode === 'black') {
+    return false;
+  }
+  if (mode === 'custom') {
+    const luminance = getRelativeLuminance(customColor);
+    return luminance === null ? true : luminance > 0.35;
+  }
+  return !isDarkMode;
+}
+
+function overlayPillClass(isLightBackground: boolean, disabled = false): string {
+  if (isLightBackground) {
+    return disabled
+      ? 'bg-black/5 text-black/25 cursor-not-allowed'
+      : 'bg-black/10 text-black/80 hover:bg-black/20';
+  }
+  return disabled
+    ? 'bg-white/10 text-white/30 cursor-not-allowed'
+    : 'bg-white/25 text-white hover:bg-white/40';
+}
+
 // 按住方向键时对比轴每秒移动的百分比，决定长按的滑动手感。
 const SLIDER_HOLD_SPEED = 50;
 const SLIDER_DOUBLE_PRESS_MS = 350;
@@ -73,11 +153,13 @@ function BatchNavButton({
   direction,
   disabled,
   label,
+  isLightBackground,
   onClick,
 }: {
   direction: 'prev' | 'next';
   disabled: boolean;
   label: string;
+  isLightBackground: boolean;
   onClick: () => void;
 }) {
   const isPrev = direction === 'prev';
@@ -91,11 +173,7 @@ function BatchNavButton({
       onTouchStart={(e) => e.stopPropagation()}
       className={`absolute bottom-3 z-30 w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
         isPrev ? 'left-3' : 'right-3'
-      } ${
-        disabled
-          ? 'bg-white/10 text-black/30 cursor-not-allowed'
-          : 'bg-white/25 text-black/80 hover:bg-white/40'
-      }`}
+      } ${overlayPillClass(isLightBackground, disabled)}`}
     >
       <svg
         className="w-4 h-4"
@@ -107,6 +185,102 @@ function BatchNavButton({
         <path d={isPrev ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6'} />
       </svg>
     </button>
+  );
+}
+
+const SWATCH_BASE_CLASS =
+  'relative flex-shrink-0 w-[14px] h-[14px] rounded-full transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500';
+const SWATCH_ACTIVE_CLASS = 'outline outline-2 outline-offset-1 outline-indigo-500';
+
+const TRANSPARENT_SWATCH_STYLE: React.CSSProperties = {
+  backgroundColor: '#ffffff',
+  backgroundImage:
+    'linear-gradient(45deg, #cbd5e1 25%, transparent 25%), linear-gradient(-45deg, #cbd5e1 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #cbd5e1 75%), linear-gradient(-45deg, transparent 75%, #cbd5e1 75%)',
+  backgroundSize: '4px 4px',
+  backgroundPosition: '0 0, 0 2px, 2px -2px, -2px 0px',
+};
+
+function PreviewBackgroundControl({
+  value,
+  customColor,
+  isLightBackground,
+  onChange,
+  onCustomColorChange,
+  t,
+}: {
+  value: PreviewBackground;
+  customColor: string;
+  isLightBackground: boolean;
+  onChange: (mode: PreviewBackground) => void;
+  onCustomColorChange: (color: string) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={t('previewBackground')}
+      title={t('previewBackground')}
+      onMouseDown={(event) => event.stopPropagation()}
+      onTouchStart={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+      className={`absolute z-30 left-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 rounded-full p-1 shadow-sm backdrop-blur-sm ${
+        isLightBackground ? 'bg-black/10' : 'bg-white/20'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => onChange('transparent')}
+        aria-pressed={value === 'transparent'}
+        aria-label={t('backgroundTransparent')}
+        title={t('backgroundTransparent')}
+        style={TRANSPARENT_SWATCH_STYLE}
+        className={`${SWATCH_BASE_CLASS} border border-black/15 ${
+          value === 'transparent' ? SWATCH_ACTIVE_CLASS : ''
+        }`}
+      />
+      <button
+        type="button"
+        onClick={() => onChange('black')}
+        aria-pressed={value === 'black'}
+        aria-label={t('backgroundBlack')}
+        title={t('backgroundBlack')}
+        style={{ backgroundColor: '#000000' }}
+        className={`${SWATCH_BASE_CLASS} border border-white/25 ${
+          value === 'black' ? SWATCH_ACTIVE_CLASS : ''
+        }`}
+      />
+      <button
+        type="button"
+        onClick={() => onChange('white')}
+        aria-pressed={value === 'white'}
+        aria-label={t('backgroundWhite')}
+        title={t('backgroundWhite')}
+        style={{ backgroundColor: '#ffffff' }}
+        className={`${SWATCH_BASE_CLASS} border border-black/15 ${
+          value === 'white' ? SWATCH_ACTIVE_CLASS : ''
+        }`}
+      />
+      <label
+        title={t('backgroundCustom')}
+        aria-label={t('backgroundCustom')}
+        style={{ backgroundColor: customColor }}
+        onClick={() => onChange('custom')}
+        className={`${SWATCH_BASE_CLASS} cursor-pointer border border-black/15 ${
+          value === 'custom' ? SWATCH_ACTIVE_CLASS : ''
+        }`}
+      >
+        <input
+          type="color"
+          value={customColor}
+          aria-label={t('backgroundCustom')}
+          onChange={(event) => {
+            onCustomColorChange(event.target.value);
+            onChange('custom');
+          }}
+          className="absolute inset-0 w-full h-full rounded-full opacity-0 cursor-pointer"
+        />
+      </label>
+    </div>
   );
 }
 
@@ -131,6 +305,10 @@ export function ImagePreview() {
     setBatchConcurrency,
     gpuAcceleration,
     keyboardMode,
+    previewBackground,
+    previewBackgroundColor,
+    setPreviewBackground,
+    setPreviewBackgroundColor,
   } = useAppStore();
   const { t } = useTranslation();
   const [sliderPosition, setSliderPosition] = useState(50);
@@ -310,6 +488,16 @@ export function ImagePreview() {
       : null;
   const showBatchNav = batchMode && viewingBatchResult && previewableItems.length > 1;
   const hasComparison = !!displayResult;
+  const previewIsLight = isLightPreviewBackground(
+    previewBackground,
+    previewBackgroundColor,
+    isDarkMode,
+  );
+  const previewBackgroundStyle = getPreviewBackgroundStyle(
+    previewBackground,
+    previewBackgroundColor,
+    isDarkMode,
+  );
 
   useEffect(() => {
     if (!showBatchNav && !hasComparison) return;
@@ -749,17 +937,7 @@ export function ImagePreview() {
       <div
         ref={containerRef}
         className={`relative w-full h-full rounded-none sm:rounded-lg overflow-hidden select-none touch-none ${isPanning ? 'cursor-grabbing' : 'cursor-grab'} ${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'}`}
-        style={{
-          backgroundImage: `
-						linear-gradient(45deg, ${isDarkMode ? '#334155' : '#e5e7eb'} 25%, transparent 25%),
-						linear-gradient(-45deg, ${isDarkMode ? '#334155' : '#e5e7eb'} 25%, transparent 25%),
-						linear-gradient(45deg, transparent 75%, ${isDarkMode ? '#334155' : '#e5e7eb'} 75%),
-						linear-gradient(-45deg, transparent 75%, ${isDarkMode ? '#334155' : '#e5e7eb'} 75%)
-					`,
-          backgroundSize: '20px 20px',
-          backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-          backgroundColor: isDarkMode ? '#1e293b' : '#f3f4f6',
-        }}
+        style={previewBackgroundStyle}
         onMouseDown={handleContainerMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
@@ -773,7 +951,7 @@ export function ImagePreview() {
         {batchMode && viewingBatchResult && (
           <button
             onClick={backToBatchQueue}
-            className="absolute top-3 left-3 z-30 px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-black/80 hover:bg-white/30 transition-colors flex items-center gap-1"
+            className={`absolute top-3 left-3 z-30 px-3 py-1 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${overlayPillClass(previewIsLight)}`}
           >
             <svg
               className="w-3.5 h-3.5"
@@ -799,7 +977,7 @@ export function ImagePreview() {
               )
             }
             onMouseDown={(e) => e.stopPropagation()}
-            className="absolute top-3 right-3 z-30 px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-black/80 hover:bg-white/30 transition-colors flex items-center gap-1"
+            className={`absolute top-3 right-3 z-30 px-3 py-1 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${overlayPillClass(previewIsLight)}`}
             title={t('downloadImage')}
             aria-label={t('downloadImage')}
           >
@@ -820,18 +998,29 @@ export function ImagePreview() {
           </button>
         )}
 
+        <PreviewBackgroundControl
+          value={previewBackground}
+          customColor={previewBackgroundColor}
+          isLightBackground={previewIsLight}
+          onChange={setPreviewBackground}
+          onCustomColorChange={setPreviewBackgroundColor}
+          t={t}
+        />
+
         {showBatchNav && (
           <>
             <BatchNavButton
               direction="prev"
               disabled={!previousBatchItem}
               label={t('previousImage')}
+              isLightBackground={previewIsLight}
               onClick={() => previousBatchItem && selectBatchItem(previousBatchItem.id)}
             />
             <BatchNavButton
               direction="next"
               disabled={!nextBatchItem}
               label={t('nextImage')}
+              isLightBackground={previewIsLight}
               onClick={() => nextBatchItem && selectBatchItem(nextBatchItem.id)}
             />
           </>
@@ -858,22 +1047,7 @@ export function ImagePreview() {
             className="absolute inset-0"
             style={{
               clipPath: `inset(0 0 0 ${sliderPosition}%)`,
-              backgroundImage: isDarkMode
-                ? `
-								linear-gradient(45deg, #334155 25%, transparent 25%),
-								linear-gradient(-45deg, #334155 25%, transparent 25%),
-								linear-gradient(45deg, transparent 75%, #334155 75%),
-								linear-gradient(-45deg, transparent 75%, #334155 75%)
-							`
-                : `
-								linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
-								linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
-								linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
-								linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)
-							`,
-              backgroundSize: '20px 20px',
-              backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-              backgroundColor: isDarkMode ? '#1e293b' : '#f3f4f6',
+              ...previewBackgroundStyle,
             }}
           >
             <div

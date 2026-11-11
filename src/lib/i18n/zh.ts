@@ -144,6 +144,11 @@ export const translations = {
   previewOriginal: '原图',
   previewResult: '结果',
   previewDragHint: '左右拖动滑块对比处理前后效果',
+  previewBackground: '预览背景',
+  backgroundTransparent: '透明',
+  backgroundBlack: '黑色',
+  backgroundWhite: '白色',
+  backgroundCustom: '自定义颜色',
   processingHint: '处理中...',
   processingModelDownload: '首次使用需要下载模型文件',
 

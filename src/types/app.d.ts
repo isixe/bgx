@@ -6,6 +6,9 @@ export type GpuFallbackReason = 'insecure-context' | 'no-adapter' | 'runtime';
 // 预览区键盘操作模式：arrows = 方向键（↑↓←→），wasd = WASD 键
 export type KeyboardMode = 'arrows' | 'wasd';
 
+// 预览区背景：transparent = 棋盘格（表示透明），black/white = 纯色，custom = 用户自选颜色
+export type PreviewBackground = 'transparent' | 'black' | 'white' | 'custom';
+
 export interface ModelGroup {
   id: ModelGroupId;
   nameKey: string;
@@ -90,6 +93,9 @@ export type AppState = {
   preloadEnabled: boolean;
   // 预览区键盘操作模式，用户偏好，持久化到 localStorage
   keyboardMode: KeyboardMode;
+  // 预览区背景模式与自定义颜色，用户偏好，持久化到 localStorage
+  previewBackground: PreviewBackground;
+  previewBackgroundColor: string;
 
   // 客户端挂载后应用持久化偏好，确保 SSR 与客户端首帧一致
   hydrateFromStorage: () => void;
@@ -100,6 +106,8 @@ export type AppState = {
   applyGpuFallback: (reason?: GpuFallbackReason) => void;
   setPreloadEnabled: (enabled: boolean) => void;
   setKeyboardMode: (mode: KeyboardMode) => void;
+  setPreviewBackground: (mode: PreviewBackground) => void;
+  setPreviewBackgroundColor: (color: string) => void;
 
   setCurrentModel: (model: string) => Promise<void>;
   setDefaultModel: (modelId: string) => void;

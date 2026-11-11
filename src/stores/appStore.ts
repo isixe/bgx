@@ -9,6 +9,7 @@ import type {
   UpdateCheckState,
   GpuFallbackReason,
   KeyboardMode,
+  PreviewBackground,
 } from '../types/app';
 import {
   getCachedModelBlobUrl,
@@ -61,6 +62,21 @@ function readPersistedPreferences(): Partial<AppState> {
   const storedKeyboardMode = localStorage.getItem('bgx-keyboard-mode');
   if (storedKeyboardMode === 'arrows' || storedKeyboardMode === 'wasd') {
     prefs.keyboardMode = storedKeyboardMode;
+  }
+
+  const storedPreviewBackground = localStorage.getItem('bgx-preview-background');
+  if (
+    storedPreviewBackground === 'transparent' ||
+    storedPreviewBackground === 'black' ||
+    storedPreviewBackground === 'white' ||
+    storedPreviewBackground === 'custom'
+  ) {
+    prefs.previewBackground = storedPreviewBackground;
+  }
+
+  const storedPreviewBackgroundColor = localStorage.getItem('bgx-preview-background-color');
+  if (storedPreviewBackgroundColor && /^#[0-9a-f]{6}$/i.test(storedPreviewBackgroundColor)) {
+    prefs.previewBackgroundColor = storedPreviewBackgroundColor;
   }
 
   const storedDefaultModel = localStorage.getItem('bgx-default-model');
@@ -117,6 +133,8 @@ const initialState = {
   gpuFallbackReason: null as GpuFallbackReason | null,
   preloadEnabled: true,
   keyboardMode: 'arrows' as KeyboardMode,
+  previewBackground: 'transparent' as PreviewBackground,
+  previewBackgroundColor: '#808080',
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -338,6 +356,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       localStorage.setItem('bgx-keyboard-mode', mode);
     }
     set({ keyboardMode: mode });
+  },
+  setPreviewBackground: (mode) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bgx-preview-background', mode);
+    }
+    set({ previewBackground: mode });
+  },
+  setPreviewBackgroundColor: (color) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bgx-preview-background-color', color);
+    }
+    set({ previewBackgroundColor: color });
   },
   setUpdateCheckState: (state) => set({ updateCheckState: state }),
   setLatestVersion: (version) => set({ latestVersion: version }),
