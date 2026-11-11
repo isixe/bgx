@@ -1,22 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 
-export interface SelectOption {
-  value: number;
+export interface SelectOption<T extends string | number = number> {
+  value: T;
   label: string;
 }
 
-interface SelectProps {
-  value: number;
-  options: SelectOption[];
-  onChange?: (value: number) => void;
+interface SelectProps<T extends string | number> {
+  value: T;
+  options: SelectOption<T>[];
+  onChange?: (value: T) => void;
   isDarkMode: boolean;
   ariaLabel?: string;
   title?: string;
   disabled?: boolean;
   readOnly?: boolean;
+  className?: string;
 }
 
-export function Select({
+export function Select<T extends string | number = number>({
   value,
   options,
   onChange,
@@ -25,7 +26,8 @@ export function Select({
   title,
   disabled = false,
   readOnly = false,
-}: SelectProps) {
+  className = '',
+}: SelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const selected = options.find((option) => option.value === value);
@@ -97,9 +99,9 @@ export function Select({
           isDarkMode
             ? 'bg-slate-600 text-gray-200 border border-slate-500 hover:border-slate-400'
             : 'bg-white text-gray-700 border border-gray-300 hover:border-gray-400'
-        } ${disabled ? 'cursor-not-allowed opacity-60 hover:border-slate-500' : ''}`}
+        } ${disabled ? 'cursor-not-allowed opacity-60 hover:border-slate-500' : ''} ${className}`}
       >
-        <span className="tabular-nums">{selected ? selected.label : value}</span>
+        <span className="tabular-nums whitespace-nowrap">{selected ? selected.label : value}</span>
         <svg
           className={`w-3 h-3 transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`}
           viewBox="0 0 24 24"
@@ -131,7 +133,7 @@ export function Select({
                   onChange?.(option.value);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center justify-between gap-3 px-2.5 py-1 text-xs tabular-nums text-left transition-colors ${
+                className={`w-full flex items-center justify-between gap-3 px-2.5 py-1 text-xs tabular-nums text-left whitespace-nowrap transition-colors ${
                   isSelected
                     ? 'text-indigo-500 font-semibold'
                     : isDarkMode

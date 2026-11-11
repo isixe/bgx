@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '../../stores/appStore';
-import type { PreviewBackground } from '../../types/app';
+import type { PreviewBackground, PreviewBackgroundPosition } from '../../types/app';
 import { useTranslation } from '../../lib/i18n';
 import { downloadResultImage } from '../../utils/downloadImage';
 import { GPU_CONCURRENCY, getBatchConcurrencyOptions } from '../../utils/concurrency';
@@ -189,21 +189,64 @@ function BatchNavButton({
 }
 
 const SWATCH_BASE_CLASS =
-  'relative flex-shrink-0 w-[14px] h-[14px] rounded-full transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500';
+  'relative flex-shrink-0 w-[18px] h-[18px] rounded-full transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500';
 const SWATCH_ACTIVE_CLASS = 'outline outline-2 outline-offset-1 outline-indigo-500';
 
 const TRANSPARENT_SWATCH_STYLE: React.CSSProperties = {
   backgroundColor: '#ffffff',
   backgroundImage:
     'linear-gradient(45deg, #cbd5e1 25%, transparent 25%), linear-gradient(-45deg, #cbd5e1 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #cbd5e1 75%), linear-gradient(-45deg, transparent 75%, #cbd5e1 75%)',
-  backgroundSize: '4px 4px',
-  backgroundPosition: '0 0, 0 2px, 2px -2px, -2px 0px',
+  backgroundSize: '5px 5px',
+  backgroundPosition: '0 0, 0 2.5px, 2.5px -2.5px, -2.5px 0px',
 };
+
+// 贴边收起：在预览区选定的那条边上留一条不可见的感应区，鼠标移入或键盘聚焦时色板滑出。
+// 这些类名必须写成完整字面量，Tailwind 才能扫描到。
+const PREVIEW_BACKGROUND_LAYOUT: Record<
+  PreviewBackgroundPosition,
+  { wrapper: string; hint: string; panel: string; chevron: string }
+> = {
+  left: {
+    wrapper: 'inset-y-0 left-0 w-3 items-center',
+    hint: 'left-0 top-1/2 h-11 w-3.5 -translate-y-1/2 rounded-r-full',
+    panel:
+      'flex-col -translate-x-[calc(100%+8px)] group-hover:translate-x-3 group-focus-within:translate-x-3 [@media(hover:none)]:translate-x-3',
+    chevron: '',
+  },
+  right: {
+    wrapper: 'inset-y-0 right-0 w-3 items-center justify-end',
+    hint: 'right-0 top-1/2 h-11 w-3.5 -translate-y-1/2 rounded-l-full',
+    panel:
+      'flex-col translate-x-[calc(100%+8px)] group-hover:-translate-x-3 group-focus-within:-translate-x-3 [@media(hover:none)]:-translate-x-3',
+    chevron: 'rotate-180',
+  },
+  top: {
+    wrapper: 'inset-x-0 top-0 h-3 justify-center items-start',
+    hint: 'top-0 left-1/2 w-11 h-3.5 -translate-x-1/2 rounded-b-full',
+    panel:
+      'flex-row -translate-y-[calc(100%+8px)] group-hover:translate-y-3 group-focus-within:translate-y-3 [@media(hover:none)]:translate-y-3',
+    chevron: 'rotate-90',
+  },
+  bottom: {
+    wrapper: 'inset-x-0 bottom-0 h-3 justify-center items-end',
+    hint: 'bottom-0 left-1/2 w-11 h-3.5 -translate-x-1/2 rounded-t-full',
+    panel:
+      'flex-row translate-y-[calc(100%+8px)] group-hover:-translate-y-3 group-focus-within:-translate-y-3 [@media(hover:none)]:-translate-y-3',
+    chevron: '-rotate-90',
+  },
+};
+
+const HINT_BASE_CLASS =
+  'pointer-events-none absolute flex items-center justify-center shadow-sm backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-0 group-focus-within:opacity-0 [@media(hover:none)]:opacity-0';
+
+const PANEL_BASE_CLASS =
+  'flex items-center gap-1.5 rounded-full p-1.5 shadow-sm backdrop-blur-sm transition-transform duration-200 ease-out';
 
 function PreviewBackgroundControl({
   value,
   customColor,
   isLightBackground,
+  position,
   onChange,
   onCustomColorChange,
   t,
@@ -211,10 +254,12 @@ function PreviewBackgroundControl({
   value: PreviewBackground;
   customColor: string;
   isLightBackground: boolean;
+  position: PreviewBackgroundPosition;
   onChange: (mode: PreviewBackground) => void;
   onCustomColorChange: (color: string) => void;
   t: (key: string) => string;
 }) {
+  const layout = PREVIEW_BACKGROUND_LAYOUT[position];
   return (
     <div
       role="group"
@@ -223,63 +268,83 @@ function PreviewBackgroundControl({
       onMouseDown={(event) => event.stopPropagation()}
       onTouchStart={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
-      className={`absolute z-30 left-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 rounded-full p-1 shadow-sm backdrop-blur-sm ${
-        isLightBackground ? 'bg-black/10' : 'bg-white/20'
-      }`}
+      className={`group absolute z-30 flex ${layout.wrapper}`}
     >
-      <button
-        type="button"
-        onClick={() => onChange('transparent')}
-        aria-pressed={value === 'transparent'}
-        aria-label={t('backgroundTransparent')}
-        title={t('backgroundTransparent')}
-        style={TRANSPARENT_SWATCH_STYLE}
-        className={`${SWATCH_BASE_CLASS} border border-black/15 ${
-          value === 'transparent' ? SWATCH_ACTIVE_CLASS : ''
-        }`}
-      />
-      <button
-        type="button"
-        onClick={() => onChange('black')}
-        aria-pressed={value === 'black'}
-        aria-label={t('backgroundBlack')}
-        title={t('backgroundBlack')}
-        style={{ backgroundColor: '#000000' }}
-        className={`${SWATCH_BASE_CLASS} border border-white/25 ${
-          value === 'black' ? SWATCH_ACTIVE_CLASS : ''
-        }`}
-      />
-      <button
-        type="button"
-        onClick={() => onChange('white')}
-        aria-pressed={value === 'white'}
-        aria-label={t('backgroundWhite')}
-        title={t('backgroundWhite')}
-        style={{ backgroundColor: '#ffffff' }}
-        className={`${SWATCH_BASE_CLASS} border border-black/15 ${
-          value === 'white' ? SWATCH_ACTIVE_CLASS : ''
-        }`}
-      />
-      <label
-        title={t('backgroundCustom')}
-        aria-label={t('backgroundCustom')}
-        style={{ backgroundColor: customColor }}
-        onClick={() => onChange('custom')}
-        className={`${SWATCH_BASE_CLASS} cursor-pointer border border-black/15 ${
-          value === 'custom' ? SWATCH_ACTIVE_CLASS : ''
+      <span
+        aria-hidden="true"
+        className={`${HINT_BASE_CLASS} ${layout.hint} ${
+          isLightBackground ? 'bg-black/10 text-black/50' : 'bg-white/20 text-white/70'
         }`}
       >
-        <input
-          type="color"
-          value={customColor}
-          aria-label={t('backgroundCustom')}
-          onChange={(event) => {
-            onCustomColorChange(event.target.value);
-            onChange('custom');
-          }}
-          className="absolute inset-0 w-full h-full rounded-full opacity-0 cursor-pointer"
+        <svg
+          className={`w-2.5 h-2.5 ${layout.chevron}`}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={3}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
+        </svg>
+      </span>
+      <div
+        className={`${PANEL_BASE_CLASS} ${layout.panel} ${
+          isLightBackground ? 'bg-black/10' : 'bg-white/20'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => onChange('transparent')}
+          aria-pressed={value === 'transparent'}
+          aria-label={t('backgroundTransparent')}
+          title={t('backgroundTransparent')}
+          style={TRANSPARENT_SWATCH_STYLE}
+          className={`${SWATCH_BASE_CLASS} border border-black/15 ${
+            value === 'transparent' ? SWATCH_ACTIVE_CLASS : ''
+          }`}
         />
-      </label>
+        <button
+          type="button"
+          onClick={() => onChange('black')}
+          aria-pressed={value === 'black'}
+          aria-label={t('backgroundBlack')}
+          title={t('backgroundBlack')}
+          style={{ backgroundColor: '#000000' }}
+          className={`${SWATCH_BASE_CLASS} border border-white/25 ${
+            value === 'black' ? SWATCH_ACTIVE_CLASS : ''
+          }`}
+        />
+        <button
+          type="button"
+          onClick={() => onChange('white')}
+          aria-pressed={value === 'white'}
+          aria-label={t('backgroundWhite')}
+          title={t('backgroundWhite')}
+          style={{ backgroundColor: '#ffffff' }}
+          className={`${SWATCH_BASE_CLASS} border border-black/15 ${
+            value === 'white' ? SWATCH_ACTIVE_CLASS : ''
+          }`}
+        />
+        <label
+          title={t('backgroundCustom')}
+          aria-label={t('backgroundCustom')}
+          style={{ backgroundColor: customColor }}
+          onClick={() => onChange('custom')}
+          className={`${SWATCH_BASE_CLASS} cursor-pointer border border-black/15 ${
+            value === 'custom' ? SWATCH_ACTIVE_CLASS : ''
+          }`}
+        >
+          <input
+            type="color"
+            value={customColor}
+            aria-label={t('backgroundCustom')}
+            onChange={(event) => {
+              onCustomColorChange(event.target.value);
+              onChange('custom');
+            }}
+            className="absolute inset-0 w-full h-full rounded-full opacity-0 cursor-pointer"
+          />
+        </label>
+      </div>
     </div>
   );
 }
@@ -307,6 +372,7 @@ export function ImagePreview() {
     keyboardMode,
     previewBackground,
     previewBackgroundColor,
+    previewBackgroundPosition,
     setPreviewBackground,
     setPreviewBackgroundColor,
   } = useAppStore();
@@ -966,7 +1032,7 @@ export function ImagePreview() {
           </button>
         )}
 
-        {displayResult && (
+        {batchMode && viewingBatchResult && displayResult && (
           <button
             onClick={() =>
               downloadResultImage(
@@ -1002,6 +1068,7 @@ export function ImagePreview() {
           value={previewBackground}
           customColor={previewBackgroundColor}
           isLightBackground={previewIsLight}
+          position={previewBackgroundPosition}
           onChange={setPreviewBackground}
           onCustomColorChange={setPreviewBackgroundColor}
           t={t}

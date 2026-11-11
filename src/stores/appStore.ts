@@ -10,6 +10,7 @@ import type {
   GpuFallbackReason,
   KeyboardMode,
   PreviewBackground,
+  PreviewBackgroundPosition,
 } from '../types/app';
 import {
   getCachedModelBlobUrl,
@@ -79,6 +80,16 @@ function readPersistedPreferences(): Partial<AppState> {
     prefs.previewBackgroundColor = storedPreviewBackgroundColor;
   }
 
+  const storedPreviewBackgroundPosition = localStorage.getItem('bgx-preview-background-position');
+  if (
+    storedPreviewBackgroundPosition === 'top' ||
+    storedPreviewBackgroundPosition === 'bottom' ||
+    storedPreviewBackgroundPosition === 'left' ||
+    storedPreviewBackgroundPosition === 'right'
+  ) {
+    prefs.previewBackgroundPosition = storedPreviewBackgroundPosition;
+  }
+
   const storedDefaultModel = localStorage.getItem('bgx-default-model');
   if (storedDefaultModel && MODELS.some((model) => model.id === storedDefaultModel)) {
     prefs.defaultModel = storedDefaultModel;
@@ -135,6 +146,7 @@ const initialState = {
   keyboardMode: 'arrows' as KeyboardMode,
   previewBackground: 'transparent' as PreviewBackground,
   previewBackgroundColor: '#808080',
+  previewBackgroundPosition: 'left' as PreviewBackgroundPosition,
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -368,6 +380,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       localStorage.setItem('bgx-preview-background-color', color);
     }
     set({ previewBackgroundColor: color });
+  },
+  setPreviewBackgroundPosition: (position) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bgx-preview-background-position', position);
+    }
+    set({ previewBackgroundPosition: position });
   },
   setUpdateCheckState: (state) => set({ updateCheckState: state }),
   setLatestVersion: (version) => set({ latestVersion: version }),

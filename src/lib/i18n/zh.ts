@@ -149,6 +149,12 @@ export const translations = {
   backgroundBlack: '黑色',
   backgroundWhite: '白色',
   backgroundCustom: '自定义颜色',
+  previewBackgroundPosition: '背景控件位置',
+  previewBackgroundPositionDesc: '选择背景控件贴边收起的位置',
+  backgroundPositionTop: '上方',
+  backgroundPositionBottom: '下方',
+  backgroundPositionLeft: '左侧',
+  backgroundPositionRight: '右侧',
   processingHint: '处理中...',
   processingModelDownload: '首次使用需要下载模型文件',
 

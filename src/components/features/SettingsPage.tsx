@@ -5,7 +5,7 @@ import { checkForAppUpdate, isDesktopApp, DOWNLOAD_URL } from '../../lib/appUpda
 import pkg from '../../../package.json';
 import { Select } from '../ui/Select';
 import { GPU_CONCURRENCY, getBatchConcurrencyOptions } from '../../utils/concurrency';
-import type { KeyboardMode } from '../../types/app';
+import type { KeyboardMode, PreviewBackgroundPosition } from '../../types/app';
 
 // Keep the "checking…" indicator visible for at least this long so an instant
 // network response does not cause a distracting flash.
@@ -14,6 +14,16 @@ const MIN_CHECKING_MS = 2500;
 const KEYBOARD_MODE_OPTIONS: { value: KeyboardMode; label: string }[] = [
   { value: 'arrows', label: '↑ ↓ ← →' },
   { value: 'wasd', label: 'W A S D' },
+];
+
+const PREVIEW_BACKGROUND_POSITION_OPTIONS: {
+  value: PreviewBackgroundPosition;
+  labelKey: string;
+}[] = [
+  { value: 'top', labelKey: 'backgroundPositionTop' },
+  { value: 'bottom', labelKey: 'backgroundPositionBottom' },
+  { value: 'left', labelKey: 'backgroundPositionLeft' },
+  { value: 'right', labelKey: 'backgroundPositionRight' },
 ];
 
 export function SettingsPage() {
@@ -35,6 +45,8 @@ export function SettingsPage() {
     setPreloadEnabled,
     keyboardMode,
     setKeyboardMode,
+    previewBackgroundPosition,
+    setPreviewBackgroundPosition,
   } = useAppStore();
 
   const cardClasses = `rounded-xl border p-4 ${
@@ -44,6 +56,11 @@ export function SettingsPage() {
   const concurrencyOptions = getBatchConcurrencyOptions().map((value) => ({
     value,
     label: String(value),
+  }));
+
+  const previewBackgroundPositionOptions = PREVIEW_BACKGROUND_POSITION_OPTIONS.map((option) => ({
+    value: option.value,
+    label: t(option.labelKey),
   }));
 
   const updateStatusText =
@@ -411,6 +428,29 @@ export function SettingsPage() {
                           );
                         })}
                       </div>
+                    </div>
+                    <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                        >
+                          {t('previewBackgroundPosition')}
+                        </p>
+                        <p
+                          className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                        >
+                          {t('previewBackgroundPositionDesc')}
+                        </p>
+                      </div>
+                      <Select
+                        value={previewBackgroundPosition}
+                        options={previewBackgroundPositionOptions}
+                        onChange={setPreviewBackgroundPosition}
+                        isDarkMode={isDarkMode}
+                        ariaLabel={t('previewBackgroundPosition')}
+                        title={t('previewBackgroundPosition')}
+                        className="min-w-[92px] justify-between"
+                      />
                     </div>
                   </div>
                 </div>

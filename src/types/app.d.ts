@@ -9,6 +9,9 @@ export type KeyboardMode = 'arrows' | 'wasd';
 // 预览区背景：transparent = 棋盘格（表示透明），black/white = 纯色，custom = 用户自选颜色
 export type PreviewBackground = 'transparent' | 'black' | 'white' | 'custom';
 
+// 预览背景控件的贴边收起位置，控件始终在对应边缘上居中
+export type PreviewBackgroundPosition = 'top' | 'bottom' | 'left' | 'right';
+
 export interface ModelGroup {
   id: ModelGroupId;
   nameKey: string;
@@ -96,6 +99,8 @@ export type AppState = {
   // 预览区背景模式与自定义颜色，用户偏好，持久化到 localStorage
   previewBackground: PreviewBackground;
   previewBackgroundColor: string;
+  // 预览背景控件的贴边收起位置，用户偏好，持久化到 localStorage
+  previewBackgroundPosition: PreviewBackgroundPosition;
 
   // 客户端挂载后应用持久化偏好，确保 SSR 与客户端首帧一致
   hydrateFromStorage: () => void;
@@ -108,6 +113,7 @@ export type AppState = {
   setKeyboardMode: (mode: KeyboardMode) => void;
   setPreviewBackground: (mode: PreviewBackground) => void;
   setPreviewBackgroundColor: (color: string) => void;
+  setPreviewBackgroundPosition: (position: PreviewBackgroundPosition) => void;
 
   setCurrentModel: (model: string) => Promise<void>;
   setDefaultModel: (modelId: string) => void;

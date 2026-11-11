@@ -151,6 +151,12 @@ export const translations = {
   backgroundBlack: 'Black',
   backgroundWhite: 'White',
   backgroundCustom: 'Custom color',
+  previewBackgroundPosition: 'Background control position',
+  previewBackgroundPositionDesc: 'Pick which edge the background control collapses into',
+  backgroundPositionTop: 'Top',
+  backgroundPositionBottom: 'Bottom',
+  backgroundPositionLeft: 'Left',
+  backgroundPositionRight: 'Right',
   processingHint: 'Processing...',
   processingModelDownload: 'First use requires downloading model files',
 
