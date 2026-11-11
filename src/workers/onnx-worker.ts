@@ -49,9 +49,6 @@ const isOrtPthreadWorker = ctx.name.startsWith('em-pthread');
 const FATAL_PATTERN =
   /memory access out of bounds|cannot enlarge memory|out of memory|allocation failed|RangeError|Aborted|RuntimeError|Assertion failed|OOM/i;
 
-// WebGPU 设备丢失（驱动重置 / TDR）在推理期抛出的错误特征，用于触发无损回退。
-const GPU_DEVICE_LOST_PATTERN = /device\s*(?:was\s*)?lost|GPUDevice|gpu device lost/i;
-
 let wasmBinaryPromise: Promise<void> | null = null;
 // 主线程抓取一次后透過 SharedArrayBuffer 分享過來；worker 仍需自行複製一份 ArrayBuffer，
 // 因為 WebAssembly.compile 不接受以 SAB 為底的緩衝。
@@ -61,6 +58,9 @@ let sessionMode: ExecutionMode | null = null;
 let session: InferenceSession | null = null;
 let wantsGpu = false;
 let gpuFailed = false;
+// 记录 GPU 失败所针对的模型 URL。之前只要失败一次就永久闩锁，加载期的瞬时失败
+// （驱动/显存竞争）会把整个会话的 GPU 后端关掉；按模型记忆后，换模型会获得重试机会。
+let gpuFailedModelUrl: string | null = null;
 // 最近一次 runInference 实际使用的执行后端，用于判断错误是否发生在 GPU 推理途中。
 let lastRunMode: ExecutionMode = 'wasm';
 const cancelledTasks = new Set<string>();
@@ -278,14 +278,23 @@ async function createSession(
   return buildSession(new Uint8Array(await response.arrayBuffer()), mode);
 }
 
-async function resolveExecutionMode(): Promise<ExecutionMode> {
-  if (!wantsGpu || gpuFailed) {
+async function resolveExecutionMode(modelUrl: string): Promise<ExecutionMode> {
+  if (!wantsGpu) {
     return 'wasm';
   }
+
+  if (gpuFailed && gpuFailedModelUrl === modelUrl) {
+    return 'wasm';
+  }
+
+  // 针对其他模型的失败不算数：这是新的加载请求，给 GPU 一次重试机会。
+  gpuFailed = false;
+  gpuFailedModelUrl = null;
 
   const adapter = await probeWebGpuAdapter();
   if (!adapter) {
     gpuFailed = true;
+    gpuFailedModelUrl = modelUrl;
     const hasGpuApi =
       typeof navigator !== 'undefined' && !!(navigator as unknown as WebGpuNavigator).gpu;
     postGpuStatus(
@@ -302,7 +311,7 @@ async function resolveExecutionMode(): Promise<ExecutionMode> {
 }
 
 async function getSession(modelUrl: string): Promise<InferenceSession> {
-  const desiredMode = await resolveExecutionMode();
+  const desiredMode = await resolveExecutionMode(modelUrl);
 
   if (session && sessionModelUrl === modelUrl && sessionMode === desiredMode) {
     return session;
@@ -322,6 +331,7 @@ async function getSession(modelUrl: string): Promise<InferenceSession> {
       return session;
     } catch (error) {
       gpuFailed = true;
+      gpuFailedModelUrl = modelUrl;
       postGpuStatus(false, error instanceof Error ? error.message : String(error));
     }
   }
@@ -717,13 +727,15 @@ async function runInferenceWithFallback(
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    if (lastRunMode !== 'gpu' || !GPU_DEVICE_LOST_PATTERN.test(errorMessage)) {
+    // 只要失败发生在 GPU 后端上，就一律重建并降级到 WASM 重跑一次。之前只匹配
+    // 「设备丢失」字样，导致 shader 编译 / 显存分配等其他 GPU 失败把坏 session
+    // 固化下来，此后每个任务都复用同一坏后端，永不回退。
+    if (lastRunMode !== 'gpu') {
       throw error;
     }
-    if (!gpuFailed) {
-      gpuFailed = true;
-      postGpuStatus(false, errorMessage);
-    }
+    gpuFailed = true;
+    gpuFailedModelUrl = modelUrl;
+    postGpuStatus(false, errorMessage);
     await releaseSession();
     return await runInference(
       imageBlob,
@@ -782,6 +794,10 @@ async function handleTask(
     const fatal = FATAL_PATTERN.test(errorMessage);
 
     if (fatal) {
+      if (lastRunMode === 'gpu') {
+        gpuFailed = true;
+        gpuFailedModelUrl = message.modelUrl;
+      }
       await releaseSession();
     }
 
@@ -839,6 +855,7 @@ function handleMessage(event: MessageEvent<InboundMessage>): void {
     if (typeof message.useGpu === 'boolean') {
       if (message.useGpu && !wantsGpu) {
         gpuFailed = false;
+        gpuFailedModelUrl = null;
         resetAdapterProbe();
       }
       wantsGpu = message.useGpu;

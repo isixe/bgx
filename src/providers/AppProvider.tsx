@@ -190,16 +190,20 @@ export function AppProvider() {
 
   useEffect(() => {
     let cancelled = false;
+    let disposePool: (() => void) | null = null;
     import('../workers/onnx-worker-pool').then((mod) => {
       if (cancelled) {
         return;
       }
+      disposePool = mod.disposeOnnxWorkerPool;
       poolRef.current = mod.getOnnxWorkerPool();
       setIsPoolReady(true);
     });
     return () => {
       cancelled = true;
-      poolRef.current?.cancelAll();
+      // 只 cancelAll 会留下 worker 与其持有的 GPU device；卸载时必须真正销毁 pool。
+      disposePool?.();
+      poolRef.current = null;
     };
   }, []);
 
@@ -220,6 +224,12 @@ export function AppProvider() {
       poolRef.current?.setJobConcurrency(batchMode ? null : 1);
     }
   }, [batchMode, isPoolReady]);
+
+  useEffect(() => {
+    if (isPoolReady) {
+      poolRef.current?.unload();
+    }
+  }, [cachedModelUrl, isPoolReady]);
 
   useEffect(() => {
     if (!isPoolReady) {

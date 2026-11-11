@@ -93,7 +93,9 @@ export class OnnxWorkerPool {
   private jobConcurrency: number | null = null;
   private useGpu = true;
   private gpuActive: boolean | null = null;
+  private readonly gpuStatusBySlot = new Map<WorkerSlot, boolean>();
   private currentModelBytes = 0;
+  private activeModelUrl: string | null = null;
 
   onGpuStatus: ((status: { active: boolean; reason?: string }) => void) | null = null;
 
@@ -159,8 +161,10 @@ export class OnnxWorkerPool {
       return;
     }
 
-    this.ensureModelBuffer(modelUrl);
-    void this.ensureWasmBuffer().then(() => {
+    this.setActiveModel(modelUrl);
+    // 等共享模型缓冲就绪后再下发预热：否则 worker 收不到 PROVIDE_MODEL，
+    // 只能各自 fetch 一遍，共享缓冲白做且首图更慢。
+    void Promise.all([this.ensureModelBuffer(modelUrl), this.ensureWasmBuffer()]).then(() => {
       if (this.disposed) {
         return;
       }
@@ -174,6 +178,19 @@ export class OnnxWorkerPool {
         slot.worker.postMessage({ type: 'PRELOAD_MODEL', modelUrl, resolution });
       }
     });
+  }
+
+  // 只让空闲 worker 释放 session，避免打断正在推理的任务。
+  unload(): void {
+    if (this.disposed) {
+      return;
+    }
+    for (const slot of this.slots) {
+      if (slot.busy || slot.preloading) {
+        continue;
+      }
+      slot.worker.postMessage({ type: 'UNLOAD_MODEL' });
+    }
   }
 
   get activeCount(): number {
@@ -211,9 +228,15 @@ export class OnnxWorkerPool {
         progressTimer: null,
         resolve,
       });
-      this.ensureModelBuffer(modelUrl);
+      this.setActiveModel(modelUrl);
+      // 先确保共享模型缓冲就绪再派发，保证建 slot 时能带上 PROVIDE_MODEL，
+      // worker 不必回退到自行 fetch。
+      void this.ensureModelBuffer(modelUrl).then(() => {
+        if (!this.disposed) {
+          this.drainQueue();
+        }
+      });
       this.ensureWasmBuffer();
-      this.drainQueue();
     });
   }
 
@@ -262,6 +285,7 @@ export class OnnxWorkerPool {
       slot.worker.terminate();
     }
     this.slots.length = 0;
+    this.gpuStatusBySlot.clear();
     this.modelBuffers.clear();
     this.modelBufferRequests.clear();
     this.wasmBuffer = null;
@@ -306,15 +330,19 @@ export class OnnxWorkerPool {
     return this.wasmBufferRequest;
   }
 
-  private ensureModelBuffer(modelUrl: string): void {
+  private ensureModelBuffer(modelUrl: string): Promise<void> {
     if (
       this.disposed ||
       !modelUrl ||
       typeof SharedArrayBuffer === 'undefined' ||
-      this.modelBuffers.has(modelUrl) ||
-      this.modelBufferRequests.has(modelUrl)
+      this.modelBuffers.has(modelUrl)
     ) {
-      return;
+      return Promise.resolve();
+    }
+
+    const existing = this.modelBufferRequests.get(modelUrl);
+    if (existing) {
+      return existing;
     }
 
     // 只抓取一次模型字節，透過 SharedArrayBuffer 共享給所有 worker，
@@ -333,7 +361,7 @@ export class OnnxWorkerPool {
         new Uint8Array(shared).set(new Uint8Array(bytes));
         this.modelBuffers.set(modelUrl, shared);
         this.broadcastModelBuffer(modelUrl, shared);
-        this.applyModelMemoryLimit(bytes.byteLength);
+        this.applyModelMemoryLimit(modelUrl, bytes.byteLength);
       } catch (error) {
         // 共享緩衝不可用時靜默回退到 worker 內的獨立 fetch。
         console.warn('[onnx-pool] shared model buffer unavailable, falling back:', error);
@@ -341,10 +369,27 @@ export class OnnxWorkerPool {
     })();
 
     this.modelBufferRequests.set(modelUrl, request);
+    return request;
   }
 
-  private applyModelMemoryLimit(modelBytes: number): void {
-    if (this.disposed || modelBytes <= this.currentModelBytes) {
+  private setActiveModel(modelUrl: string): void {
+    if (this.activeModelUrl === modelUrl) {
+      return;
+    }
+    this.activeModelUrl = modelUrl;
+    // 换模型先清零：否则会沿用上一个（可能更大）模型的字节数压低并发。
+    // 新模型的真实字节数会在共享缓冲就绪后由 applyModelMemoryLimit 重新应用。
+    const before = this.effectiveConcurrency;
+    this.currentModelBytes = 0;
+    if (this.effectiveConcurrency === before) {
+      return;
+    }
+    this.trimSlots();
+    this.applyThreadConfig();
+  }
+
+  private applyModelMemoryLimit(modelUrl: string, modelBytes: number): void {
+    if (this.disposed || modelUrl !== this.activeModelUrl || modelBytes <= 0) {
       return;
     }
 
@@ -411,10 +456,7 @@ export class OnnxWorkerPool {
     }
 
     if (message.type === 'GPU_STATUS') {
-      if (this.gpuActive !== message.active) {
-        this.gpuActive = message.active;
-        this.onGpuStatus?.({ active: message.active, reason: message.reason });
-      }
+      this.updateGpuStatus(slot, message.active, message.reason);
       return;
     }
 
@@ -441,6 +483,19 @@ export class OnnxWorkerPool {
         this.finishTask(slot, message.taskId, { type: 'error', error: message.error });
       }
     }
+  }
+
+  // GPU 是否可用是全局状态，但上报来自多个 worker。按 slot 记录后取“任一活跃”，
+  // 避免单个 worker 的上报被其他 worker 覆盖（last-writer-wins 抖动），
+  // 只在聚合结果真正翻转时才通知上层。
+  private updateGpuStatus(slot: WorkerSlot, active: boolean, reason?: string): void {
+    this.gpuStatusBySlot.set(slot, active);
+    const anyActive = [...this.gpuStatusBySlot.values()].some(Boolean);
+    if (anyActive === this.gpuActive) {
+      return;
+    }
+    this.gpuActive = anyActive;
+    this.onGpuStatus?.({ active: anyActive, reason });
   }
 
   private handleProgress(task: PendingTask, progress: number): void {
@@ -549,6 +604,7 @@ export class OnnxWorkerPool {
 
   private restartSlot(slot: WorkerSlot): void {
     slot.worker.terminate();
+    this.gpuStatusBySlot.delete(slot);
     this.slots[slot.index] = this.createSlot(slot.index);
     this.applyThreadConfig();
   }
@@ -587,6 +643,7 @@ export class OnnxWorkerPool {
       }
 
       slot.worker.terminate();
+      this.gpuStatusBySlot.delete(slot);
       this.slots.splice(index, 1);
     }
 
