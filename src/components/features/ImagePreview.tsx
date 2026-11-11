@@ -497,7 +497,7 @@ const resultSrcToRender = batchMode ? leasedResultSrc : displayResult;
 
   const handleTouchMove = useCallback(
     (e: React.TouchEvent) => {
-      e.preventDefault();
+      // onTouchMove 是 passive 监听器，不能 preventDefault；滚动已由容器的 touch-action: none 阻止。
       if (isDraggingSlider) {
         handleSliderMove(e.touches[0].clientX);
       }
@@ -546,7 +546,7 @@ const resultSrcToRender = batchMode ? leasedResultSrc : displayResult;
 
   const handleWheel = (e: React.WheelEvent) => {
     if (isBatchProcessing) return;
-    e.preventDefault();
+    // onWheel 是 passive 监听器，不能 preventDefault；页面本身不可滚动。
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     setScale((prev) => Math.max(0.1, Math.min(5, prev * delta)));
   };
