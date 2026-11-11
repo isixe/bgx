@@ -952,6 +952,7 @@ export function SettingsPage() {
                           src="https://picnook.itea.dev/favicon.ico"
                           alt="PicNook"
                           className="h-5 w-5"
+                          crossOrigin="anonymous"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
