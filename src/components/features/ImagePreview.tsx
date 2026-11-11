@@ -428,12 +428,12 @@ export function ImagePreview() {
   const displayOriginal = activeBatchItem ? activeBatchItem.originalImage : originalImage;
   const displayResult = (activeBatchItem ? activeBatchItem.resultImage : resultImage) ?? undefined;
 
-// 批处理模式下 originalImage/resultImage 只是 imageStore 的 key，字节留在 IndexedDB。
-// 这里按需租一个活 URL，切换图片或卸载时立刻释放，内存中只保留当前显示的这两张。
-const leasedOriginalSrc = useStoredImageSrc(batchMode ? displayOriginal : null);
-const leasedResultSrc = useStoredImageSrc(batchMode ? displayResult : null);
-const originalSrcToRender = batchMode ? leasedOriginalSrc : displayOriginal;
-const resultSrcToRender = batchMode ? leasedResultSrc : displayResult;
+  // 批处理模式下 originalImage/resultImage 只是 imageStore 的 key，字节留在 IndexedDB。
+  // 这里按需租一个活 URL，切换图片或卸载时立刻释放，内存中只保留当前显示的这两张。
+  const leasedOriginalSrc = useStoredImageSrc(batchMode ? displayOriginal : null);
+  const leasedResultSrc = useStoredImageSrc(batchMode ? displayResult : null);
+  const originalSrcToRender = batchMode ? leasedOriginalSrc : displayOriginal;
+  const resultSrcToRender = batchMode ? leasedResultSrc : displayResult;
   const isBatchProcessing = activeBatchItem
     ? activeBatchItem.status === 'processing'
     : isProcessing;
