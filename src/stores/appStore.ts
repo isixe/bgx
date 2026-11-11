@@ -21,8 +21,29 @@ import {
   getAllCachedModels,
   clearModelDataFromMemory,
 } from '../utils/modelCache';
-import { createRememberedImageUrl } from '../utils/imageStore';
+import { createRememberedImageUrl, persistImageBlob, releaseImageUrl } from '../utils/imageStore';
+import { createThumbnailBlob } from '../utils/thumbnail';
 import { MODELS } from '../config/models';
+
+// 入队后的收尾工作：先把原始图字节落到 IndexedDB，再释放内存里的活 URL；
+// 缩略图串行生成，队列列表只显示它，全分辨率图只在预览时按需取回。
+async function prepareBatchItem(id: string, file: File, originalImage: string): Promise<void> {
+  const persisted = await persistImageBlob(originalImage, file);
+  if (persisted) {
+    releaseImageUrl(originalImage);
+  }
+
+  const thumbnail = await createThumbnailBlob(file);
+  if (!thumbnail) {
+    return;
+  }
+
+  const store = useAppStore.getState();
+  if (!store.batchQueue.some((item) => item.id === id)) {
+    return;
+  }
+  store.setBatchItemThumbnail(id, createRememberedImageUrl(thumbnail));
+}
 
 // 读取持久化的用户偏好。仅在客户端挂载后调用，不能在模块初始化阶段读取，
 // 否则 SSR（无 localStorage）与客户端首帧会不一致，导致 React 水合不匹配。
@@ -420,6 +441,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       id,
       originalImage,
       resultImage: null,
+      thumbnailImage: null,
       status: 'pending',
       modelId: get().currentModel,
       name: file.name,
@@ -434,6 +456,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     // 自动触发处理
     get().updateBatchItemStatus(id, 'pending');
+
+    void prepareBatchItem(id, file, originalImage);
   },
 
   selectBatchItem: (id: string) => {
@@ -521,11 +545,22 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
   },
 
+  setBatchItemThumbnail: (id: string, thumbnailImage: string) => {
+    set((state) => ({
+      batchQueue: state.batchQueue.map((candidate) =>
+        candidate.id === id && !candidate.thumbnailImage
+          ? { ...candidate, thumbnailImage }
+          : candidate,
+      ),
+    }));
+  },
+
   removeBatchItem: (id: string) => {
     const item = get().batchQueue.find((candidate) => candidate.id === id);
     if (item) {
       revokeObjectUrl(item.originalImage);
       revokeObjectUrl(item.resultImage);
+      revokeObjectUrl(item.thumbnailImage);
     }
 
     set((state) => ({
@@ -538,6 +573,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     for (const item of get().batchQueue) {
       revokeObjectUrl(item.originalImage);
       revokeObjectUrl(item.resultImage);
+      revokeObjectUrl(item.thumbnailImage);
     }
 
     set({

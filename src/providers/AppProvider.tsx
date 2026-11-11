@@ -4,7 +4,13 @@ import { useRemoveBackground, MODEL_NOT_CACHED } from '../hooks/useRemoveBackgro
 import { MainLayout } from '../components/layout/MainLayout';
 import { useTranslation, i18n } from '../lib/i18n';
 import { isModelCached, getCachedModelBlobUrl } from '../utils/modelCache';
-import { createRememberedImageUrl, getImageBlob, pruneImageStore } from '../utils/imageStore';
+import {
+  createRememberedImageUrl,
+  getImageBlob,
+  persistImageBlob,
+  pruneImageStore,
+  releaseImageUrl,
+} from '../utils/imageStore';
 import { getModelById } from '../utils/modelUtils';
 import { checkForAppUpdate, isDesktopApp } from '../lib/appUpdate';
 import { GPU_CONCURRENCY } from '../utils/concurrency';
@@ -173,7 +179,13 @@ export function AppProvider() {
         );
 
         if (result.type === 'success' && result.blob) {
-          updateBatchItemStatus(item.id, 'completed', createRememberedImageUrl(result.blob));
+          const resultImage = createRememberedImageUrl(result.blob);
+          updateBatchItemStatus(item.id, 'completed', resultImage);
+          void persistImageBlob(resultImage, result.blob).then((persisted) => {
+            if (persisted) {
+              releaseImageUrl(resultImage);
+            }
+          });
         } else if (result.type === 'error') {
           updateBatchItemStatus(item.id, 'error', null, result.error);
         } else {

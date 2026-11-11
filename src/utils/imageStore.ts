@@ -98,15 +98,42 @@ async function readBlobFromDB(url: string): Promise<Blob | null> {
   });
 }
 
-async function writeBlobToDB(url: string, blob: Blob): Promise<void> {
+async function writeBlobToDB(url: string, blob: Blob): Promise<boolean> {
   const record: StoredImage = { url, blob, createdAt: Date.now() };
   if (await runTransaction('readwrite', (store) => store.put(record))) {
-    return;
+    return true;
   }
 
   // 配额写满时先丢掉最旧的四分之一再试，失败就只靠内存层。
   await pruneOldestRecords(0.25);
-  await runTransaction('readwrite', (store) => store.put(record));
+  return runTransaction('readwrite', (store) => store.put(record));
+}
+
+// 同一个 key 的落盘只做一次：调用方可能同时需要「异步确认写入成功」和「后台落盘」，
+// 重复 put 会把几十 MB 的字节写两遍。
+const pendingWrites = new Map<string, Promise<boolean>>();
+
+function persistBlobToDB(url: string, blob: Blob): Promise<boolean> {
+  const inFlight = pendingWrites.get(url);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const task = writeBlobToDB(url, blob);
+  pendingWrites.set(url, task);
+  task.then(
+    () => {
+      if (pendingWrites.get(url) === task) {
+        pendingWrites.delete(url);
+      }
+    },
+    () => {
+      if (pendingWrites.get(url) === task) {
+        pendingWrites.delete(url);
+      }
+    },
+  );
+  return task;
 }
 
 function resolveKey(url: string): string {
@@ -153,13 +180,52 @@ export function rememberImageBlob(url: string, blob: Blob): void {
   }
 
   rememberInMemory(url, blob);
-  void writeBlobToDB(url, blob);
+  void persistBlobToDB(url, blob);
 }
 
 export function createRememberedImageUrl(blob: Blob): string {
   const url = URL.createObjectURL(blob);
   rememberImageBlob(url, blob);
   return url;
+}
+
+// 等待字节真正写进 IndexedDB 后再返回结果，调用方才有依据决定能否撤销活 URL。
+export function persistImageBlob(url: string, blob: Blob): Promise<boolean> {
+  rememberImageBlob(url, blob);
+  return persistBlobToDB(url, blob);
+}
+
+// 只释放内存里的活 URL 与 JS 句柄，IndexedDB 里的字节保留：
+// 之后 preview / 处理流程仍能用同一个 key 把图片重新取回来。
+// 注意与 revokeObjectUrl 的区别：那个会连 IndexedDB 记录一起删掉。
+export function releaseImageUrl(url: string | null | undefined): void {
+  if (!url || !url.startsWith('blob:')) {
+    return;
+  }
+
+  const key = resolveKey(url);
+
+  const pending = pendingForget.get(key);
+  if (pending) {
+    clearTimeout(pending);
+    pendingForget.delete(key);
+  }
+
+  URL.revokeObjectURL(url);
+
+  const healed = healedUrls.get(key);
+  if (healed && healed !== url) {
+    URL.revokeObjectURL(healed);
+  }
+  healedUrls.delete(key);
+
+  const blob = memoryBlobs.get(key);
+  if (blob) {
+    memoryBlobs.delete(key);
+    memoryBytes -= blob.size;
+  }
+
+  urlOrigins.delete(url);
 }
 
 export async function getImageBlob(url: string): Promise<Blob> {

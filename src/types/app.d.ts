@@ -160,6 +160,7 @@ export type AppState = {
   selectBatchQueueItem: (id: string, shiftKey?: boolean) => void;
   selectAllBatchItems: (selectAll: boolean) => void;
   setBatchItemProgress: (id: string, progress: number) => void;
+  setBatchItemThumbnail: (id: string, thumbnailImage: string) => void;
   backToBatchQueue: () => void;
   removeBatchItem: (id: string) => void;
   clearBatchQueue: () => void;
@@ -176,8 +177,12 @@ export type BatchItemStatus = 'pending' | 'processing' | 'completed' | 'error';
 
 export interface BatchItem {
   id: string;
+  // 原始图在 imageStore 里的 key（blob: URL 字符串），活的 URL 会在落盘后释放
   originalImage: string;
+  // 同上，结果图的 key
   resultImage: string | null;
+  // 队列列表专用的小图，只有它常驻内存
+  thumbnailImage: string | null;
   status: BatchItemStatus;
   modelId: string;
   name: string;

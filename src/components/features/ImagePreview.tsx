@@ -7,6 +7,7 @@ import { GPU_CONCURRENCY, getBatchConcurrencyOptions } from '../../utils/concurr
 import { Select } from '../ui/Select';
 import { SelfHealingImage } from '../ui/SelfHealingImage';
 import { getImageBlob } from '../../utils/imageStore';
+import { useStoredImageSrc } from '../../hooks/useStoredImageSrc';
 
 function formatDuration(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) {
@@ -426,6 +427,13 @@ export function ImagePreview() {
   const showQueueList = batchMode && !viewingBatchResult;
   const displayOriginal = activeBatchItem ? activeBatchItem.originalImage : originalImage;
   const displayResult = (activeBatchItem ? activeBatchItem.resultImage : resultImage) ?? undefined;
+
+// 批处理模式下 originalImage/resultImage 只是 imageStore 的 key，字节留在 IndexedDB。
+// 这里按需租一个活 URL，切换图片或卸载时立刻释放，内存中只保留当前显示的这两张。
+const leasedOriginalSrc = useStoredImageSrc(batchMode ? displayOriginal : null);
+const leasedResultSrc = useStoredImageSrc(batchMode ? displayResult : null);
+const originalSrcToRender = batchMode ? leasedOriginalSrc : displayOriginal;
+const resultSrcToRender = batchMode ? leasedResultSrc : displayResult;
   const isBatchProcessing = activeBatchItem
     ? activeBatchItem.status === 'processing'
     : isProcessing;
@@ -898,11 +906,17 @@ export function ImagePreview() {
                         className="flex-1 min-w-0"
                       >
                         <div className="flex items-center gap-3">
-                          <SelfHealingImage
-                            src={item.originalImage}
-                            alt={item.name}
-                            className="w-8 h-8 rounded object-cover flex-shrink-0"
-                          />
+                          {item.thumbnailImage ? (
+                            <SelfHealingImage
+                              src={item.thumbnailImage}
+                              alt={item.name}
+                              className="w-8 h-8 rounded object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div
+                              className={`w-8 h-8 rounded flex-shrink-0 ${isDarkMode ? 'bg-slate-600' : 'bg-gray-300'}`}
+                            />
+                          )}
                           <span
                             className={`flex-1 text-sm truncate ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}
                           >
@@ -1103,14 +1117,14 @@ export function ImagePreview() {
           }}
         >
           <SelfHealingImage
-            src={displayOriginal!}
+            src={originalSrcToRender!}
             alt="Original"
             className="max-w-full max-h-full object-contain"
             draggable={false}
           />
         </div>
 
-        {displayResult && (
+        {resultSrcToRender && (
           <div
             className="absolute inset-0"
             style={{
@@ -1127,7 +1141,7 @@ export function ImagePreview() {
               }}
             >
               <SelfHealingImage
-                src={displayResult}
+                src={resultSrcToRender}
                 alt="Result"
                 className="max-w-full max-h-full object-contain"
                 draggable={false}
