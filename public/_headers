@@ -1,0 +1,7 @@
+# Cross-origin isolation so SharedArrayBuffer is available and ONNX Runtime Web can
+# run multi-threaded WASM in production. COEP uses `credentialless` instead of
+# `require-corp` so that cross-origin resources without a CORP header (the
+# analytics tracker and the external site favicons) are not blocked.
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: credentialless
