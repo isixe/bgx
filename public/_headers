@@ -1,7 +1,10 @@
 # Cross-origin isolation so SharedArrayBuffer is available and ONNX Runtime Web can
-# run multi-threaded WASM in production. COEP uses `credentialless` instead of
-# `require-corp` so that cross-origin resources without a CORP header (the
-# analytics tracker and the external site favicons) are not blocked.
+# run multi-threaded WASM in production. COEP uses `require-corp` for broad browser
+# support; every cross-origin subresource must therefore opt into CORS/CORP:
+#   - analytics tracker script and the external site favicons (image-dash, picnook)
+#     are loaded with crossorigin="anonymous" and are served with Access-Control-Allow-Origin.
+#   - bg2x favicon is served without CORS/CORP headers and stays blocked until bg2x
+#     adds its own Cross-Origin-Resource-Policy / Access-Control-Allow-Origin header.
 /*
   Cross-Origin-Opener-Policy: same-origin
-  Cross-Origin-Embedder-Policy: credentialless
+  Cross-Origin-Embedder-Policy: require-corp
