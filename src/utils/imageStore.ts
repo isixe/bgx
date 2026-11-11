@@ -333,6 +333,25 @@ async function pruneOldestRecords(ratio: number): Promise<void> {
   });
 }
 
+// 彻底清空图片库：内存句柄、活 URL、待删除定时器与 IndexedDB 记录一并清掉。
+// 只作用于本模块的 'images' store，绝不碰模型库（bgx-models-db）与 localStorage 里的设置。
+export async function clearImageStore(): Promise<void> {
+  for (const timer of pendingForget.values()) {
+    clearTimeout(timer);
+  }
+  pendingForget.clear();
+
+  for (const healed of healedUrls.values()) {
+    URL.revokeObjectURL(healed);
+  }
+  healedUrls.clear();
+  urlOrigins.clear();
+  memoryBlobs.clear();
+  memoryBytes = 0;
+
+  await runTransaction('readwrite', (store) => store.clear());
+}
+
 export async function pruneImageStore(maxAgeMs = DEFAULT_MAX_AGE_MS): Promise<void> {
   const db = await openDB();
   if (!db) return;

@@ -21,28 +21,23 @@ import {
   getAllCachedModels,
   clearModelDataFromMemory,
 } from '../utils/modelCache';
-import { createRememberedImageUrl, persistImageBlob, releaseImageUrl } from '../utils/imageStore';
+import {
+  clearImageStore,
+  createRememberedImageUrl,
+  persistImageBlob,
+  releaseImageUrl,
+} from '../utils/imageStore';
 import { createThumbnailBlob } from '../utils/thumbnail';
 import { MODELS } from '../config/models';
 
-// 入队后的收尾工作：先把原始图字节落到 IndexedDB，再释放内存里的活 URL；
-// 缩略图串行生成，队列列表只显示它，全分辨率图只在预览时按需取回。
-async function prepareBatchItem(id: string, file: File, originalImage: string): Promise<void> {
-  const persisted = await persistImageBlob(originalImage, file);
-  if (persisted) {
-    releaseImageUrl(originalImage);
-  }
+// 批量导入逐张串行：任一时刻只有一个原始图处于活 URL 状态，
+// 避免一次性拖入大量图片时在同一 tick 内创建 N 个 blob URL 把内存撑爆。
+let importTail: Promise<void> = Promise.resolve();
 
-  const thumbnail = await createThumbnailBlob(file);
-  if (!thumbnail) {
-    return;
-  }
-
-  const store = useAppStore.getState();
-  if (!store.batchQueue.some((item) => item.id === id)) {
-    return;
-  }
-  store.setBatchItemThumbnail(id, createRememberedImageUrl(thumbnail));
+function enqueueImport(task: () => Promise<void>): Promise<void> {
+  const run = importTail.then(task, task);
+  importTail = run.catch(() => {});
+  return run;
 }
 
 // 读取持久化的用户偏好。仅在客户端挂载后调用，不能在模块初始化阶段读取，
@@ -431,34 +426,51 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ batchConcurrency: next });
   },
 
-  addToBatchQueue: async (file: File) => {
-    const id =
-      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-    const originalImage = createRememberedImageUrl(file);
-    const item: BatchItem = {
-      id,
-      originalImage,
-      resultImage: null,
-      thumbnailImage: null,
-      status: 'pending',
-      modelId: get().currentModel,
-      name: file.name,
-      progress: 0,
-      startedAt: null,
-      finishedAt: null,
-    };
+  addToBatchQueue: (file: File) =>
+    enqueueImport(async () => {
+      const id =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+      const originalImage = createRememberedImageUrl(file);
+      const item: BatchItem = {
+        id,
+        originalImage,
+        resultImage: null,
+        thumbnailImage: null,
+        status: 'pending',
+        modelId: get().currentModel,
+        name: file.name,
+        progress: 0,
+        startedAt: null,
+        finishedAt: null,
+      };
 
-    set((state) => ({
-      batchQueue: [...state.batchQueue, item],
-    }));
+      set((state) => ({
+        batchQueue: [...state.batchQueue, item],
+      }));
 
-    // 自动触发处理
-    get().updateBatchItemStatus(id, 'pending');
+      // 自动触发处理
+      get().updateBatchItemStatus(id, 'pending');
 
-    void prepareBatchItem(id, file, originalImage);
-  },
+      // 先把原始图字节落到 IndexedDB，再释放内存里的活 URL；
+      // 缩略图串行生成，队列列表只显示它，全分辨率图只在预览时按需取回。
+      const persisted = await persistImageBlob(originalImage, file);
+      if (persisted) {
+        releaseImageUrl(originalImage);
+      }
+
+      const thumbnail = await createThumbnailBlob(file);
+      if (!thumbnail) {
+        return;
+      }
+
+      const store = get();
+      if (!store.batchQueue.some((candidate) => candidate.id === id)) {
+        return;
+      }
+      store.setBatchItemThumbnail(id, createRememberedImageUrl(thumbnail));
+    }),
 
   selectBatchItem: (id: string) => {
     set({
@@ -679,8 +691,17 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   reset: () => {
     const state = get();
+
+    for (const item of state.batchQueue) {
+      revokeObjectUrl(item.originalImage);
+      revokeObjectUrl(item.resultImage);
+      revokeObjectUrl(item.thumbnailImage);
+    }
     revokeObjectUrl(state.originalImage);
     revokeObjectUrl(state.resultImage);
+
+    void clearImageStore();
+
     // 保留当前选中的模型和模型状态，只重置图片相关状态
     set({
       originalImage: null,
@@ -692,6 +713,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       processedModel: null,
       cachedModelUrl: null,
       isModelLoading: false,
+      batchQueue: [],
+      activeBatchItemId: null,
+      viewingBatchResult: false,
+      selectedBatchItemIds: [],
+      selectionAnchorId: null,
     });
     // 重新加载当前模型
     get().setCurrentModel(state.currentModel);

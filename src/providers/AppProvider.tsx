@@ -5,10 +5,10 @@ import { MainLayout } from '../components/layout/MainLayout';
 import { useTranslation, i18n } from '../lib/i18n';
 import { isModelCached, getCachedModelBlobUrl } from '../utils/modelCache';
 import {
+  clearImageStore,
   createRememberedImageUrl,
   getImageBlob,
   persistImageBlob,
-  pruneImageStore,
   releaseImageUrl,
 } from '../utils/imageStore';
 import { getModelById } from '../utils/modelUtils';
@@ -76,8 +76,9 @@ export function AppProvider() {
     initializeModelStatuses();
   }, [initializeModelStatuses]);
 
+  // 页面首次加载时清空图片库，丢弃上次意外退出残留的图片缓存。
   useEffect(() => {
-    void pruneImageStore();
+    void clearImageStore();
   }, []);
 
   useEffect(() => {
