@@ -249,9 +249,12 @@ export class OnnxWorkerPool {
     }
 
     const slot = this.slots.find((candidate) => candidate.currentTaskId === taskId);
-    if (slot) {
-      slot.worker.postMessage({ type: 'CANCEL_TASK', taskId });
+    if (!slot) {
+      return;
     }
+
+    this.abandonActiveTask(slot);
+    this.drainQueue();
   }
 
   cancelAll(): void {
@@ -260,11 +263,37 @@ export class OnnxWorkerPool {
       task?.resolve({ type: 'cancelled' });
     }
 
-    for (const slot of this.slots) {
+    for (const slot of [...this.slots]) {
       if (slot.currentTaskId) {
-        slot.worker.postMessage({ type: 'CANCEL_TASK', taskId: slot.currentTaskId });
+        this.abandonActiveTask(slot);
       }
     }
+
+    this.drainQueue();
+  }
+
+  // 主动放弃某个正被 worker 执行的任务：worker 只能在推理间隙响应 CANCEL_TASK，
+  // 任务一旦进入推理就只能靠重建 slot 立即回收 worker。若不回收，被取消的任务会
+  // 继续占用一个并发额度直到推理跑完，runItem 也就一直挂着，调度器因 inFlight
+  // 满额而不再派发，整个队列会退化成单并发。
+  private abandonActiveTask(slot: WorkerSlot): void {
+    const taskId = slot.currentTaskId;
+    if (!taskId) {
+      return;
+    }
+
+    const task = this.activeTasks.get(taskId);
+    this.activeTasks.delete(taskId);
+    if (task) {
+      this.clearProgressTimer(task);
+      task.resolve({ type: 'cancelled' });
+    }
+
+    slot.currentTaskId = null;
+    slot.busy = false;
+    // 必须重建 worker：复用同一个 worker 派发新任务会让它同时跑两个任务，
+    // 被放弃任务迟到的结果也会被当成新任务的结果。
+    this.restartSlot(slot);
   }
 
   dispose(): void {
