@@ -120,7 +120,7 @@ export function ModelSelector() {
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.id)}
-                    className="flex w-full items-center gap-1 px-4 py-1.5 text-left text-[11px] font-bold uppercase tracking-wide text-black"
+                    className={`flex w-full items-center gap-1 px-4 py-1.5 text-left text-[11px] font-bold uppercase tracking-wide ${isDarkMode ? 'text-white' : 'text-black'}`}
                   >
                     <svg
                       className={`h-3 w-3 shrink-0 transition-transform ${collapsedGroups[group.id] ? '-rotate-90' : ''}`}

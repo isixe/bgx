@@ -103,7 +103,9 @@ export function ModelsPage({ hideHeader = false }: ModelsPageProps) {
               onClick={() => toggleGroup(group.id)}
               className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1 pb-2 text-left"
             >
-              <h3 className="flex items-center gap-1 text-sm font-bold text-black">
+              <h3
+                className={`flex items-center gap-1 text-sm font-bold ${isDarkMode ? 'text-white' : 'text-black'}`}
+              >
                 <svg
                   className={`h-4 w-4 shrink-0 transition-transform ${collapsedGroups[group.id] ? '-rotate-90' : ''}`}
                   fill="none"

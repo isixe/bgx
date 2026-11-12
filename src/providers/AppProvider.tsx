@@ -179,7 +179,14 @@ export function AppProvider() {
           (progress) => setBatchItemProgress(item.id, progress),
         );
 
+        const latestStatus = useAppStore
+          .getState()
+          .batchQueue.find((candidate) => candidate.id === item.id)?.status;
+
         if (result.type === 'success' && result.blob) {
+          if (latestStatus === 'cancelled') {
+            return;
+          }
           const resultImage = createRememberedImageUrl(result.blob);
           updateBatchItemStatus(item.id, 'completed', resultImage);
           void persistImageBlob(resultImage, result.blob).then((persisted) => {
@@ -188,7 +195,14 @@ export function AppProvider() {
             }
           });
         } else if (result.type === 'error') {
+          if (latestStatus === 'cancelled') {
+            return;
+          }
           updateBatchItemStatus(item.id, 'error', null, result.error);
+        } else if (result.type === 'cancelled') {
+          if (latestStatus === 'processing') {
+            updateBatchItemStatus(item.id, 'cancelled');
+          }
         } else {
           updateBatchItemStatus(item.id, 'pending');
         }

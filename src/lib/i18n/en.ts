@@ -264,6 +264,7 @@ export const translations = {
   batchStatusCompleted: 'Done',
   batchStatusFailed: 'Failed',
   batchStatusPending: 'Pending',
+  batchStatusCancelled: 'Cancelled',
   batchExport: 'Export',
   batchExportAll: 'Export All',
   batchExportSelected: 'Export Selected',

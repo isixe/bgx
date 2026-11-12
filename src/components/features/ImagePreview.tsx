@@ -370,6 +370,8 @@ export function ImagePreview() {
     selectAllBatchItems,
     backToBatchQueue,
     reprocessBatchItem,
+    removeBatchItem,
+    cancelBatchItem,
     setBatchConcurrency,
     gpuAcceleration,
     keyboardMode,
@@ -830,31 +832,10 @@ export function ImagePreview() {
               <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1">
                 {batchQueue.map((item) => {
                   const isSelected = selectedBatchItemIds.includes(item.id);
-                  const isSelectable = item.status === 'completed' || item.status === 'error';
-                  const statusLabel =
-                    item.status === 'processing'
-                      ? t('processingHint')
-                      : item.status === 'completed'
-                        ? t('batchStatusCompleted')
-                        : item.status === 'error'
-                          ? t('batchStatusFailed')
-                          : t('batchStatusPending');
-                  const statusColors =
-                    item.status === 'processing'
-                      ? isDarkMode
-                        ? 'text-blue-400'
-                        : 'text-blue-600'
-                      : item.status === 'completed'
-                        ? isDarkMode
-                          ? 'text-green-400'
-                          : 'text-green-600'
-                        : item.status === 'error'
-                          ? isDarkMode
-                            ? 'text-red-400'
-                            : 'text-red-600'
-                          : isDarkMode
-                            ? 'text-gray-400'
-                            : 'text-gray-500';
+                  const isSelectable =
+                    item.status === 'completed' ||
+                    item.status === 'error' ||
+                    item.status === 'cancelled';
 
                   return (
                     <div
@@ -986,21 +967,103 @@ export function ImagePreview() {
                         </>
                       )}
                       {item.status === 'processing' ? (
-                        <ProgressRing progress={item.progress} isDarkMode={isDarkMode} />
-                      ) : isSelected && item.status === 'completed' ? (
-                        <button
-                          onClick={() => {
-                            reprocessBatchItem(item.id, currentModel);
-                            selectAllBatchItems(false);
-                          }}
-                          className="text-xs px-2.5 py-1 rounded bg-indigo-500 text-white hover:bg-indigo-600 transition-colors flex-shrink-0 font-medium"
-                        >
-                          {t('reprocess')}
-                        </button>
+                        <>
+                          <ProgressRing progress={item.progress} isDarkMode={isDarkMode} />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cancelBatchItem(item.id);
+                              void import('../../workers/onnx-worker-pool')
+                                .then((mod) => mod.getOnnxWorkerPool().cancelTask(item.id))
+                                .catch(() => {});
+                            }}
+                            className={`flex-shrink-0 p-1 rounded transition-colors ${isDarkMode ? 'hover:bg-slate-500 text-gray-300 hover:text-white' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
+                            title={t('cancelProcessing')}
+                            aria-label={t('cancelProcessing')}
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M6 6l12 12M18 6L6 18"
+                              />
+                            </svg>
+                          </button>
+                        </>
                       ) : (
-                        <span className={`text-xs flex-shrink-0 font-medium ${statusColors}`}>
-                          {statusLabel}
-                        </span>
+                        <>
+                          {item.status === 'completed' ? (
+                            <svg
+                              className={`w-4 h-4 flex-shrink-0 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={2.5}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          ) : (
+                            (item.status === 'error' || item.status === 'cancelled') && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  reprocessBatchItem(item.id, currentModel);
+                                }}
+                                className={`relative flex-shrink-0 p-1 rounded transition-colors ${isDarkMode ? 'hover:bg-slate-500 text-gray-300 hover:text-white' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
+                                title={t('reprocess')}
+                                aria-label={t('reprocess')}
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth={2}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M4 4v5h5M20 20v-5h-5M20 9a8 8 0 00-13.4-3.3L4 8m16 8l-2.6 2.3A8 8 0 014 15"
+                                  />
+                                </svg>
+                                <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500" />
+                              </button>
+                            )
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeBatchItem(item.id);
+                            }}
+                            className={`flex-shrink-0 p-1 rounded transition-colors ${isDarkMode ? 'hover:bg-red-500/20 text-gray-300 hover:text-red-400' : 'hover:bg-red-50 text-gray-500 hover:text-red-600'}`}
+                            title={t('delete')}
+                            aria-label={t('delete')}
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        </>
                       )}
                     </div>
                   );
