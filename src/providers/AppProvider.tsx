@@ -130,6 +130,7 @@ export function AppProvider() {
   const inFlightRef = useRef(new Set<string>());
   const modelUrlCacheRef = useRef(new Map<string, string>());
   const [isPoolReady, setIsPoolReady] = useState(false);
+  const [queueTick, setQueueTick] = useState(0);
 
   const resolveModelUrl = useCallback(async (modelId: string): Promise<string | null> => {
     const cached = modelUrlCacheRef.current.get(modelId);
@@ -215,6 +216,8 @@ export function AppProvider() {
         );
       } finally {
         inFlightRef.current.delete(item.id);
+        // 取消的任务不会改动 store，调度 effect 因此收不到通知，必须在这里主动唤醒。
+        setQueueTick((tick) => tick + 1);
       }
     },
     [resolveModelUrl, updateBatchItemStatus, setBatchItemProgress],
@@ -343,7 +346,7 @@ export function AppProvider() {
       inFlightRef.current.add(item.id);
       void runItem(item);
     }
-  }, [batchMode, batchQueue, activeConcurrency, isPoolReady, runItem]);
+  }, [batchMode, batchQueue, activeConcurrency, isPoolReady, runItem, queueTick]);
 
   useEffect(() => {
     if (originalImage && !isProcessing && isReadyToProcess) {
