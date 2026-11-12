@@ -113,6 +113,10 @@ export function DownloadPage({ initialRelease = null }: DownloadPageProps) {
     document.title = t('downloadPage.documentTitle');
   }, [language, t]);
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-app-ready', 'true');
+  }, []);
+
   const surfaceBg = isDarkMode ? 'bg-slate-900' : 'bg-slate-50';
   const headerStyle = isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white';
   const titleStyle = isDarkMode ? 'text-white' : 'text-slate-900';

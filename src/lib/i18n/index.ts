@@ -6,7 +6,6 @@ export type Language = 'zh' | 'en';
 
 const translations = { zh, en };
 
-// 服務器端和客戶端首次渲染使用一致的默認語言
 const DEFAULT_LANGUAGE: Language = 'en';
 
 // 各語言對應的頁面標題
@@ -15,16 +14,34 @@ const titles: Record<Language, string> = {
   en: 'BGX - Background Remover',
 };
 
-function getStoredLanguage(): Language | null {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('bgx-language') as Language | null;
-    if (stored && ['zh', 'en'].includes(stored)) {
-      return stored;
-    }
-    const browserLang = navigator.language.toLowerCase();
-    if (browserLang.startsWith('zh')) {
-      return 'zh';
-    }
+declare global {
+  interface Window {
+    __BGX_LANG__?: Language;
+  }
+}
+
+function isLanguage(value: unknown): value is Language {
+  return value === 'zh' || value === 'en';
+}
+
+/**
+ * 解析客戶端應使用的語言。
+ * 優先級：Layout 內聯預水合腳本寫入的 window.__BGX_LANG__（首幀前已確定）
+ * → localStorage → 瀏覽器語言 → null。服務器端返回 null（回退默認語言）。
+ */
+function resolveClientLanguage(): Language | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  if (isLanguage(window.__BGX_LANG__)) {
+    return window.__BGX_LANG__;
+  }
+  const stored = localStorage.getItem('bgx-language');
+  if (isLanguage(stored)) {
+    return stored;
+  }
+  if (navigator.language.toLowerCase().startsWith('zh')) {
+    return 'zh';
   }
   return null;
 }
@@ -38,7 +55,7 @@ export const i18n: {
   t: (key: TranslationKey | string) => string;
   getLanguage: () => Language;
 } = {
-  currentLang: DEFAULT_LANGUAGE,
+  currentLang: resolveClientLanguage() ?? DEFAULT_LANGUAGE,
   listeners: new Set<() => void>(),
 
   subscribe(listener: () => void) {
@@ -56,7 +73,10 @@ export const i18n: {
     this.currentLang = lang;
     if (typeof window !== 'undefined') {
       localStorage.setItem('bgx-language', lang);
+      window.__BGX_LANG__ = lang;
       document.title = titles[lang];
+      document.documentElement.lang = lang;
+      document.documentElement.setAttribute('data-lang', lang);
     }
     this.notify();
   },
@@ -81,19 +101,6 @@ export const i18n: {
 
 export function useTranslation() {
   const [, forceUpdate] = useState({});
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  useEffect(() => {
-    // 客戶端 hydration 完成後，應用存儲的語言設置
-    if (!isHydrated) {
-      const storedLang = getStoredLanguage();
-      if (storedLang && storedLang !== i18n.currentLang) {
-        i18n.setLanguage(storedLang);
-      }
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsHydrated(true);
-    }
-  }, [isHydrated]);
 
   useEffect(() => {
     return i18n.subscribe(() => {
@@ -111,7 +118,6 @@ export function useTranslation() {
     t,
     language: i18n.getLanguage(),
     setLanguage,
-    isHydrated,
   };
 }
 

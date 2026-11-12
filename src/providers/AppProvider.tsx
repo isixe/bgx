@@ -383,5 +383,10 @@ export function AppProvider() {
     document.title = i18n.t('pageTitle');
   }, [language]);
 
+  // Signal that the island has mounted so the startup shell can be removed.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-app-ready', 'true');
+  }, []);
+
   return <MainLayout />;
 }

@@ -56,28 +56,26 @@ function openDB(): Promise<IDBDatabase | null> {
   return dbPromise;
 }
 
-function runTransaction(
+async function runTransaction(
   mode: IDBTransactionMode,
   work: (store: IDBObjectStore) => void,
 ): Promise<boolean> {
-  return openDB().then(
-    (db) =>
-      new Promise<boolean>((resolve) => {
-        if (!db) {
-          resolve(false);
-          return;
-        }
-        try {
-          const transaction = db.transaction(STORE_NAME, mode);
-          work(transaction.objectStore(STORE_NAME));
-          transaction.oncomplete = () => resolve(true);
-          transaction.onerror = () => resolve(false);
-          transaction.onabort = () => resolve(false);
-        } catch {
-          resolve(false);
-        }
-      }),
-  );
+  const db = await openDB();
+  if (!db) {
+    return false;
+  }
+
+  return new Promise<boolean>((resolve) => {
+    try {
+      const transaction = db.transaction(STORE_NAME, mode);
+      work(transaction.objectStore(STORE_NAME));
+      transaction.oncomplete = () => resolve(true);
+      transaction.onerror = () => resolve(false);
+      transaction.onabort = () => resolve(false);
+    } catch {
+      resolve(false);
+    }
+  });
 }
 
 async function readBlobFromDB(url: string): Promise<Blob | null> {

@@ -87,6 +87,29 @@ const fullOgImageUrl = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogIma
       })();
     </script>
 
+    <!-- Language anti-flash: resolve the active language before first paint and
+         expose it to the i18n module via window.__BGX_LANG__, so the client island
+         renders in the correct language on its very first frame (no en→zh flip). -->
+    <script is:inline>
+      (function () {
+        try {
+          var stored = localStorage.getItem('bgx-language');
+          var lang =
+            stored === 'zh' || stored === 'en'
+              ? stored
+              : (navigator.language || '').toLowerCase().indexOf('zh') === 0
+                ? 'zh'
+                : 'en';
+          window.__BGX_LANG__ = lang;
+          document.documentElement.lang = lang;
+          document.documentElement.setAttribute('data-lang', lang);
+          document.title = lang === 'zh' ? 'BGX - 背景移除工具' : 'BGX - Background Remover';
+        } catch (e) {
+          /* localStorage unavailable — fall back to the server-rendered defaults */
+        }
+      })();
+    </script>
+
     <!-- Analytics: injected at runtime, skipped entirely in the desktop (Electron) app. -->
     <script is:inline>
       if (!navigator.userAgent.includes('Electron')) {
@@ -101,6 +124,9 @@ const fullOgImageUrl = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogIma
     </script>
   </head>
   <body>
+    <div id="boot-shell" aria-hidden="true">
+      <div class="boot-spinner"></div>
+    </div>
     <slot />
   </body>
 </html>
@@ -128,6 +154,51 @@ const fullOgImageUrl = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogIma
       'Helvetica Neue',
       Arial,
       sans-serif;
+  }
+
+  /* Theme background painted before hydration, so the viewport never flashes
+     white while the client island loads. Matches slate-50 / slate-900. */
+  html {
+    background: #f8fafc;
+  }
+
+  html.dark {
+    background: #0f172a;
+  }
+
+  /* Startup shell shown until the client island signals readiness by setting
+     html[data-app-ready]. Hides the JS-loading gap behind the app's own surface. */
+  #boot-shell {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+  }
+
+  html.dark #boot-shell {
+    background: #0f172a;
+  }
+
+  html[data-app-ready] #boot-shell {
+    display: none;
+  }
+
+  .boot-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(100, 116, 139, 0.25);
+    border-top-color: #64748b;
+    border-radius: 50%;
+    animation: boot-spin 0.8s linear infinite;
+  }
+
+  @keyframes boot-spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* Custom scrollbar */

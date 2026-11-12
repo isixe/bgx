@@ -38,5 +38,5 @@ try {
   locale={metadata.locale}
   preconnect={['https://api.github.com']}
 >
-  <DownloadPage client:load initialRelease={initialRelease} />
+  <DownloadPage client:only="react" initialRelease={initialRelease} />
 </Layout>

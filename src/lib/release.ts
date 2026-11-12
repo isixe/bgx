@@ -48,25 +48,24 @@ function collectAssets(rawAssets: unknown): ReleaseInfo['assets'] {
   return assets;
 }
 
-export function fetchLatestRelease(timeoutMs = 8000): Promise<ReleaseInfo> {
+export async function fetchLatestRelease(timeoutMs = 8000): Promise<ReleaseInfo> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  return fetch(LATEST_RELEASE_API, {
-    headers: { Accept: 'application/vnd.github+json' },
-    signal: controller.signal,
-  })
-    .then((response) => {
-      if (!response.ok) throw new Error(`GitHub API responded with ${response.status}`);
-      return response.json() as Promise<Record<string, unknown>>;
-    })
-    .then((data) => ({
+  try {
+    const response = await fetch(LATEST_RELEASE_API, {
+      headers: { Accept: 'application/vnd.github+json' },
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`GitHub API responded with ${response.status}`);
+    const data = (await response.json()) as Record<string, unknown>;
+    return {
       tagName: typeof data.tag_name === 'string' ? data.tag_name : '',
       assets: collectAssets(data.assets),
-    }))
-    .finally(() => {
-      clearTimeout(timer);
-    });
+    };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function readCachedRelease(): ReleaseInfo | null {
