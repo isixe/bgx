@@ -257,6 +257,7 @@ export const translations = {
   batchStatusCompleted: '完成',
   batchStatusFailed: '失败',
   batchStatusPending: '等待中',
+  batchStatusCancelled: '已取消',
   batchExport: '导出',
   batchExportAll: '全部导出',
   batchExportSelected: '导出选中',

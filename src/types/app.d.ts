@@ -163,6 +163,7 @@ export type AppState = {
   setBatchItemThumbnail: (id: string, thumbnailImage: string) => void;
   backToBatchQueue: () => void;
   removeBatchItem: (id: string) => void;
+  cancelBatchItem: (id: string) => void;
   clearBatchQueue: () => void;
   reprocessBatchItem: (id: string, modelId: string) => void;
   updateBatchItemStatus: (
@@ -173,7 +174,7 @@ export type AppState = {
   ) => void;
 };
 
-export type BatchItemStatus = 'pending' | 'processing' | 'completed' | 'error';
+export type BatchItemStatus = 'pending' | 'processing' | 'completed' | 'error' | 'cancelled';
 
 export interface BatchItem {
   id: string;

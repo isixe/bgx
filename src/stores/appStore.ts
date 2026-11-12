@@ -493,7 +493,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectBatchQueueItem: (id: string, shiftKey = false) => {
     set((state) => {
       const selectableIds = state.batchQueue
-        .filter((item) => item.status === 'completed' || item.status === 'error')
+        .filter(
+          (item) =>
+            item.status === 'completed' || item.status === 'error' || item.status === 'cancelled',
+        )
         .map((item) => item.id);
 
       const targetIndex = selectableIds.indexOf(id);
@@ -532,7 +535,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
 
       const selectableIds = state.batchQueue
-        .filter((item) => item.status === 'completed' || item.status === 'error')
+        .filter(
+          (item) =>
+            item.status === 'completed' || item.status === 'error' || item.status === 'cancelled',
+        )
         .map((item) => item.id);
 
       return {
@@ -577,6 +583,26 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     set((state) => ({
       batchQueue: state.batchQueue.filter((candidate) => candidate.id !== id),
+      activeBatchItemId: state.activeBatchItemId === id ? null : state.activeBatchItemId,
+      viewingBatchResult: state.activeBatchItemId === id ? false : state.viewingBatchResult,
+      selectedBatchItemIds: state.selectedBatchItemIds.filter((selectedId) => selectedId !== id),
+      selectionAnchorId: state.selectionAnchorId === id ? null : state.selectionAnchorId,
+    }));
+  },
+
+  cancelBatchItem: (id: string) => {
+    set((state) => ({
+      batchQueue: state.batchQueue.map((candidate) => {
+        if (candidate.id !== id || candidate.status !== 'processing') {
+          return candidate;
+        }
+        return {
+          ...candidate,
+          status: 'cancelled' as BatchItemStatus,
+          finishedAt: Date.now(),
+        };
+      }),
+      selectedBatchItemIds: state.selectedBatchItemIds.filter((selectedId) => selectedId !== id),
       selectionAnchorId: state.selectionAnchorId === id ? null : state.selectionAnchorId,
     }));
   },
@@ -652,7 +678,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     const now = Date.now();
-    const isFinished = status === 'completed' || status === 'error';
+    const keepsSelection = status === 'completed' || status === 'error';
 
     set((state) => ({
       batchQueue: state.batchQueue.map((item) => {
@@ -670,9 +696,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (status === 'processing') {
           next.startedAt = now;
           next.finishedAt = null;
-        } else if (isFinished) {
+        } else if (status === 'completed' || status === 'error') {
           next.finishedAt = now;
           next.progress = 100;
+        } else if (status === 'cancelled') {
+          next.finishedAt = now;
         } else {
           next.startedAt = null;
           next.finishedAt = null;
@@ -681,11 +709,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
         return next;
       }),
-      selectedBatchItemIds: isFinished
+      selectedBatchItemIds: keepsSelection
         ? state.selectedBatchItemIds
         : state.selectedBatchItemIds.filter((selectedId) => selectedId !== id),
       selectionAnchorId:
-        !isFinished && state.selectionAnchorId === id ? null : state.selectionAnchorId,
+        !keepsSelection && state.selectionAnchorId === id ? null : state.selectionAnchorId,
     }));
   },
 
