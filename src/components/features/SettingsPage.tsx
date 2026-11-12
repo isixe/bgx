@@ -5,7 +5,11 @@ import { checkForAppUpdate, isDesktopApp, DOWNLOAD_URL } from '../../lib/appUpda
 import pkg from '../../../package.json';
 import { Select } from '../ui/Select';
 import { GPU_CONCURRENCY, getBatchConcurrencyOptions } from '../../utils/concurrency';
-import type { KeyboardMode, PreviewBackgroundPosition } from '../../types/app';
+import type {
+  KeyboardMode,
+  PreviewBackgroundImageScope,
+  PreviewBackgroundPosition,
+} from '../../types/app';
 
 // Keep the "checking…" indicator visible for at least this long so an instant
 // network response does not cause a distracting flash.
@@ -24,6 +28,14 @@ const PREVIEW_BACKGROUND_POSITION_OPTIONS: {
   { value: 'bottom', labelKey: 'backgroundPositionBottom' },
   { value: 'left', labelKey: 'backgroundPositionLeft' },
   { value: 'right', labelKey: 'backgroundPositionRight' },
+];
+
+const PREVIEW_BACKGROUND_IMAGE_SCOPE_OPTIONS: {
+  value: PreviewBackgroundImageScope;
+  labelKey: string;
+}[] = [
+  { value: 'item', labelKey: 'backgroundImageScopeItem' },
+  { value: 'global', labelKey: 'backgroundImageScopeGlobal' },
 ];
 
 export function SettingsPage() {
@@ -47,6 +59,8 @@ export function SettingsPage() {
     setKeyboardMode,
     previewBackgroundPosition,
     setPreviewBackgroundPosition,
+    previewBackgroundImageScope,
+    setPreviewBackgroundImageScope,
   } = useAppStore();
 
   const cardClasses = `rounded-xl border p-4 ${
@@ -62,6 +76,13 @@ export function SettingsPage() {
     value: option.value,
     label: t(option.labelKey),
   }));
+
+  const previewBackgroundImageScopeOptions = PREVIEW_BACKGROUND_IMAGE_SCOPE_OPTIONS.map(
+    (option) => ({
+      value: option.value,
+      label: t(option.labelKey),
+    }),
+  );
 
   const updateStatusText =
     updateCheckState === 'checking'
@@ -449,7 +470,30 @@ export function SettingsPage() {
                         isDarkMode={isDarkMode}
                         ariaLabel={t('previewBackgroundPosition')}
                         title={t('previewBackgroundPosition')}
-                        className="min-w-[92px] justify-between"
+                        className="min-w-[92px] justify-between !p-[5px]"
+                      />
+                    </div>
+                    <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}
+                        >
+                          {t('backgroundImageScope')}
+                        </p>
+                        <p
+                          className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                        >
+                          {t('backgroundImageScopeDesc')}
+                        </p>
+                      </div>
+                      <Select
+                        value={previewBackgroundImageScope}
+                        options={previewBackgroundImageScopeOptions}
+                        onChange={setPreviewBackgroundImageScope}
+                        isDarkMode={isDarkMode}
+                        ariaLabel={t('backgroundImageScope')}
+                        title={t('backgroundImageScope')}
+                        className="min-w-[92px] justify-between !p-[5px]"
                       />
                     </div>
                   </div>
@@ -494,6 +538,7 @@ export function SettingsPage() {
                         isDarkMode={isDarkMode}
                         ariaLabel={t('cpuConcurrency')}
                         title={t('cpuConcurrency')}
+                        className="!p-[5px]"
                       />
                     </div>
                     <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>
@@ -516,6 +561,7 @@ export function SettingsPage() {
                         readOnly
                         ariaLabel={t('gpuConcurrency')}
                         title={t('gpuConcurrency')}
+                        className="!p-[5px]"
                       />
                     </div>
                     <div className={`flex items-center justify-between gap-4 ${cardClasses}`}>

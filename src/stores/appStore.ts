@@ -11,6 +11,7 @@ import type {
   KeyboardMode,
   PreviewBackground,
   PreviewBackgroundPosition,
+  PreviewBackgroundImageScope,
 } from '../types/app';
 import {
   getCachedModelBlobUrl,
@@ -40,6 +41,12 @@ function enqueueImport(task: () => Promise<void>): Promise<void> {
   const run = importTail.then(task, task);
   importTail = run.catch(() => {});
   return run;
+}
+
+function revokeBlobUrl(url: string | null | undefined): void {
+  if (url && url.startsWith('blob:')) {
+    URL.revokeObjectURL(url);
+  }
 }
 
 // 读取持久化的用户偏好。仅在客户端挂载后调用，不能在模块初始化阶段读取，
@@ -89,7 +96,8 @@ function readPersistedPreferences(): Partial<AppState> {
     storedPreviewBackground === 'transparent' ||
     storedPreviewBackground === 'black' ||
     storedPreviewBackground === 'white' ||
-    storedPreviewBackground === 'custom'
+    storedPreviewBackground === 'custom' ||
+    storedPreviewBackground === 'image'
   ) {
     prefs.previewBackground = storedPreviewBackground;
   }
@@ -107,6 +115,16 @@ function readPersistedPreferences(): Partial<AppState> {
     storedPreviewBackgroundPosition === 'right'
   ) {
     prefs.previewBackgroundPosition = storedPreviewBackgroundPosition;
+  }
+
+  const storedPreviewBackgroundImageScope = localStorage.getItem(
+    'bgx-preview-background-image-scope',
+  );
+  if (
+    storedPreviewBackgroundImageScope === 'item' ||
+    storedPreviewBackgroundImageScope === 'global'
+  ) {
+    prefs.previewBackgroundImageScope = storedPreviewBackgroundImageScope;
   }
 
   const storedDefaultModel = localStorage.getItem('bgx-default-model');
@@ -166,6 +184,8 @@ const initialState = {
   previewBackground: 'transparent' as PreviewBackground,
   previewBackgroundColor: '#808080',
   previewBackgroundPosition: 'left' as PreviewBackgroundPosition,
+  previewBackgroundImage: null as string | null,
+  previewBackgroundImageScope: 'item' as PreviewBackgroundImageScope,
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -406,6 +426,27 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     set({ previewBackgroundPosition: position });
   },
+  setPreviewBackgroundImage: (url) => {
+    revokeBlobUrl(get().previewBackgroundImage);
+    set({ previewBackgroundImage: url });
+  },
+  setPreviewBackgroundImageScope: (scope) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bgx-preview-background-image-scope', scope);
+    }
+    set({ previewBackgroundImageScope: scope });
+  },
+  setBatchItemBackgroundImage: (id, url) => {
+    const target = get().batchQueue.find((item) => item.id === id);
+    if (target && target.backgroundImage !== url) {
+      revokeBlobUrl(target.backgroundImage);
+    }
+    set((state) => ({
+      batchQueue: state.batchQueue.map((item) =>
+        item.id === id ? { ...item, backgroundImage: url } : item,
+      ),
+    }));
+  },
   setUpdateCheckState: (state) => set({ updateCheckState: state }),
   setLatestVersion: (version) => set({ latestVersion: version }),
   dismissUpdateNotice: () => {
@@ -604,6 +645,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       revokeObjectUrl(item.originalImage);
       revokeObjectUrl(item.resultImage);
       revokeObjectUrl(item.thumbnailImage);
+      revokeBlobUrl(item.backgroundImage);
     }
 
     set((state) => ({
@@ -637,6 +679,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       revokeObjectUrl(item.originalImage);
       revokeObjectUrl(item.resultImage);
       revokeObjectUrl(item.thumbnailImage);
+      revokeBlobUrl(item.backgroundImage);
     }
 
     set({
@@ -749,9 +792,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       revokeObjectUrl(item.originalImage);
       revokeObjectUrl(item.resultImage);
       revokeObjectUrl(item.thumbnailImage);
+      revokeBlobUrl(item.backgroundImage);
     }
     revokeObjectUrl(state.originalImage);
     revokeObjectUrl(state.resultImage);
+    revokeBlobUrl(state.previewBackgroundImage);
 
     void clearImageStore();
 
@@ -759,6 +804,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       originalImage: null,
       resultImage: null,
+      previewBackgroundImage: null,
       isProcessing: false,
       progress: 0,
       error: null,

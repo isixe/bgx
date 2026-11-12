@@ -159,6 +159,13 @@ export const translations = {
   backgroundPositionBottom: 'Bottom',
   backgroundPositionLeft: 'Left',
   backgroundPositionRight: 'Right',
+  backgroundImage: 'Custom image',
+  backgroundImageClear: 'Remove image background',
+  backgroundImageScope: 'Image background scope',
+  backgroundImageScopeDesc:
+    'Choose whether the uploaded image background applies to the current image only or to all images',
+  backgroundImageScopeItem: 'Current image',
+  backgroundImageScopeGlobal: 'All images',
   processingHint: 'Processing...',
   processingModelDownload: 'First use requires downloading model files',
 

@@ -6,7 +6,7 @@ import { downloadResultImage } from '../../utils/downloadImage';
 import { GPU_CONCURRENCY, getBatchConcurrencyOptions } from '../../utils/concurrency';
 import { Select } from '../ui/Select';
 import { SelfHealingImage } from '../ui/SelfHealingImage';
-import { getImageBlob, SOURCE_FILE_MISSING } from '../../utils/imageStore';
+import { getImageBlob, snapshotImageBlob, SOURCE_FILE_MISSING } from '../../utils/imageStore';
 import { MODEL_NOT_CACHED } from '../../hooks/useRemoveBackground';
 import { useStoredImageSrc } from '../../hooks/useStoredImageSrc';
 
@@ -93,6 +93,7 @@ function getPreviewBackgroundStyle(
   mode: PreviewBackground,
   customColor: string,
   isDarkMode: boolean,
+  imageUrl?: string | null,
 ): React.CSSProperties {
   if (mode === 'black') {
     return { backgroundColor: '#000000', backgroundImage: 'none' };
@@ -102,6 +103,16 @@ function getPreviewBackgroundStyle(
   }
   if (mode === 'custom') {
     return { backgroundColor: customColor, backgroundImage: 'none' };
+  }
+  // 图片背景：铺满容器并居中裁切，透明结果图叠加其上便于比对。
+  if (mode === 'image' && imageUrl) {
+    return {
+      backgroundColor: isDarkMode ? '#1e293b' : '#f3f4f6',
+      backgroundImage: `url("${imageUrl}")`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+    };
   }
 
   const tile = isDarkMode ? '#334155' : '#e5e7eb';
@@ -270,19 +281,26 @@ function PreviewBackgroundControl({
   customColor,
   isLightBackground,
   position,
+  hasImage,
   onChange,
   onCustomColorChange,
+  onImageSelect,
+  onImageClear,
   t,
 }: {
   value: PreviewBackground;
   customColor: string;
   isLightBackground: boolean;
   position: PreviewBackgroundPosition;
+  hasImage: boolean;
   onChange: (mode: PreviewBackground) => void;
   onCustomColorChange: (color: string) => void;
+  onImageSelect: (file: File) => void;
+  onImageClear: () => void;
   t: (key: string) => string;
 }) {
   const layout = PREVIEW_BACKGROUND_LAYOUT[position];
+  const imageInputRef = useRef<HTMLInputElement>(null);
   return (
     <div
       role="group"
@@ -367,6 +385,62 @@ function PreviewBackgroundControl({
             className="absolute inset-0 w-full h-full rounded-full opacity-0 cursor-pointer"
           />
         </label>
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) {
+              onImageSelect(file);
+            }
+            event.target.value = '';
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => imageInputRef.current?.click()}
+          aria-pressed={value === 'image'}
+          aria-label={t('backgroundImage')}
+          title={t('backgroundImage')}
+          className={`${SWATCH_BASE_CLASS} flex items-center justify-center border ${
+            isLightBackground ? 'border-black/15 text-black/70' : 'border-white/25 text-white'
+          } ${value === 'image' ? SWATCH_ACTIVE_CLASS : ''}`}
+        >
+          <svg
+            className="w-3 h-3"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <path d="M21 15l-5-5L5 21" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        {hasImage && (
+          <button
+            type="button"
+            onClick={onImageClear}
+            aria-label={t('backgroundImageClear')}
+            title={t('backgroundImageClear')}
+            className={`${SWATCH_BASE_CLASS} flex items-center justify-center border ${
+              isLightBackground ? 'border-black/15 text-black/70' : 'border-white/25 text-white'
+            }`}
+          >
+            <svg
+              className="w-3 h-3"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -398,8 +472,12 @@ export function ImagePreview() {
     previewBackground,
     previewBackgroundColor,
     previewBackgroundPosition,
+    previewBackgroundImage,
+    previewBackgroundImageScope,
     setPreviewBackground,
     setPreviewBackgroundColor,
+    setPreviewBackgroundImage,
+    setBatchItemBackgroundImage,
   } = useAppStore();
   const { t } = useTranslation();
   const [sliderPosition, setSliderPosition] = useState(50);
@@ -445,6 +523,14 @@ export function ImagePreview() {
   const activeBatchItem = batchMode
     ? (batchQueue.find((item) => item.id === activeBatchItemId) ?? null)
     : null;
+
+  // 图片背景作用范围：全局取共享图片；单个 item 在批处理模式下取当前选中项自己的图片。
+  const scopedBackgroundImage =
+    previewBackgroundImageScope === 'global'
+      ? previewBackgroundImage
+      : batchMode
+        ? (activeBatchItem?.backgroundImage ?? null)
+        : previewBackgroundImage;
 
   const showQueueList = batchMode && !viewingBatchResult;
   const displayOriginal = activeBatchItem ? activeBatchItem.originalImage : originalImage;
@@ -616,7 +702,54 @@ export function ImagePreview() {
     previewBackground,
     previewBackgroundColor,
     isDarkMode,
+    scopedBackgroundImage,
   );
+
+  const previewBackgroundControlValue: PreviewBackground =
+    previewBackground === 'image' && !scopedBackgroundImage ? 'transparent' : previewBackground;
+
+  const applyBackgroundImage = useCallback(
+    async (file: File) => {
+      const blob = await snapshotImageBlob(file).catch(() => null);
+      if (!blob) {
+        showToast(t('errorReadFailed'));
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const targetItem = previewBackgroundImageScope === 'global' ? null : activeBatchItem;
+      if (targetItem) {
+        setBatchItemBackgroundImage(targetItem.id, url);
+      } else {
+        setPreviewBackgroundImage(url);
+      }
+      setPreviewBackground('image');
+    },
+    [
+      previewBackgroundImageScope,
+      activeBatchItem,
+      setPreviewBackgroundImage,
+      setBatchItemBackgroundImage,
+      setPreviewBackground,
+      showToast,
+      t,
+    ],
+  );
+
+  const clearBackgroundImage = useCallback(() => {
+    const targetItem = previewBackgroundImageScope === 'global' ? null : activeBatchItem;
+    if (targetItem) {
+      setBatchItemBackgroundImage(targetItem.id, null);
+    } else {
+      setPreviewBackgroundImage(null);
+    }
+    setPreviewBackground('transparent');
+  }, [
+    previewBackgroundImageScope,
+    activeBatchItem,
+    setPreviewBackgroundImage,
+    setBatchItemBackgroundImage,
+    setPreviewBackground,
+  ]);
 
   useEffect(() => {
     if (!showBatchNav && !hasComparison) return;
@@ -1068,23 +1201,16 @@ export function ImagePreview() {
                                 d="M5 13l4 4L19 7"
                               />
                             </svg>
-                          ) : item.status === 'pending' ? (
+                          ) : item.status === 'error' || item.status === 'cancelled' ? (
                             <span
-                              className={`w-4 h-4 flex-shrink-0 rounded-full border-2 border-current border-t-transparent animate-spin ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
-                              title={t('batchStatusPending')}
+                              className="w-2 h-2 flex-shrink-0 rounded-full bg-red-500"
+                              title={
+                                item.status === 'error'
+                                  ? t('batchStatusFailed')
+                                  : t('batchStatusCancelled')
+                              }
                             />
-                          ) : (
-                            (item.status === 'error' || item.status === 'cancelled') && (
-                              <span
-                                className="w-2 h-2 flex-shrink-0 rounded-full bg-red-500"
-                                title={
-                                  item.status === 'error'
-                                    ? t('batchStatusFailed')
-                                    : t('batchStatusCancelled')
-                                }
-                              />
-                            )
-                          )}
+                          ) : null}
                           {(item.status === 'error' || item.status === 'cancelled') && (
                             <button
                               onClick={(e) => {
@@ -1213,12 +1339,15 @@ export function ImagePreview() {
         )}
 
         <PreviewBackgroundControl
-          value={previewBackground}
+          value={previewBackgroundControlValue}
           customColor={previewBackgroundColor}
           isLightBackground={previewIsLight}
           position={previewBackgroundPosition}
+          hasImage={!!scopedBackgroundImage}
           onChange={setPreviewBackground}
           onCustomColorChange={setPreviewBackgroundColor}
+          onImageSelect={applyBackgroundImage}
+          onImageClear={clearBackgroundImage}
           t={t}
         />
 

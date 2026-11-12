@@ -6,8 +6,11 @@ export type GpuFallbackReason = 'insecure-context' | 'no-adapter' | 'runtime';
 // 预览区键盘操作模式：arrows = 方向键（↑↓←→），wasd = WASD 键
 export type KeyboardMode = 'arrows' | 'wasd';
 
-// 预览区背景：transparent = 棋盘格（表示透明），black/white = 纯色，custom = 用户自选颜色
-export type PreviewBackground = 'transparent' | 'black' | 'white' | 'custom';
+// 预览区背景：transparent = 棋盘格（表示透明），black/white = 纯色，custom = 用户自选颜色，image = 用户上传的图片
+export type PreviewBackground = 'transparent' | 'black' | 'white' | 'custom' | 'image';
+
+// 图片背景的作用范围：item = 仅作用于当前队列项（默认），global = 像纯色背景一样作用于全部项目
+export type PreviewBackgroundImageScope = 'item' | 'global';
 
 // 预览背景控件的贴边收起位置，控件始终在对应边缘上居中
 export type PreviewBackgroundPosition = 'top' | 'bottom' | 'left' | 'right';
@@ -101,6 +104,10 @@ export type AppState = {
   previewBackgroundColor: string;
   // 预览背景控件的贴边收起位置，用户偏好，持久化到 localStorage
   previewBackgroundPosition: PreviewBackgroundPosition;
+  // 上传的图片背景（blob: URL），仅保留在当前会话，不持久化
+  previewBackgroundImage: string | null;
+  // 图片背景的作用范围，用户偏好，持久化到 localStorage
+  previewBackgroundImageScope: PreviewBackgroundImageScope;
 
   // 客户端挂载后应用持久化偏好，确保 SSR 与客户端首帧一致
   hydrateFromStorage: () => void;
@@ -114,6 +121,9 @@ export type AppState = {
   setPreviewBackground: (mode: PreviewBackground) => void;
   setPreviewBackgroundColor: (color: string) => void;
   setPreviewBackgroundPosition: (position: PreviewBackgroundPosition) => void;
+  setPreviewBackgroundImage: (url: string | null) => void;
+  setPreviewBackgroundImageScope: (scope: PreviewBackgroundImageScope) => void;
+  setBatchItemBackgroundImage: (id: string, url: string | null) => void;
 
   setCurrentModel: (model: string) => Promise<void>;
   setDefaultModel: (modelId: string) => void;
@@ -184,6 +194,8 @@ export interface BatchItem {
   resultImage: string | null;
   // 队列列表专用的小图，只有它常驻内存
   thumbnailImage: string | null;
+  // 该队列项单独设置的图片背景（blob: URL），仅"单个 item"作用范围下使用，不持久化
+  backgroundImage?: string | null;
   status: BatchItemStatus;
   modelId: string;
   name: string;

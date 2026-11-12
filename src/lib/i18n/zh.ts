@@ -157,6 +157,12 @@ export const translations = {
   backgroundPositionBottom: '下方',
   backgroundPositionLeft: '左侧',
   backgroundPositionRight: '右侧',
+  backgroundImage: '自定义图片',
+  backgroundImageClear: '移除图片背景',
+  backgroundImageScope: '图片背景作用范围',
+  backgroundImageScopeDesc: '上传的图片背景只作用于当前图片，还是全部图片',
+  backgroundImageScopeItem: '当前图片',
+  backgroundImageScopeGlobal: '全部图片',
   processingHint: '处理中...',
   processingModelDownload: '首次使用需要下载模型文件',
 

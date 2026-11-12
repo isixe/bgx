@@ -65,7 +65,7 @@ export function Select<T extends string | number = number>({
           isDarkMode
             ? 'bg-slate-600 text-gray-200 border border-slate-500'
             : 'bg-white text-gray-700 border border-gray-300'
-        }`}
+        } ${className}`}
       >
         <span className="tabular-nums">{selected ? selected.label : value}</span>
         <svg
