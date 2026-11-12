@@ -42,6 +42,8 @@ export const translations = {
     '不支持的图片格式，请上传 JPG、PNG、WebP、BMP、TIFF、SVG、AVIF 或 HEIC 格式',
   errorFileTooLarge: '图片大小不能超过 30MB',
   errorReadFailed: '读取图片失败',
+  errorSourceFileMissing: '找不到源文件，可能已被移动或删除',
+  sourceFileMissing: '原图已不可用',
 
   modelSelectorTitle: '选择模型',
   modelOutputSize: '输出尺寸',

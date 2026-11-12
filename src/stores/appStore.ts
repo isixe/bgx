@@ -26,6 +26,8 @@ import {
   createRememberedImageUrl,
   persistImageBlob,
   releaseImageUrl,
+  snapshotImageBlob,
+  SOURCE_FILE_MISSING,
 } from '../utils/imageStore';
 import { createThumbnailBlob } from '../utils/thumbnail';
 import { MODELS } from '../config/models';
@@ -432,7 +434,30 @@ export const useAppStore = create<AppState>((set, get) => ({
         typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
           ? crypto.randomUUID()
           : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-      const originalImage = createRememberedImageUrl(file);
+
+      const snapshot = await snapshotImageBlob(file).catch(() => null);
+      if (!snapshot) {
+        const missingItem: BatchItem = {
+          id,
+          originalImage: `missing:${id}`,
+          resultImage: null,
+          thumbnailImage: null,
+          status: 'error',
+          modelId: get().currentModel,
+          name: file.name,
+          progress: 100,
+          startedAt: null,
+          finishedAt: Date.now(),
+          error: SOURCE_FILE_MISSING,
+        };
+        set((state) => ({
+          batchQueue: [...state.batchQueue, missingItem],
+          error: SOURCE_FILE_MISSING,
+        }));
+        return;
+      }
+
+      const originalImage = createRememberedImageUrl(snapshot);
       const item: BatchItem = {
         id,
         originalImage,
@@ -455,12 +480,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       // 先把原始图字节落到 IndexedDB，再释放内存里的活 URL；
       // 缩略图串行生成，队列列表只显示它，全分辨率图只在预览时按需取回。
-      const persisted = await persistImageBlob(originalImage, file);
+      const persisted = await persistImageBlob(originalImage, snapshot);
       if (persisted) {
         releaseImageUrl(originalImage);
       }
 
-      const thumbnail = await createThumbnailBlob(file);
+      const thumbnail = await createThumbnailBlob(snapshot);
       if (!thumbnail) {
         return;
       }

@@ -43,6 +43,8 @@ export const translations = {
     'Unsupported image format. Please upload JPG, PNG, WebP, BMP, TIFF, SVG, AVIF, or HEIC.',
   errorFileTooLarge: 'Image size cannot exceed 30MB',
   errorReadFailed: 'Failed to read image',
+  errorSourceFileMissing: 'Source file not found. It may have been moved or deleted.',
+  sourceFileMissing: 'Source image unavailable',
 
   modelSelectorTitle: 'Select Model',
   modelOutputSize: 'Output Size',

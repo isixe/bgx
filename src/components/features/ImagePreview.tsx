@@ -6,7 +6,8 @@ import { downloadResultImage } from '../../utils/downloadImage';
 import { GPU_CONCURRENCY, getBatchConcurrencyOptions } from '../../utils/concurrency';
 import { Select } from '../ui/Select';
 import { SelfHealingImage } from '../ui/SelfHealingImage';
-import { getImageBlob } from '../../utils/imageStore';
+import { getImageBlob, SOURCE_FILE_MISSING } from '../../utils/imageStore';
+import { MODEL_NOT_CACHED } from '../../hooks/useRemoveBackground';
 import { useStoredImageSrc } from '../../hooks/useStoredImageSrc';
 
 function formatDuration(ms: number): string {
@@ -22,6 +23,25 @@ function formatDuration(ms: number): string {
   }
   const minutes = Math.floor(seconds / 60);
   return `${minutes}m ${Math.round(seconds % 60)}s`;
+}
+
+function describeBatchError(
+  error: string | null | undefined,
+  translate: (key: string) => string,
+): string | null {
+  if (!error) {
+    return null;
+  }
+  if (error === SOURCE_FILE_MISSING) {
+    return translate('errorSourceFileMissing');
+  }
+  if (error === MODEL_NOT_CACHED || error === 'Model not available') {
+    return translate('modelDeletedReDownload');
+  }
+  if (error === 'Worker pool unavailable') {
+    return translate('batchStatusFailed');
+  }
+  return error;
 }
 
 function ProgressRing({ progress, isDarkMode }: { progress: number; isDarkMode: boolean }) {
@@ -432,10 +452,32 @@ export function ImagePreview() {
 
   // 批处理模式下 originalImage/resultImage 只是 imageStore 的 key，字节留在 IndexedDB。
   // 这里按需租一个活 URL，切换图片或卸载时立刻释放，内存中只保留当前显示的这两张。
-  const leasedOriginalSrc = useStoredImageSrc(batchMode ? displayOriginal : null);
-  const leasedResultSrc = useStoredImageSrc(batchMode ? displayResult : null);
-  const originalSrcToRender = batchMode ? leasedOriginalSrc : displayOriginal;
-  const resultSrcToRender = batchMode ? leasedResultSrc : displayResult;
+  const leasedOriginal = useStoredImageSrc(batchMode ? displayOriginal : null);
+  const leasedResult = useStoredImageSrc(batchMode ? displayResult : null);
+  const originalSrcToRender = batchMode ? leasedOriginal.src : displayOriginal;
+  const resultSrcToRender = batchMode ? leasedResult.src : displayResult;
+  const originalMissing = batchMode ? leasedOriginal.failed : false;
+  const missingSourceFallback = (
+    <div
+      className={`flex flex-col items-center gap-2 px-4 text-center text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+    >
+      <svg
+        className="w-8 h-8"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+        />
+        <path strokeLinecap="round" d="M3 3l18 18" />
+      </svg>
+      <span>{t('sourceFileMissing')}</span>
+    </div>
+  );
   const isBatchProcessing = activeBatchItem
     ? activeBatchItem.status === 'processing'
     : isProcessing;
@@ -892,6 +934,11 @@ export function ImagePreview() {
                               src={item.thumbnailImage}
                               alt={item.name}
                               className="w-8 h-8 rounded object-cover flex-shrink-0"
+                              fallback={
+                                <div
+                                  className={`w-8 h-8 rounded flex-shrink-0 ${isDarkMode ? 'bg-slate-600' : 'bg-gray-300'}`}
+                                />
+                              }
                             />
                           ) : (
                             <div
@@ -904,16 +951,25 @@ export function ImagePreview() {
                             {item.name}
                           </span>
                         </div>
-                        {item.status !== 'pending' && (
+                        {item.status === 'error' && describeBatchError(item.error, t) ? (
                           <span
-                            className={`block mt-0.5 text-[10px] tabular-nums ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                            className={`block mt-0.5 text-[10px] truncate ${isDarkMode ? 'text-red-400' : 'text-red-500'}`}
+                            title={describeBatchError(item.error, t) ?? undefined}
                           >
-                            {formatDuration(
-                              item.startedAt === null
-                                ? 0
-                                : (item.finishedAt ?? now) - item.startedAt,
-                            )}
+                            {describeBatchError(item.error, t)}
                           </span>
+                        ) : (
+                          item.status !== 'pending' && (
+                            <span
+                              className={`block mt-0.5 text-[10px] tabular-nums ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                            >
+                              {formatDuration(
+                                item.startedAt === null
+                                  ? 0
+                                  : (item.finishedAt ?? now) - item.startedAt,
+                              )}
+                            </span>
+                          )
                         )}
                       </div>
 
@@ -1012,33 +1068,47 @@ export function ImagePreview() {
                                 d="M5 13l4 4L19 7"
                               />
                             </svg>
+                          ) : item.status === 'pending' ? (
+                            <span
+                              className={`w-4 h-4 flex-shrink-0 rounded-full border-2 border-current border-t-transparent animate-spin ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                              title={t('batchStatusPending')}
+                            />
                           ) : (
                             (item.status === 'error' || item.status === 'cancelled') && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  reprocessBatchItem(item.id, currentModel);
-                                }}
-                                className={`relative flex-shrink-0 p-1 rounded transition-colors ${isDarkMode ? 'hover:bg-slate-500 text-gray-300 hover:text-white' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
-                                title={t('reprocess')}
-                                aria-label={t('reprocess')}
-                              >
-                                <svg
-                                  className="w-4 h-4"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth={2}
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M4 4v5h5M20 20v-5h-5M20 9a8 8 0 00-13.4-3.3L4 8m16 8l-2.6 2.3A8 8 0 014 15"
-                                  />
-                                </svg>
-                                <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500" />
-                              </button>
+                              <span
+                                className="w-2 h-2 flex-shrink-0 rounded-full bg-red-500"
+                                title={
+                                  item.status === 'error'
+                                    ? t('batchStatusFailed')
+                                    : t('batchStatusCancelled')
+                                }
+                              />
                             )
+                          )}
+                          {(item.status === 'error' || item.status === 'cancelled') && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                reprocessBatchItem(item.id, currentModel);
+                              }}
+                              className={`flex-shrink-0 p-1 rounded transition-colors ${isDarkMode ? 'hover:bg-slate-500 text-gray-300 hover:text-white' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
+                              title={t('reprocess')}
+                              aria-label={t('reprocess')}
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M4 4v5h5M20 20v-5h-5M20 9a8 8 0 00-13.4-3.3L4 8m16 8l-2.6 2.3A8 8 0 014 15"
+                                />
+                              </svg>
+                            </button>
                           )}
                           <button
                             onClick={(e) => {
@@ -1179,12 +1249,17 @@ export function ImagePreview() {
             transition: isDraggingSlider || isPanning ? 'none' : 'transform 0.1s ease-out',
           }}
         >
-          <SelfHealingImage
-            src={originalSrcToRender!}
-            alt="Original"
-            className="max-w-full max-h-full object-contain"
-            draggable={false}
-          />
+          {originalSrcToRender ? (
+            <SelfHealingImage
+              src={originalSrcToRender}
+              alt="Original"
+              className="max-w-full max-h-full object-contain"
+              draggable={false}
+              fallback={missingSourceFallback}
+            />
+          ) : (
+            originalMissing && missingSourceFallback
+          )}
         </div>
 
         {resultSrcToRender && (
@@ -1208,6 +1283,7 @@ export function ImagePreview() {
                 alt="Result"
                 className="max-w-full max-h-full object-contain"
                 draggable={false}
+                fallback={missingSourceFallback}
               />
             </div>
           </div>

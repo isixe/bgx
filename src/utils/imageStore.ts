@@ -10,6 +10,44 @@ const FORGET_DELAY_MS = 30 * 1000;
 const MAX_MEMORY_BYTES = 64 * 1024 * 1024;
 const MAX_MEMORY_ENTRIES = 6;
 
+// 上传拿到的 File 只是磁盘上的句柄：用户在资源管理器里删掉源文件后，
+// 这个句柄、由它派生出的 blob: URL、以及写进 IndexedDB 的记录都读不出字节。
+// 所以拿到文件的第一时间就把字节复制成真正的 Blob，之后全靠这份副本。
+export const SOURCE_FILE_MISSING = 'source_file_missing';
+
+export class SourceFileMissingError extends Error {
+  constructor() {
+    super(SOURCE_FILE_MISSING);
+    this.name = 'SourceFileMissingError';
+  }
+}
+
+export async function snapshotImageBlob(source: Blob): Promise<Blob> {
+  if (typeof File === 'undefined' || !(source instanceof File)) {
+    return source;
+  }
+
+  try {
+    const buffer = await source.arrayBuffer();
+    return new Blob([buffer], { type: source.type || 'application/octet-stream' });
+  } catch {
+    throw new SourceFileMissingError();
+  }
+}
+
+// 内存/IndexedDB 里可能躺着早期写入的 File 句柄，读不出来就当作没命中，继续往下找。
+async function materializeBlob(blob: Blob): Promise<Blob | null> {
+  if (typeof File === 'undefined' || !(blob instanceof File)) {
+    return blob;
+  }
+
+  try {
+    return await snapshotImageBlob(blob);
+  } catch {
+    return null;
+  }
+}
+
 interface StoredImage {
   url: string;
   blob: Blob;
@@ -231,23 +269,33 @@ export async function getImageBlob(url: string): Promise<Blob> {
 
   const cached = takeFromMemory(key);
   if (cached) {
-    return cached;
+    const materialized = await materializeBlob(cached);
+    if (materialized) {
+      return materialized;
+    }
   }
 
   const stored = await readBlobFromDB(key);
   if (stored) {
-    rememberInMemory(key, stored);
-    return stored;
+    const materialized = await materializeBlob(stored);
+    if (materialized) {
+      rememberInMemory(key, materialized);
+      return materialized;
+    }
   }
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to read image: ${response.status}`);
-  }
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new SourceFileMissingError();
+    }
 
-  const blob = await response.blob();
-  rememberImageBlob(key, blob);
-  return blob;
+    const blob = await response.blob();
+    rememberImageBlob(key, blob);
+    return blob;
+  } catch {
+    throw new SourceFileMissingError();
+  }
 }
 
 export async function renewImageUrl(url: string): Promise<string | null> {

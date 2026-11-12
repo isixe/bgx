@@ -1,7 +1,11 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../lib/i18n';
-import { createRememberedImageUrl } from '../../utils/imageStore';
+import {
+  createRememberedImageUrl,
+  snapshotImageBlob,
+  SOURCE_FILE_MISSING,
+} from '../../utils/imageStore';
 
 const SUPPORTED_FORMATS = [
   'image/jpeg',
@@ -52,7 +56,7 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
   };
 
   const handleFiles = useCallback(
-    (files: File[]) => {
+    async (files: File[]) => {
       if (disabled) return;
 
       const validFiles: File[] = [];
@@ -73,12 +77,18 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
       if (validFiles.length === 1) {
         clearBatchQueue();
         setBatchMode(false);
-        setOriginalImage(createRememberedImageUrl(validFiles[0]));
         setError(null);
+        try {
+          const snapshot = await snapshotImageBlob(validFiles[0]);
+          setOriginalImage(createRememberedImageUrl(snapshot));
+        } catch {
+          setOriginalImage(null);
+          setError(SOURCE_FILE_MISSING);
+        }
       } else {
         clearBatchQueue();
         setBatchMode(true);
-        validFiles.forEach((file) => addToBatchQueue(file));
+        validFiles.forEach((file) => void addToBatchQueue(file));
       }
     },
     [setOriginalImage, setError, t, disabled, setBatchMode, addToBatchQueue, clearBatchQueue],
@@ -117,7 +127,7 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
 
       const files = Array.from(e.dataTransfer.files);
       if (files.length > 0) {
-        handleFiles(files);
+        void handleFiles(files);
       }
     },
     [handleFiles, disabled],
@@ -132,7 +142,7 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files ? Array.from(e.target.files) : [];
       if (files.length > 0) {
-        handleFiles(files);
+        void handleFiles(files);
       }
       // Reset so selecting the same files again triggers onChange
       if (fileInputRef.current) {
@@ -152,7 +162,7 @@ export function ImageUploader({ disabled = false, disabledMessage }: ImageUpload
         if (items[i].type.startsWith('image/')) {
           const blob = items[i].getAsFile();
           if (blob) {
-            handleFiles([blob]);
+            void handleFiles([blob]);
             break;
           }
         }

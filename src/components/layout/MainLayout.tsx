@@ -12,7 +12,7 @@ import { ExportPanel } from '../features/ExportPanel';
 import { SettingsPage } from '../features/SettingsPage';
 import { LanguageSwitcher } from '../ui/LanguageSwitcher';
 import { saveImagesBatchToDirectory } from '../../utils/downloadImage';
-import { getImageBlob } from '../../utils/imageStore';
+import { getImageBlob, SOURCE_FILE_MISSING } from '../../utils/imageStore';
 import { DOWNLOAD_URL, isDesktopApp } from '../../lib/appUpdate';
 
 export function MainLayout() {
@@ -680,7 +680,11 @@ function SidebarContent({
             </svg>
           </button>
           <div className="pr-6">
-            {error === 'model_download_failed' ? t('modelDownloadFailed') : error}
+            {error === 'model_download_failed'
+              ? t('modelDownloadFailed')
+              : error === SOURCE_FILE_MISSING
+                ? t('errorSourceFileMissing')
+                : error}
           </div>
         </div>
       )}
