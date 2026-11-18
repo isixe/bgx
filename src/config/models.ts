@@ -223,7 +223,7 @@ const MODEL_SERIES: Record<ModelGroupId, ModelSeries> = {
         downloadUrl:
           'https://huggingface.co/TheGuy444/InSPyReNet-Res2Net50/resolve/main/onnx/model.onnx?download=true',
         feedbackUrl: [
-          'https://hf-mirror.com/TheGuy444/InSPyReNet-Res2Net50/resolve/main/onnx/model.onnx',
+          'https://www.modelscope.cn/models/Rokaa111/InSPyReNet-Res2Net50/resolve/main/onnx/model.onnx',
         ],
         preprocess: 'imagenet',
         postprocess: 'linear',
